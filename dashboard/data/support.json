@@ -1,0 +1,342 @@
+{
+  "summaryCards": [
+    {
+      "label": "Open Tickets",
+      "value": "124",
+      "note": "",
+      "tone": "text-[#1f3d8f]"
+    },
+    {
+      "label": "In Progress",
+      "value": "48",
+      "note": "",
+      "tone": "text-[#1f3d8f]"
+    },
+    {
+      "label": "Resolved",
+      "value": "1,204",
+      "note": "",
+      "tone": "text-[#16a34a]"
+    },
+    {
+      "label": "High Priority",
+      "value": "12",
+      "note": "",
+      "tone": "text-[#dc2626]"
+    }
+  ],
+  "tickets": [
+    {
+      "id": "#TK-8802",
+      "userName": "Sarah Jenkins",
+      "userRole": "User",
+      "avatar": "https://i.pravatar.cc/80?img=32",
+      "type": "Account",
+      "subject": "Unable to process monthly subscription payment",
+      "status": "In Progress",
+      "priority": "High",
+      "openedAt": "Oct 24, 2023 \ufffd 09:45 AM",
+      "issueDetails": "Hello, I've been trying to renew my premium subscription for the last 2 hours. Every time I enter my card details, the page spins and eventually shows a generic error. Please help.",
+      "conversation": [
+        {
+          "sender": "agent",
+          "text": "Hello Sarah, thank you for reaching out. We are looking into our payment gateway logs right now. Could you confirm if you are using a VPN?",
+          "time": "10:15 AM",
+          "name": "You"
+        },
+        {
+          "sender": "user",
+          "text": "Yes, I am using a corporate VPN. Does that matter?",
+          "time": "10:22 AM",
+          "name": "Sarah Jenkins"
+        }
+      ]
+    },
+    {
+      "id": "#TK-8795",
+      "userName": "TechFlow Solutions",
+      "userRole": "Vendor",
+      "avatar": "https://i.pravatar.cc/80?img=60",
+      "type": "Technical",
+      "subject": "API Endpoint returning 500 errors during callback",
+      "status": "Open",
+      "priority": "Medium",
+      "openedAt": "Oct 24, 2023 \ufffd 11:30 AM",
+      "issueDetails": "Callback endpoint is failing with 500 for select requests. Logs attached for investigation.",
+      "conversation": []
+    },
+    {
+      "id": "#TK-8742",
+      "userName": "John Doe",
+      "userRole": "User",
+      "avatar": "https://i.pravatar.cc/80?img=15",
+      "type": "Account",
+      "subject": "Request to change registered email address",
+      "status": "Resolved",
+      "priority": "Low",
+      "openedAt": "Oct 22, 2023 \ufffd 04:02 PM",
+      "issueDetails": "User requested to update primary email address due to typo during onboarding.",
+      "conversation": []
+    },
+    {
+      "id": "#TK-8803",
+      "userName": "Logan Garcia",
+      "userRole": "User",
+      "avatar": "https://i.pravatar.cc/80?img=52",
+      "type": "Compliance",
+      "subject": "App crash when uploading documents",
+      "status": "Resolved",
+      "priority": "High",
+      "openedAt": "Feb 22, 2026 ? 8:15 AM",
+      "issueDetails": "Automated ticket generated from user submission. Please review and follow up.",
+      "conversation": []
+    },
+    {
+      "id": "#TK-8804",
+      "userName": "Ava Baker",
+      "userRole": "Vendor",
+      "avatar": "https://i.pravatar.cc/80?img=11",
+      "type": "Technical",
+      "subject": "App crash when uploading documents",
+      "status": "Resolved",
+      "priority": "Medium",
+      "openedAt": "Feb 20, 2026 ? 9:45 AM",
+      "issueDetails": "Automated ticket generated from user submission. Please review and follow up.",
+      "conversation": []
+    },
+    {
+      "id": "#TK-8805",
+      "userName": "Charlotte Perez",
+      "userRole": "Vendor",
+      "avatar": "https://i.pravatar.cc/80?img=55",
+      "type": "Billing",
+      "subject": "Unable to update billing profile",
+      "status": "Resolved",
+      "priority": "High",
+      "openedAt": "Feb 4, 2026 ? 9:15 AM",
+      "issueDetails": "Automated ticket generated from user submission. Please review and follow up.",
+      "conversation": []
+    },
+    {
+      "id": "#TK-8806",
+      "userName": "Sophia Patel",
+      "userRole": "User",
+      "avatar": "https://i.pravatar.cc/80?img=31",
+      "type": "Technical",
+      "subject": "App crash when uploading documents",
+      "status": "Open",
+      "priority": "Low",
+      "openedAt": "Feb 14, 2026 ? 11:45 AM",
+      "issueDetails": "Automated ticket generated from user submission. Please review and follow up.",
+      "conversation": []
+    },
+    {
+      "id": "#TK-8807",
+      "userName": "Lucas Nguyen",
+      "userRole": "User",
+      "avatar": "https://i.pravatar.cc/80?img=37",
+      "type": "Billing",
+      "subject": "Subscription downgrade failed",
+      "status": "Open",
+      "priority": "High",
+      "openedAt": "Feb 8, 2026 ? 10:15 AM",
+      "issueDetails": "Automated ticket generated from user submission. Please review and follow up.",
+      "conversation": []
+    },
+    {
+      "id": "#TK-8808",
+      "userName": "Ethan Garcia",
+      "userRole": "User",
+      "avatar": "https://i.pravatar.cc/80?img=20",
+      "type": "Billing",
+      "subject": "Incorrect booking status",
+      "status": "Open",
+      "priority": "Low",
+      "openedAt": "Feb 6, 2026 ? 10:30 AM",
+      "issueDetails": "Automated ticket generated from user submission. Please review and follow up.",
+      "conversation": []
+    },
+    {
+      "id": "#TK-8809",
+      "userName": "Charlotte Garcia",
+      "userRole": "Vendor",
+      "avatar": "https://i.pravatar.cc/80?img=39",
+      "type": "Compliance",
+      "subject": "Payout schedule clarification",
+      "status": "Resolved",
+      "priority": "High",
+      "openedAt": "Feb 16, 2026 ? 11:05 AM",
+      "issueDetails": "Automated ticket generated from user submission. Please review and follow up.",
+      "conversation": []
+    },
+    {
+      "id": "#TK-8810",
+      "userName": "Ben Nguyen",
+      "userRole": "Vendor",
+      "avatar": "https://i.pravatar.cc/80?img=42",
+      "type": "Billing",
+      "subject": "Unable to update billing profile",
+      "status": "Open",
+      "priority": "Low",
+      "openedAt": "Feb 22, 2026 ? 8:30 AM",
+      "issueDetails": "Automated ticket generated from user submission. Please review and follow up.",
+      "conversation": []
+    },
+    {
+      "id": "#TK-8811",
+      "userName": "Evelyn Nguyen",
+      "userRole": "User",
+      "avatar": "https://i.pravatar.cc/80?img=61",
+      "type": "Compliance",
+      "subject": "Payout schedule clarification",
+      "status": "Open",
+      "priority": "High",
+      "openedAt": "Feb 14, 2026 ? 11:05 AM",
+      "issueDetails": "Automated ticket generated from user submission. Please review and follow up.",
+      "conversation": []
+    },
+    {
+      "id": "#TK-8812",
+      "userName": "Logan Moore",
+      "userRole": "Vendor",
+      "avatar": "https://i.pravatar.cc/80?img=43",
+      "type": "Billing",
+      "subject": "App crash when uploading documents",
+      "status": "Open",
+      "priority": "Medium",
+      "openedAt": "Feb 14, 2026 ? 11:30 AM",
+      "issueDetails": "Automated ticket generated from user submission. Please review and follow up.",
+      "conversation": []
+    },
+    {
+      "id": "#TK-8813",
+      "userName": "Isabella Scott",
+      "userRole": "User",
+      "avatar": "https://i.pravatar.cc/80?img=59",
+      "type": "Account",
+      "subject": "Login verification email missing",
+      "status": "In Progress",
+      "priority": "Medium",
+      "openedAt": "Feb 4, 2026 ? 11:05 AM",
+      "issueDetails": "Automated ticket generated from user submission. Please review and follow up.",
+      "conversation": []
+    },
+    {
+      "id": "#TK-8814",
+      "userName": "Levi Perez",
+      "userRole": "Vendor",
+      "avatar": "https://i.pravatar.cc/80?img=7",
+      "type": "Technical",
+      "subject": "Login verification email missing",
+      "status": "Resolved",
+      "priority": "Medium",
+      "openedAt": "Feb 21, 2026 ? 11:05 AM",
+      "issueDetails": "Automated ticket generated from user submission. Please review and follow up.",
+      "conversation": []
+    },
+    {
+      "id": "#TK-8815",
+      "userName": "Mia Turner",
+      "userRole": "User",
+      "avatar": "https://i.pravatar.cc/80?img=37",
+      "type": "Compliance",
+      "subject": "Subscription downgrade failed",
+      "status": "Open",
+      "priority": "Low",
+      "openedAt": "Feb 21, 2026 ? 9:15 AM",
+      "issueDetails": "Automated ticket generated from user submission. Please review and follow up.",
+      "conversation": []
+    },
+    {
+      "id": "#TK-8816",
+      "userName": "Lucas Scott",
+      "userRole": "User",
+      "avatar": "https://i.pravatar.cc/80?img=53",
+      "type": "Account",
+      "subject": "Refund request pending",
+      "status": "Open",
+      "priority": "Medium",
+      "openedAt": "Feb 4, 2026 ? 9:45 AM",
+      "issueDetails": "Automated ticket generated from user submission. Please review and follow up.",
+      "conversation": []
+    },
+    {
+      "id": "#TK-8817",
+      "userName": "Lucas Allen",
+      "userRole": "Vendor",
+      "avatar": "https://i.pravatar.cc/80?img=54",
+      "type": "Compliance",
+      "subject": "Subscription downgrade failed",
+      "status": "Open",
+      "priority": "Medium",
+      "openedAt": "Feb 18, 2026 ? 9:45 AM",
+      "issueDetails": "Automated ticket generated from user submission. Please review and follow up.",
+      "conversation": []
+    },
+    {
+      "id": "#TK-8818",
+      "userName": "Mia Rivera",
+      "userRole": "User",
+      "avatar": "https://i.pravatar.cc/80?img=9",
+      "type": "Billing",
+      "subject": "Vendor profile approval delay",
+      "status": "In Progress",
+      "priority": "High",
+      "openedAt": "Feb 9, 2026 ? 8:30 AM",
+      "issueDetails": "Automated ticket generated from user submission. Please review and follow up.",
+      "conversation": []
+    },
+    {
+      "id": "#TK-8819",
+      "userName": "Lucas Baker",
+      "userRole": "Vendor",
+      "avatar": "https://i.pravatar.cc/80?img=20",
+      "type": "Compliance",
+      "subject": "Subscription downgrade failed",
+      "status": "In Progress",
+      "priority": "Medium",
+      "openedAt": "Feb 18, 2026 ? 11:45 AM",
+      "issueDetails": "Automated ticket generated from user submission. Please review and follow up.",
+      "conversation": []
+    },
+    {
+      "id": "#TK-8820",
+      "userName": "Amelia Khan",
+      "userRole": "User",
+      "avatar": "https://i.pravatar.cc/80?img=50",
+      "type": "Technical",
+      "subject": "Vendor profile approval delay",
+      "status": "Open",
+      "priority": "Medium",
+      "openedAt": "Feb 24, 2026 ? 11:45 AM",
+      "issueDetails": "Automated ticket generated from user submission. Please review and follow up.",
+      "conversation": []
+    },
+    {
+      "id": "#TK-8821",
+      "userName": "Isabella Brown",
+      "userRole": "Vendor",
+      "avatar": "https://i.pravatar.cc/80?img=5",
+      "type": "Technical",
+      "subject": "Login verification email missing",
+      "status": "Open",
+      "priority": "Medium",
+      "openedAt": "Feb 4, 2026 ? 11:05 AM",
+      "issueDetails": "Automated ticket generated from user submission. Please review and follow up.",
+      "conversation": []
+    },
+    {
+      "id": "#TK-8822",
+      "userName": "Ava Lee",
+      "userRole": "User",
+      "avatar": "https://i.pravatar.cc/80?img=10",
+      "type": "Compliance",
+      "subject": "Payout schedule clarification",
+      "status": "In Progress",
+      "priority": "High",
+      "openedAt": "Feb 23, 2026 ? 11:05 AM",
+      "issueDetails": "Automated ticket generated from user submission. Please review and follow up.",
+      "conversation": []
+    }
+  ]
+}

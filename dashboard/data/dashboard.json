@@ -1,0 +1,429 @@
+{
+  "stats": [
+    {
+      "label": "TOTAL REVENUE",
+      "value": "$4,285,120",
+      "sub": "vs. $3.8M last month",
+      "trend": "+12.5%",
+      "icon": "tag"
+    },
+    {
+      "label": "ACTIVE USERS",
+      "value": "85,420",
+      "sub": "Daily active sessions peak",
+      "trend": "+5.2%",
+      "icon": "users"
+    },
+    {
+      "label": "ACTIVE VENDORS",
+      "value": "85,40",
+      "sub": "Daily active sessions peak",
+      "trend": "+5.2%",
+      "icon": "shopping_bag"
+    },
+    {
+      "label": "TOTAL BOOKINGS",
+      "value": "12,300",
+      "sub": "Across all 52 vendors",
+      "trend": "+8.1%",
+      "icon": "calendar"
+    },
+    {
+      "label": "Customer Satisfaction",
+      "value": "4.82/5",
+      "sub": "BASED ON 12K REVIEWS",
+      "trend": "0.0%",
+      "icon": "smile"
+    }
+  ],
+  "statMetrics": [
+    {
+      "label": "TOTAL REVENUE",
+      "current": 4285120,
+      "previous": 3800000,
+      "sub": "vs. $3.8M last month",
+      "icon": "tag",
+      "format": "currency"
+    },
+    {
+      "label": "ACTIVE USERS",
+      "current": 85420,
+      "previous": 81190,
+      "sub": "Daily active sessions peak",
+      "icon": "users",
+      "format": "count"
+    },
+    {
+      "label": "ACTIVE VENDORS",
+      "current": 8540,
+      "previous": 8120,
+      "sub": "Daily active sessions peak",
+      "icon": "shopping_bag",
+      "format": "count"
+    },
+    {
+      "label": "TOTAL BOOKINGS",
+      "current": 12300,
+      "previous": 11380,
+      "sub": "Across all 52 vendors",
+      "icon": "calendar",
+      "format": "count"
+    },
+    {
+      "label": "Customer Satisfaction",
+      "current": 4.82,
+      "previous": 4.79,
+      "sub": "BASED ON 12K REVIEWS",
+      "icon": "smile",
+      "format": "score",
+      "decimals": 2,
+      "scoreMax": 5
+    }
+  ],
+  "monthlyData": [
+    {
+      "period": "JAN",
+      "value": 38
+    },
+    {
+      "period": "FEB",
+      "value": 55
+    },
+    {
+      "period": "MAR",
+      "value": 42
+    },
+    {
+      "period": "APR",
+      "value": 68
+    },
+    {
+      "period": "MAY",
+      "value": 60
+    },
+    {
+      "period": "JUN",
+      "value": 84
+    },
+    {
+      "period": "JUL",
+      "value": 95
+    },
+    {
+      "period": "AUG",
+      "value": 78
+    },
+    {
+      "period": "SEP",
+      "value": 90
+    },
+    {
+      "period": "OCT",
+      "value": 74
+    },
+    {
+      "period": "NOV",
+      "value": 82
+    },
+    {
+      "period": "DEC",
+      "value": 98
+    }
+  ],
+  "weeklyData": [
+    {
+      "period": "MON",
+      "value": 52
+    },
+    {
+      "period": "TUE",
+      "value": 71
+    },
+    {
+      "period": "WED",
+      "value": 64
+    },
+    {
+      "period": "THU",
+      "value": 86
+    },
+    {
+      "period": "FRI",
+      "value": 93
+    },
+    {
+      "period": "SAT",
+      "value": 88
+    },
+    {
+      "period": "SUN",
+      "value": 97
+    }
+  ],
+  "bookingMetricsByRange": {
+    "monthly": [
+      {
+        "name": "Hotels & Stays",
+        "count": 5535,
+        "color": "#27409b"
+      },
+      {
+        "name": "Flight Bundles",
+        "count": 3936,
+        "color": "#7a88ff"
+      },
+      {
+        "name": "Local Tours",
+        "count": 2829,
+        "color": "#dce2ef"
+      }
+    ],
+    "weekly": [
+      {
+        "name": "Hotels & Stays",
+        "count": 1376,
+        "color": "#27409b"
+      },
+      {
+        "name": "Flight Bundles",
+        "count": 1088,
+        "color": "#7a88ff"
+      },
+      {
+        "name": "Local Tours",
+        "count": 736,
+        "color": "#dce2ef"
+      }
+    ]
+  },
+  "bookingByRange": {
+    "monthly": [
+      {
+        "name": "Hotels & Stays",
+        "value": 45,
+        "color": "#27409b"
+      },
+      {
+        "name": "Flight Bundles",
+        "value": 32,
+        "color": "#7a88ff"
+      },
+      {
+        "name": "Local Tours",
+        "value": 23,
+        "color": "#dce2ef"
+      }
+    ],
+    "weekly": [
+      {
+        "name": "Hotels & Stays",
+        "value": 43,
+        "color": "#27409b"
+      },
+      {
+        "name": "Flight Bundles",
+        "value": 34,
+        "color": "#7a88ff"
+      },
+      {
+        "name": "Local Tours",
+        "value": 23,
+        "color": "#dce2ef"
+      }
+    ]
+  },
+  "vendors": [
+    {
+      "code": "AL",
+      "name": "Azure Luxury Resorts",
+      "category": "Hospitality",
+      "rating": "4.9",
+      "revenue": "$1,240,500",
+      "status": "TOP PERFORMER"
+    },
+    {
+      "code": "SA",
+      "name": "SkyHigh Airways",
+      "category": "Aviation",
+      "rating": "4.7",
+      "revenue": "$890,200",
+      "status": "STEADY"
+    },
+    {
+      "code": "GT",
+      "name": "Global Travels Co.",
+      "category": "Tours",
+      "rating": "4.2",
+      "revenue": "$450,100",
+      "status": "AT RISK"
+    },
+    {
+      "code": "UV",
+      "name": "Urban Velocity",
+      "category": "Car Rentals",
+      "rating": "4.5",
+      "revenue": "$312,000",
+      "status": "STEADY"
+    },
+    {
+      "code": "RH",
+      "name": "Rapid Hospitality",
+      "category": "Tours",
+      "rating": "3.8",
+      "revenue": "$810,203",
+      "status": "STEADY"
+    },
+    {
+      "code": "SH",
+      "name": "Silver Horizons",
+      "category": "Dining",
+      "rating": "4.8",
+      "revenue": "$936,118",
+      "status": "AT RISK"
+    },
+    {
+      "code": "BT",
+      "name": "Blue Tours",
+      "category": "Car Rentals",
+      "rating": "4.8",
+      "revenue": "$420,096",
+      "status": "TOP PERFORMER"
+    },
+    {
+      "code": "RH",
+      "name": "Rapid Hospitality",
+      "category": "Aviation",
+      "rating": "4.6",
+      "revenue": "$771,051",
+      "status": "STEADY"
+    },
+    {
+      "code": "PR",
+      "name": "Prime Rentals",
+      "category": "Aviation",
+      "rating": "4.6",
+      "revenue": "$777,937",
+      "status": "AT RISK"
+    },
+    {
+      "code": "BH",
+      "name": "Blue Hospitality",
+      "category": "Car Rentals",
+      "rating": "3.8",
+      "revenue": "$502,584",
+      "status": "AT RISK"
+    },
+    {
+      "code": "EH",
+      "name": "Emerald Horizons",
+      "category": "Tours",
+      "rating": "4.2",
+      "revenue": "$555,686",
+      "status": "TOP PERFORMER"
+    },
+    {
+      "code": "ET",
+      "name": "Emerald Trails",
+      "category": "Dining",
+      "rating": "4.9",
+      "revenue": "$503,629",
+      "status": "AT RISK"
+    },
+    {
+      "code": "RH",
+      "name": "Rapid Hospitality",
+      "category": "Aviation",
+      "rating": "4.1",
+      "revenue": "$625,254",
+      "status": "STEADY"
+    },
+    {
+      "code": "PH",
+      "name": "Prime Hospitality",
+      "category": "Hospitality",
+      "rating": "4.4",
+      "revenue": "$198,957",
+      "status": "TOP PERFORMER"
+    },
+    {
+      "code": "ER",
+      "name": "Emerald Rentals",
+      "category": "Car Rentals",
+      "rating": "5.0",
+      "revenue": "$963,671",
+      "status": "AT RISK"
+    },
+    {
+      "code": "SH",
+      "name": "Silver Horizons",
+      "category": "Car Rentals",
+      "rating": "3.8",
+      "revenue": "$682,636",
+      "status": "TOP PERFORMER"
+    },
+    {
+      "code": "GH",
+      "name": "Golden Hospitality",
+      "category": "Tours",
+      "rating": "4.5",
+      "revenue": "$789,567",
+      "status": "STEADY"
+    },
+    {
+      "code": "BR",
+      "name": "Blue Rentals",
+      "category": "Aviation",
+      "rating": "4.4",
+      "revenue": "$769,641",
+      "status": "AT RISK"
+    },
+    {
+      "code": "ST",
+      "name": "Silver Tours",
+      "category": "Aviation",
+      "rating": "4.6",
+      "revenue": "$786,269",
+      "status": "STEADY"
+    },
+    {
+      "code": "PH",
+      "name": "Prime Hospitality",
+      "category": "Car Rentals",
+      "rating": "3.9",
+      "revenue": "$167,549",
+      "status": "TOP PERFORMER"
+    },
+    {
+      "code": "SA",
+      "name": "Silver Aviation",
+      "category": "Hospitality",
+      "rating": "3.9",
+      "revenue": "$683,658",
+      "status": "TOP PERFORMER"
+    },
+    {
+      "code": "GA",
+      "name": "Golden Aviation",
+      "category": "Tours",
+      "rating": "4.6",
+      "revenue": "$899,238",
+      "status": "AT RISK"
+    },
+    {
+      "code": "RA",
+      "name": "Rapid Aviation",
+      "category": "Dining",
+      "rating": "4.7",
+      "revenue": "$282,029",
+      "status": "STEADY"
+    },
+    {
+      "code": "PH",
+      "name": "Prime Horizons",
+      "category": "Car Rentals",
+      "rating": "4.5",
+      "revenue": "$413,328",
+      "status": "TOP PERFORMER"
+    }
+  ]
+}

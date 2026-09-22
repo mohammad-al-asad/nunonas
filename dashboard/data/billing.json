@@ -1,0 +1,1176 @@
+{
+  "summaryCards": [
+    {
+      "label": "Total Revenue",
+      "value": "$1,248,600.00",
+      "note": "+12.5%",
+      "tone": "text-[#16a34a]"
+    },
+    {
+      "label": "Platform Commission",
+      "value": "$187,290.00",
+      "note": "+8.2%",
+      "tone": "text-[#16a34a]"
+    },
+    {
+      "label": "Pending Payouts",
+      "value": "$45,820.50",
+      "note": "Action Needed",
+      "tone": "text-[#f59e0b]"
+    },
+    {
+      "label": "Active Subscriptions",
+      "value": "1,240",
+      "note": "optional",
+      "tone": "text-[#8b96ad]"
+    }
+  ],
+  "recentPayments": [
+    {
+      "vendorCode": "SM",
+      "vendorName": "Skyline Media",
+      "totalEarnings": "$4,250.00",
+      "commission": "-$637.50",
+      "netPayout": "$3,612.50",
+      "status": "PAID",
+      "details": {
+        "profile": {
+          "vendorTitle": "Skyline Media",
+          "location": "Main Branch | Florida",
+          "category": "Hotel & Resort",
+          "joinedDate": "Jan 10, 2026",
+          "lastBillingDate": "Feb 01, 2026",
+          "image": "/images/billing/vendor-1.jpg"
+        },
+        "netPayable": {
+          "amount": "$3,612.50",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PAID"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$4,250.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$637.50",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-5014-PD",
+            "date": "Mar 01, 2026",
+            "amount": "$3,612.50",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-2874-PD",
+            "date": "Mar 01, 2026",
+            "amount": "$3,612.50",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-9000-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$3,612.50",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8800-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$3,612.50",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7700-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$3,612.50",
+            "status": "PAID"
+          }
+        ],
+        "reminderSentAt": "2026-02-28T23:26:21.704Z"
+      }
+    },
+    {
+      "vendorCode": "AV",
+      "vendorName": "Alpha Ventures",
+      "totalEarnings": "$12,800.00",
+      "commission": "-$1,920.00",
+      "netPayout": "$10,880.00",
+      "status": "PENDING",
+      "details": {
+        "profile": {
+          "vendorTitle": "Alpha Ventures",
+          "location": "Main Branch | Austin",
+          "category": "Technology",
+          "joinedDate": "Jan 11, 2026",
+          "lastBillingDate": "Feb 02, 2026",
+          "image": "/images/billing/vendor-2.jpg"
+        },
+        "netPayable": {
+          "amount": "$10,880.00",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PENDING"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$12,800.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$1,920.00",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-9001-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$10,880.00",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8801-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$10,880.00",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7701-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$10,880.00",
+            "status": "PENDING"
+          }
+        ]
+      }
+    },
+    {
+      "vendorCode": "UP",
+      "vendorName": "Urban Peak Co.",
+      "totalEarnings": "$8,100.00",
+      "commission": "-$1,215.00",
+      "netPayout": "$6,885.00",
+      "status": "PAID",
+      "details": {
+        "profile": {
+          "vendorTitle": "Urban Peak Co.",
+          "location": "Main Branch | Seattle",
+          "category": "Media",
+          "joinedDate": "Jan 12, 2026",
+          "lastBillingDate": "Feb 03, 2026",
+          "image": "/images/billing/vendor-3.jpg"
+        },
+        "netPayable": {
+          "amount": "$6,885.00",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PAID"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$8,100.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$1,215.00",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-7963-PD",
+            "date": "Mar 01, 2026",
+            "amount": "$6,885.00",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-9002-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$6,885.00",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8802-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$6,885.00",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7702-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$6,885.00",
+            "status": "PAID"
+          }
+        ]
+      }
+    },
+    {
+      "vendorCode": "PG",
+      "vendorName": "Pioneer Group",
+      "totalEarnings": "$8,726.00",
+      "commission": "-$1,308.90",
+      "netPayout": "$7,417.10",
+      "status": "PENDING",
+      "details": {
+        "profile": {
+          "vendorTitle": "Pioneer Group",
+          "location": "Main Branch | Denver",
+          "category": "Finance",
+          "joinedDate": "Jan 13, 2026",
+          "lastBillingDate": "Feb 04, 2026",
+          "image": "/images/billing/vendor-4.jpg"
+        },
+        "netPayable": {
+          "amount": "$7,417.10",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PENDING"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$8,726.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$1,308.90",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-9003-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$7,417.10",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8803-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$7,417.10",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7703-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$7,417.10",
+            "status": "PENDING"
+          }
+        ]
+      }
+    },
+    {
+      "vendorCode": "SH",
+      "vendorName": "Summit Hospitality",
+      "totalEarnings": "$16,793.00",
+      "commission": "-$2,518.95",
+      "netPayout": "$14,274.05",
+      "status": "PAID",
+      "details": {
+        "profile": {
+          "vendorTitle": "Summit Hospitality",
+          "location": "Main Branch | Boston",
+          "category": "Retail",
+          "joinedDate": "Jan 14, 2026",
+          "lastBillingDate": "Feb 05, 2026",
+          "image": "/images/billing/vendor-5.jpg"
+        },
+        "netPayable": {
+          "amount": "$14,274.05",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PAID"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$16,793.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$2,518.95",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-9004-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$14,274.05",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8804-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$14,274.05",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7704-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$14,274.05",
+            "status": "PAID"
+          }
+        ]
+      }
+    },
+    {
+      "vendorCode": "NH",
+      "vendorName": "Nova Holdings",
+      "totalEarnings": "$6,346.00",
+      "commission": "-$951.90",
+      "netPayout": "$5,394.10",
+      "status": "PENDING",
+      "details": {
+        "profile": {
+          "vendorTitle": "Nova Holdings",
+          "location": "Main Branch | Phoenix",
+          "category": "Logistics",
+          "joinedDate": "Jan 15, 2026",
+          "lastBillingDate": "Feb 06, 2026",
+          "image": "/images/billing/vendor-6.jpg"
+        },
+        "netPayable": {
+          "amount": "$5,394.10",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PENDING"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$6,346.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$951.90",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-9005-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$5,394.10",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8805-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$5,394.10",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7705-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$5,394.10",
+            "status": "PENDING"
+          }
+        ]
+      }
+    },
+    {
+      "vendorCode": "AH",
+      "vendorName": "Atlas Holdings",
+      "totalEarnings": "$9,610.00",
+      "commission": "-$1,441.50",
+      "netPayout": "$8,168.50",
+      "status": "PAID",
+      "details": {
+        "profile": {
+          "vendorTitle": "Atlas Holdings",
+          "location": "Main Branch | Chicago",
+          "category": "Hotel & Resort",
+          "joinedDate": "Jan 16, 2026",
+          "lastBillingDate": "Feb 07, 2026",
+          "image": "/images/billing/vendor-1.jpg"
+        },
+        "netPayable": {
+          "amount": "$8,168.50",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PAID"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$9,610.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$1,441.50",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-9006-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$8,168.50",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8806-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$8,168.50",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7706-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$8,168.50",
+            "status": "PAID"
+          }
+        ]
+      }
+    },
+    {
+      "vendorCode": "SH",
+      "vendorName": "Summit Holdings",
+      "totalEarnings": "$9,769.00",
+      "commission": "-$1,465.35",
+      "netPayout": "$8,303.65",
+      "status": "PAID",
+      "details": {
+        "profile": {
+          "vendorTitle": "Summit Holdings",
+          "location": "Main Branch | Miami",
+          "category": "Technology",
+          "joinedDate": "Jan 17, 2026",
+          "lastBillingDate": "Feb 08, 2026",
+          "image": "/images/billing/vendor-2.jpg"
+        },
+        "netPayable": {
+          "amount": "$8,303.65",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PAID"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$9,769.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$1,465.35",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-9007-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$8,303.65",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8807-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$8,303.65",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7707-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$8,303.65",
+            "status": "PAID"
+          }
+        ]
+      }
+    },
+    {
+      "vendorCode": "SL",
+      "vendorName": "Summit Labs",
+      "totalEarnings": "$17,301.00",
+      "commission": "-$2,595.15",
+      "netPayout": "$14,705.85",
+      "status": "PAID",
+      "details": {
+        "profile": {
+          "vendorTitle": "Summit Labs",
+          "location": "Main Branch | Florida",
+          "category": "Media",
+          "joinedDate": "Jan 18, 2026",
+          "lastBillingDate": "Feb 09, 2026",
+          "image": "/images/billing/vendor-3.jpg"
+        },
+        "netPayable": {
+          "amount": "$14,705.85",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PAID"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$17,301.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$2,595.15",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-9008-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$14,705.85",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8808-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$14,705.85",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7708-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$14,705.85",
+            "status": "PAID"
+          }
+        ]
+      }
+    },
+    {
+      "vendorCode": "NL",
+      "vendorName": "Nimbus Labs",
+      "totalEarnings": "$15,544.00",
+      "commission": "-$2,331.60",
+      "netPayout": "$13,212.40",
+      "status": "PAID",
+      "details": {
+        "profile": {
+          "vendorTitle": "Nimbus Labs",
+          "location": "Main Branch | Austin",
+          "category": "Finance",
+          "joinedDate": "Jan 19, 2026",
+          "lastBillingDate": "Feb 10, 2026",
+          "image": "/images/billing/vendor-4.jpg"
+        },
+        "netPayable": {
+          "amount": "$13,212.40",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PAID"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$15,544.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$2,331.60",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-9009-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$13,212.40",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8809-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$13,212.40",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7709-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$13,212.40",
+            "status": "PAID"
+          }
+        ]
+      }
+    },
+    {
+      "vendorCode": "PL",
+      "vendorName": "Pioneer Labs",
+      "totalEarnings": "$8,641.00",
+      "commission": "-$1,296.15",
+      "netPayout": "$7,344.85",
+      "status": "PENDING",
+      "details": {
+        "profile": {
+          "vendorTitle": "Pioneer Labs",
+          "location": "Main Branch | Seattle",
+          "category": "Retail",
+          "joinedDate": "Jan 20, 2026",
+          "lastBillingDate": "Feb 11, 2026",
+          "image": "/images/billing/vendor-5.jpg"
+        },
+        "netPayable": {
+          "amount": "$7,344.85",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PENDING"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$8,641.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$1,296.15",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-9010-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$7,344.85",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8810-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$7,344.85",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7710-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$7,344.85",
+            "status": "PENDING"
+          }
+        ]
+      }
+    },
+    {
+      "vendorCode": "AS",
+      "vendorName": "Atlas Studios",
+      "totalEarnings": "$11,202.00",
+      "commission": "-$1,680.30",
+      "netPayout": "$9,521.70",
+      "status": "PENDING",
+      "details": {
+        "profile": {
+          "vendorTitle": "Atlas Studios",
+          "location": "Main Branch | Denver",
+          "category": "Logistics",
+          "joinedDate": "Jan 21, 2026",
+          "lastBillingDate": "Feb 12, 2026",
+          "image": "/images/billing/vendor-6.jpg"
+        },
+        "netPayable": {
+          "amount": "$9,521.70",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PENDING"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$11,202.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$1,680.30",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-9011-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$9,521.70",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8811-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$9,521.70",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7711-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$9,521.70",
+            "status": "PENDING"
+          }
+        ]
+      }
+    },
+    {
+      "vendorCode": "NS",
+      "vendorName": "Nova Studios",
+      "totalEarnings": "$5,285.00",
+      "commission": "-$792.75",
+      "netPayout": "$4,492.25",
+      "status": "PAID",
+      "details": {
+        "profile": {
+          "vendorTitle": "Nova Studios",
+          "location": "Main Branch | Boston",
+          "category": "Hotel & Resort",
+          "joinedDate": "Jan 22, 2026",
+          "lastBillingDate": "Feb 13, 2026",
+          "image": "/images/billing/vendor-1.jpg"
+        },
+        "netPayable": {
+          "amount": "$4,492.25",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PAID"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$5,285.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$792.75",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-9012-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$4,492.25",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8812-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$4,492.25",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7712-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$4,492.25",
+            "status": "PAID"
+          }
+        ]
+      }
+    },
+    {
+      "vendorCode": "NG",
+      "vendorName": "Nimbus Group",
+      "totalEarnings": "$16,767.00",
+      "commission": "-$2,515.05",
+      "netPayout": "$14,251.95",
+      "status": "PENDING",
+      "details": {
+        "profile": {
+          "vendorTitle": "Nimbus Group",
+          "location": "Main Branch | Phoenix",
+          "category": "Technology",
+          "joinedDate": "Jan 23, 2026",
+          "lastBillingDate": "Feb 14, 2026",
+          "image": "/images/billing/vendor-2.jpg"
+        },
+        "netPayable": {
+          "amount": "$14,251.95",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PENDING"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$16,767.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$2,515.05",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-9013-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$14,251.95",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8813-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$14,251.95",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7713-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$14,251.95",
+            "status": "PENDING"
+          }
+        ]
+      }
+    },
+    {
+      "vendorCode": "NS",
+      "vendorName": "Nova Studios",
+      "totalEarnings": "$10,653.00",
+      "commission": "-$1,597.95",
+      "netPayout": "$9,055.05",
+      "status": "PAID",
+      "details": {
+        "profile": {
+          "vendorTitle": "Nova Studios",
+          "location": "Main Branch | Chicago",
+          "category": "Media",
+          "joinedDate": "Jan 24, 2026",
+          "lastBillingDate": "Feb 15, 2026",
+          "image": "/images/billing/vendor-3.jpg"
+        },
+        "netPayable": {
+          "amount": "$9,055.05",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PAID"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$10,653.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$1,597.95",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-9014-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$9,055.05",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8814-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$9,055.05",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7714-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$9,055.05",
+            "status": "PAID"
+          }
+        ]
+      }
+    },
+    {
+      "vendorCode": "AH",
+      "vendorName": "Atlas Hospitality",
+      "totalEarnings": "$12,951.00",
+      "commission": "-$1,942.65",
+      "netPayout": "$11,008.35",
+      "status": "PENDING",
+      "details": {
+        "profile": {
+          "vendorTitle": "Atlas Hospitality",
+          "location": "Main Branch | Miami",
+          "category": "Finance",
+          "joinedDate": "Jan 25, 2026",
+          "lastBillingDate": "Feb 16, 2026",
+          "image": "/images/billing/vendor-4.jpg"
+        },
+        "netPayable": {
+          "amount": "$11,008.35",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PENDING"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$12,951.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$1,942.65",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-9015-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$11,008.35",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8815-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$11,008.35",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7715-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$11,008.35",
+            "status": "PENDING"
+          }
+        ]
+      }
+    },
+    {
+      "vendorCode": "BL",
+      "vendorName": "Beacon Labs",
+      "totalEarnings": "$13,425.00",
+      "commission": "-$2,013.75",
+      "netPayout": "$11,411.25",
+      "status": "PAID",
+      "details": {
+        "profile": {
+          "vendorTitle": "Beacon Labs",
+          "location": "Main Branch | Florida",
+          "category": "Retail",
+          "joinedDate": "Jan 26, 2026",
+          "lastBillingDate": "Feb 17, 2026",
+          "image": "/images/billing/vendor-5.jpg"
+        },
+        "netPayable": {
+          "amount": "$11,411.25",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PAID"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$13,425.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$2,013.75",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-9016-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$11,411.25",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8816-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$11,411.25",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7716-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$11,411.25",
+            "status": "PAID"
+          }
+        ]
+      }
+    },
+    {
+      "vendorCode": "BL",
+      "vendorName": "Beacon Labs",
+      "totalEarnings": "$13,601.00",
+      "commission": "-$2,040.15",
+      "netPayout": "$11,560.85",
+      "status": "PAID",
+      "details": {
+        "profile": {
+          "vendorTitle": "Beacon Labs",
+          "location": "Main Branch | Austin",
+          "category": "Logistics",
+          "joinedDate": "Jan 27, 2026",
+          "lastBillingDate": "Feb 18, 2026",
+          "image": "/images/billing/vendor-6.jpg"
+        },
+        "netPayable": {
+          "amount": "$11,560.85",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PAID"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$13,601.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$2,040.15",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-9017-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$11,560.85",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8817-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$11,560.85",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7717-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$11,560.85",
+            "status": "PAID"
+          }
+        ]
+      }
+    },
+    {
+      "vendorCode": "NH",
+      "vendorName": "Nimbus Hospitality",
+      "totalEarnings": "$17,986.00",
+      "commission": "-$2,697.90",
+      "netPayout": "$15,288.10",
+      "status": "PENDING",
+      "details": {
+        "profile": {
+          "vendorTitle": "Nimbus Hospitality",
+          "location": "Main Branch | Seattle",
+          "category": "Hotel & Resort",
+          "joinedDate": "Jan 10, 2026",
+          "lastBillingDate": "Feb 01, 2026",
+          "image": "/images/billing/vendor-1.jpg"
+        },
+        "netPayable": {
+          "amount": "$15,288.10",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PENDING"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$17,986.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$2,697.90",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-9018-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$15,288.10",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8818-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$15,288.10",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7718-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$15,288.10",
+            "status": "PENDING"
+          }
+        ]
+      }
+    },
+    {
+      "vendorCode": "NL",
+      "vendorName": "Nova Labs",
+      "totalEarnings": "$12,968.00",
+      "commission": "-$1,945.20",
+      "netPayout": "$11,022.80",
+      "status": "PENDING",
+      "details": {
+        "profile": {
+          "vendorTitle": "Nova Labs",
+          "location": "Main Branch | Denver",
+          "category": "Technology",
+          "joinedDate": "Jan 11, 2026",
+          "lastBillingDate": "Feb 02, 2026",
+          "image": "/images/billing/vendor-2.jpg"
+        },
+        "netPayable": {
+          "amount": "$11,022.80",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PENDING"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$12,968.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$1,945.20",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-9019-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$11,022.80",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8819-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$11,022.80",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7719-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$11,022.80",
+            "status": "PENDING"
+          }
+        ]
+      }
+    },
+    {
+      "vendorCode": "SL",
+      "vendorName": "Summit Labs",
+      "totalEarnings": "$9,984.00",
+      "commission": "-$1,497.60",
+      "netPayout": "$8,486.40",
+      "status": "PENDING",
+      "details": {
+        "profile": {
+          "vendorTitle": "Summit Labs",
+          "location": "Main Branch | Boston",
+          "category": "Media",
+          "joinedDate": "Jan 12, 2026",
+          "lastBillingDate": "Feb 03, 2026",
+          "image": "/images/billing/vendor-3.jpg"
+        },
+        "netPayable": {
+          "amount": "$8,486.40",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PENDING"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$9,984.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$1,497.60",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-9020-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$8,486.40",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8820-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$8,486.40",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7720-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$8,486.40",
+            "status": "PENDING"
+          }
+        ]
+      }
+    },
+    {
+      "vendorCode": "AH",
+      "vendorName": "Atlas Hospitality",
+      "totalEarnings": "$16,481.00",
+      "commission": "-$2,472.15",
+      "netPayout": "$14,008.85",
+      "status": "PENDING",
+      "details": {
+        "profile": {
+          "vendorTitle": "Atlas Hospitality",
+          "location": "Main Branch | Phoenix",
+          "category": "Finance",
+          "joinedDate": "Jan 13, 2026",
+          "lastBillingDate": "Feb 04, 2026",
+          "image": "/images/billing/vendor-4.jpg"
+        },
+        "netPayable": {
+          "amount": "$14,008.85",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PENDING"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$16,481.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$2,472.15",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-9021-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$14,008.85",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8821-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$14,008.85",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7721-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$14,008.85",
+            "status": "PENDING"
+          }
+        ]
+      }
+    },
+    {
+      "vendorCode": "NS",
+      "vendorName": "Nimbus Studios",
+      "totalEarnings": "$8,748.00",
+      "commission": "-$1,312.20",
+      "netPayout": "$7,435.80",
+      "status": "PENDING",
+      "details": {
+        "profile": {
+          "vendorTitle": "Nimbus Studios",
+          "location": "Main Branch | Chicago",
+          "category": "Retail",
+          "joinedDate": "Jan 14, 2026",
+          "lastBillingDate": "Feb 05, 2026",
+          "image": "/images/billing/vendor-5.jpg"
+        },
+        "netPayable": {
+          "amount": "$7,435.80",
+          "dueDate": "Jun 15, 2026",
+          "invoiceStatus": "PENDING"
+        },
+        "financialBreakdown": {
+          "totalRevenue": "$8,748.00",
+          "commissionRate": "10.0%",
+          "commissionAmount": "-$1,312.20",
+          "cycle": "Oct 01 - Oct 31, 2025"
+        },
+        "history": [
+          {
+            "id": "TXN-9022-X9",
+            "date": "Sep 01, 2026",
+            "amount": "$7,435.80",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-8822-M2",
+            "date": "Aug 01, 2026",
+            "amount": "$7,435.80",
+            "status": "PAID"
+          },
+          {
+            "id": "TXN-7722-L1",
+            "date": "Jul 01, 2026",
+            "amount": "$7,435.80",
+            "status": "PENDING"
+          }
+        ]
+      }
+    }
+  ]
+}
