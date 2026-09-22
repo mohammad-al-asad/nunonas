@@ -1,0 +1,5 @@
+"use client";
+
+export function LoadingSkeleton({ className = "h-40" }: { className?: string }) { return <div aria-label="Loading" className={`animate-pulse rounded-2xl bg-slate-100 ${className}`} />; }
+export function ErrorState({ message = "Something went wrong.", onRetry }: { message?: string; onRetry?: () => void }) { return <div role="alert" className="rounded-2xl border border-red-100 bg-red-50 p-8 text-center text-sm text-red-700"><p>{message}</p>{onRetry ? <button type="button" onClick={onRetry} className="mt-4 rounded-xl bg-white px-4 py-2 font-bold text-red-700 shadow-sm">Try again</button> : null}</div>; }
+export function EmptyState({ title, description, action }: { title: string; description?: string; action?: React.ReactNode }) { return <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center"><p className="font-bold text-slate-600">{title}</p>{description ? <p className="mt-2 text-sm text-slate-400">{description}</p> : null}{action ? <div className="mt-4">{action}</div> : null}</div>; }
