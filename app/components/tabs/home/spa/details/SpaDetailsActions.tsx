@@ -1,0 +1,124 @@
+// @ts-nocheck
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Text,
+  Linking,
+  Alert,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import theme from "../../../../../constants/theme";
+import Button from "../../../../ui/Button";
+
+import { openUberRide } from "../../../../../lib/uber";
+
+const SpaDetailsActions = ({
+  spaId,
+  phone,
+  latitude,
+  longitude,
+  title,
+  address,
+}) => {
+  const router = useRouter();
+
+  const handleCall = () => {
+    const rawPhone = (phone || "").trim();
+    if (!rawPhone) {
+      Alert.alert("Contact Unavailable", "This spa does not have a contact phone number listed.");
+      return;
+    }
+
+    const cleanNumber = rawPhone.replace(/[^\d+]/g, "");
+    const telUrl = `tel:${cleanNumber || rawPhone}`;
+
+    Linking.openURL(telUrl).catch(() => {
+      Alert.alert("Call Failed", `Unable to place a call to ${rawPhone}.`);
+    });
+  };
+
+  const handleUber = () => {
+    openUberRide({
+      latitude,
+      longitude,
+      title,
+      address,
+    });
+  };
+
+  return (
+    <View style={styles.container}>
+      <Button
+        title="Book Now"
+        onPress={() => router.push("/home/spa/booking")}
+        style={styles.bookBtn}
+        textStyle={styles.bookBtnText}
+      />
+
+      <TouchableOpacity
+        style={styles.callBtn}
+        onPress={handleCall}
+        activeOpacity={0.7}
+        accessibilityLabel="Call Spa"
+      >
+        <Ionicons name="call" size={20} color={theme.COLORS.primary} />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.uberBtn}
+        onPress={handleUber}
+        activeOpacity={0.8}
+        accessibilityLabel="Book Uber Ride"
+      >
+        <Text style={styles.uberText}>Uber</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    gap: 12,
+    marginBottom: 25,
+  },
+  bookBtn: {
+    flex: 2,
+    height: 52,
+    borderRadius: 16,
+    ...theme.SHADOWS.primary,
+  },
+  bookBtnText: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  callBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.COLORS.border,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  uberBtn: {
+    flex: 1,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: theme.COLORS.black,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  uberText: {
+    color: theme.COLORS.white,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+});
+
+export default SpaDetailsActions;
+
+

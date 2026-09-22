@@ -1,0 +1,26 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "allowJs": false,
+    "checkJs": false,
+    "jsx": "react-jsx",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "types": ["react", "react-native", "expo-router"]
+  },
+  "include": [
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "components/**/*.ts",
+    "components/**/*.tsx",
+    "constants/**/*.ts",
+    "constants/**/*.tsx",
+    "lib/**/*.ts",
+    "lib/**/*.tsx",
+    "shims/**/*.ts",
+    "shims/**/*.tsx",
+    "declarations.d.ts"
+  ]
+}
