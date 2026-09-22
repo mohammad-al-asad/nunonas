@@ -27,7 +27,7 @@ function primaryVendorAction(status: VendorStatus): "approve" | "unblock" {
 }
 
 function primaryVendorActionLabel(status: VendorStatus) {
-  return status === "BLOCKED" ? "Unblock Vendor" : "Approve Vendor";
+  return status === "BLOCKED" ? "Unblock Service Provider" : "Approve Service Provider";
 }
 
 function primaryVendorActionAriaLabel(vendorName: string, status: VendorStatus) {
@@ -41,9 +41,12 @@ function vendorStatusClass(status: VendorStatus) {
 }
 
 const summaryIconByLabel: Record<string, { Icon: typeof FaUsers; tone: string }> = {
+  "Total Service Providers": { Icon: FaUsers, tone: "bg-[#edf2fb] text-[#1f3d8f]" },
   "Total Vendors": { Icon: FaUsers, tone: "bg-[#edf2fb] text-[#1f3d8f]" },
   "Pending Approval": { Icon: IoTimeOutline, tone: "bg-[#fff7e5] text-[#f59e0b]" },
+  "Approved Service Providers": { Icon: IoShieldCheckmark, tone: "bg-[#e8f8ef] text-[#2da772]" },
   "Approved Vendors": { Icon: IoShieldCheckmark, tone: "bg-[#e8f8ef] text-[#2da772]" },
+  "Blocked Service Providers": { Icon: IoAlertCircle, tone: "bg-[#feeeee] text-[#ef4444]" },
   "Blocked Vendors": { Icon: IoAlertCircle, tone: "bg-[#feeeee] text-[#ef4444]" },
 };
 
@@ -160,10 +163,10 @@ function syncSummaryCards(baseCards: VendorSummaryCard[], vendors: DashboardVend
   const blocked = vendors.filter((vendor) => vendor.status === "BLOCKED").length;
 
   return baseCards.map((card) => {
-    if (card.label === "Total Vendors") return { ...card, value: total.toLocaleString() };
+    if (card.label === "Total Service Providers" || card.label === "Total Vendors") return { ...card, label: "Total Service Providers", value: total.toLocaleString() };
     if (card.label === "Pending Approval") return { ...card, value: pending.toLocaleString() };
-    if (card.label === "Approved Vendors") return { ...card, value: approved.toLocaleString() };
-    if (card.label === "Blocked Vendors") return { ...card, value: blocked.toLocaleString() };
+    if (card.label === "Approved Service Providers" || card.label === "Approved Vendors") return { ...card, label: "Approved Service Providers", value: approved.toLocaleString() };
+    if (card.label === "Blocked Service Providers" || card.label === "Blocked Vendors") return { ...card, label: "Blocked Service Providers", value: blocked.toLocaleString() };
     return card;
   });
 }
@@ -611,7 +614,7 @@ export function VendorsManagementView({
 
         <section className="overflow-hidden rounded-xl border border-[#e6ecf7] bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-[#eef2f7] px-5 py-4">
-            <h3 className="m-0 text-[15px] font-semibold text-[#1d2a43]">Vendor Directory</h3>
+            <h3 className="m-0 text-[15px] font-semibold text-[#1d2a43]">Service Provider Directory</h3>
             <div className="relative flex items-center gap-2">
               <button
                 type="button"
@@ -638,7 +641,7 @@ export function VendorsManagementView({
                         statusFilter === status ? "bg-[#f3f6fd] font-semibold text-[#1f3d8f]" : ""
                       }`}
                     >
-                      {status === "ALL" ? "All vendors" : status}
+                      {status === "ALL" ? "All service providers" : status}
                     </button>
                   ))}
                 </div>
@@ -651,7 +654,7 @@ export function VendorsManagementView({
               <thead>
                 <tr>
                   {[
-                    "VENDOR ID",
+                    "SERVICE PROVIDER ID",
                     "BUSINESS NAME",
                     "OWNER",
                     "CATEGORY",
@@ -707,17 +710,16 @@ export function VendorsManagementView({
                     </td>
                     <td className="border-b border-[#edf1fa] px-4 py-4">
                       <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedVendorId(vendor.id)}
-                          className="grid h-6 w-6 place-items-center rounded-full border border-[#e6ecf7] text-[#64748b]"
+                        <Link
+                          href={`/vendors/${vendor.id}`}
+                          className="grid h-6 w-6 place-items-center rounded-full border border-[#e6ecf7] text-[#64748b] transition-colors hover:border-[#1f3d8f] hover:bg-[#eef2ff] hover:text-[#1f3d8f]"
                           aria-label={`Open ${vendor.businessName} details`}
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                             <path d="M1.5 12s3.7-6.5 10.5-6.5S22.5 12 22.5 12s-3.7 6.5-10.5 6.5S1.5 12 1.5 12Z" stroke="currentColor" strokeWidth="1.8" />
                             <circle cx="12" cy="12" r="3.5" stroke="currentColor" strokeWidth="1.8" />
                           </svg>
-                        </button>
+                        </Link>
                         <button
                           type="button"
                           onClick={() => requestVendorAction(vendor, primaryVendorAction(vendor.status))}
@@ -753,7 +755,7 @@ export function VendorsManagementView({
           <footer className="flex items-center justify-between px-5 py-4 text-[11px] text-[#8b96ad]">
             <span>
               Showing {filteredVendors.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} to{" "}
-              {Math.min(currentPage * pageSize, filteredVendors.length)} of {filteredVendors.length} vendors
+              {Math.min(currentPage * pageSize, filteredVendors.length)} of {filteredVendors.length} service providers
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -821,7 +823,7 @@ export function VendorsManagementView({
       >
         <button
           type="button"
-          aria-label="Resize vendor details panel"
+          aria-label="Resize service provider details panel"
           onPointerDown={(event) => {
             event.preventDefault();
             setIsDraggingDrawer(true);
@@ -831,7 +833,7 @@ export function VendorsManagementView({
         <div className="flex h-full flex-col overflow-hidden">
           <header className="flex items-center justify-between bg-[#1f3d8f] px-5 py-4 text-white">
             <div>
-              <h4 className="m-0 text-[13px] font-semibold">Vendor Details</h4>
+              <h4 className="m-0 text-[13px] font-semibold">Service Provider Details</h4>
               <p className="m-0 mt-1 text-[11px] text-white/75">Live data from the backend</p>
             </div>
             <button type="button" onClick={() => setSelectedVendorId(null)} className="text-white">
@@ -841,7 +843,7 @@ export function VendorsManagementView({
 
           <div className="flex-1 overflow-y-auto px-6 py-6">
             {selectedVendorLoading && !selectedVendor ? (
-              <p className="text-[13px] text-[#60718f]">Loading vendor details...</p>
+              <p className="text-[13px] text-[#60718f]">Loading service provider details...</p>
             ) : selectedVendorError && !selectedVendor ? (
               <p className="text-[13px] text-[#dc2626]">{selectedVendorError}</p>
             ) : selectedVendor ? (
@@ -918,7 +920,7 @@ export function VendorsManagementView({
                         <p className="m-0 mt-1 text-[12px] text-[#1f2d46]">{selectedVendor.category}</p>
                       </div>
                       <div>
-                        <p className="m-0 text-[10px] uppercase tracking-[0.06em] text-[#94a3b8]">Vendor ID</p>
+                        <p className="m-0 text-[10px] uppercase tracking-[0.06em] text-[#94a3b8]">Service Provider ID</p>
                         <p className="m-0 mt-1 break-all text-[12px] text-[#1f2d46]">{selectedVendor.id}</p>
                       </div>
                       <div>
@@ -950,7 +952,7 @@ export function VendorsManagementView({
                 </section>
               </div>
             ) : (
-              <p className="text-[13px] text-[#60718f]">Select a vendor to load live details.</p>
+              <p className="text-[13px] text-[#60718f]">Select a service provider to load live details.</p>
             )}
           </div>
 
@@ -973,7 +975,7 @@ export function VendorsManagementView({
                   className="flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[#fee2e2] bg-[#fff5f5] text-[12px] font-semibold text-[#ef4444] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <IoAlertCircle size={16} />
-                  Block Vendor
+                  Block Service Provider
                 </button>
               </div>
             </div>
@@ -989,10 +991,10 @@ export function VendorsManagementView({
             </h3>
             <p className="m-0 mt-3 text-[13px] leading-6 text-[#60718f]">
               {pendingVendorAction.action === "approve"
-                ? `Approve ${pendingVendorAction.vendorName}? This vendor will be allowed to operate on the platform.`
+                ? `Approve ${pendingVendorAction.vendorName}? This service provider will be allowed to operate on the platform.`
                 : pendingVendorAction.action === "unblock"
-                  ? `Unblock ${pendingVendorAction.vendorName}? This vendor will regain access to operate on the platform.`
-                  : `Block ${pendingVendorAction.vendorName}? This vendor will lose access to operate on the platform.`}
+                  ? `Unblock ${pendingVendorAction.vendorName}? This service provider will regain access to operate on the platform.`
+                  : `Block ${pendingVendorAction.vendorName}? This service provider will lose access to operate on the platform.`}
             </p>
             <div className="mt-6 flex items-center justify-end gap-3">
               <button

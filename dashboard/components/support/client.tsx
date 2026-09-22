@@ -336,7 +336,7 @@ export function SupportDashboardView({
           <table className="w-full min-w-[980px] border-collapse text-[12px]">
             <thead>
               <tr>
-                {["TICKET ID", "USER / VENDOR", "TYPE", "SUBJECT", "STATUS", "ACTION"].map((head) => (
+                {["TICKET ID", "USER / SERVICE PROVIDER", "TYPE", "SUBJECT", "STATUS", "ACTION"].map((head) => (
                   <th key={head} className="border-b border-[#edf1fa] px-4 py-3 text-left text-[10px] tracking-[0.04em] text-[#7d8ba6]">
                     {head}
                   </th>

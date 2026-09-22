@@ -96,7 +96,7 @@ export function MainLayoutShell({
                 className="w-full text-left rounded-xl border border-[#e6ecf7] bg-[#f8fbff] p-3 transition hover:border-[#8ca0d8] hover:bg-[#f3f7ff] cursor-pointer"
               >
                 <p className="m-0 flex items-center gap-2 text-[12px] font-semibold text-[#1f3d8f]">
-                  <FiInfo size={14} /> New vendor signup pending review
+                  <FiInfo size={14} /> New service provider signup pending review
                 </p>
                 <p className="m-0 mt-1 text-[11px] text-[#6c7890]">2 minutes ago</p>
               </button>

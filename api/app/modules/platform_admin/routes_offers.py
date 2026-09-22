@@ -69,7 +69,7 @@ def _normalize_object_ids(values: list | None) -> list[ObjectId]:
 def _resolve_assignment_vendors(db: Database, applied_to: str, selected_vendor_ids: list[str]) -> list[dict]:
     normalized_scope = applied_to.strip().lower()
     vendors = db["vendors"]
-    if normalized_scope in {"all vendors", "platform wide"}:
+    if normalized_scope in {"all vendors", "all service providers", "platform wide"}:
         return list(vendors.find(_eligible_vendor_query()))
 
     selected_ids = _normalize_object_ids(selected_vendor_ids)
@@ -283,7 +283,7 @@ def _normalize_offer_payload(payload: dict, existing: dict | None = None) -> dic
         "starts_at": starts_at,
         "ends_at": ends_at,
         "applied_to": applied_to,
-        "selected_vendor_ids": selected_vendor_ids if applied_to.lower() == "selected vendors" else [],
+        "selected_vendor_ids": selected_vendor_ids if applied_to.lower() in {"selected vendors", "selected service providers"} else [],
         "is_active": is_active,
         "updated_at": datetime.now(UTC),
     }

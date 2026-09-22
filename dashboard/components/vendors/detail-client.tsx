@@ -281,7 +281,7 @@ async function fetchVendorDetail(id: string, signal?: AbortSignal) {
     return { vendor: null, notFound: true };
   }
   if (!response.ok) {
-    throw new Error("Failed to load vendor details");
+    throw new Error("Failed to load service provider details");
   }
   const payload = (await response.json()) as { vendor?: DashboardVendor };
   return { vendor: payload.vendor ?? null, notFound: false };
@@ -305,7 +305,7 @@ export function VendorDetailPageClient({ vendorId }: { vendorId: string }) {
       setNotFound(result.notFound);
     } catch (loadError) {
       if ((loadError as { name?: string }).name !== "AbortError") {
-        setError("Failed to load live vendor details.");
+        setError("Failed to load live service provider details.");
       }
     } finally {
       setLoading(false);
@@ -357,13 +357,13 @@ export function VendorDetailPageClient({ vendorId }: { vendorId: string }) {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to update vendor");
+        throw new Error("Failed to update service provider");
       }
 
       setPendingAction(null);
       await loadVendor();
     } catch {
-      setError("Failed to update vendor status.");
+      setError("Failed to update service provider status.");
     } finally {
       setActionBusy(false);
     }
@@ -403,7 +403,7 @@ export function VendorDetailPageClient({ vendorId }: { vendorId: string }) {
   if (notFound) {
     return (
       <div className="rounded-3xl border border-[#e6ecf7] bg-white p-6 text-[#60718f]">
-        Vendor not found.
+        Service provider not found.
       </div>
     );
   }
@@ -417,13 +417,13 @@ export function VendorDetailPageClient({ vendorId }: { vendorId: string }) {
       <div className="flex items-center justify-between">
         <div>
           <p className="m-0 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#8b96ad]">
-            Vendor management
+            Service provider management
           </p>
           <h1 className="m-0 mt-2 text-[30px] font-semibold tracking-[-0.03em] text-[#18233c]">
             {vendor.businessName}
           </h1>
           <p className="m-0 mt-2 text-[13px] text-[#60718f]">
-            Live vendor detail view with current profile, verification, and uploaded documents.
+            Live service provider detail view with current profile, verification, and uploaded documents.
           </p>
         </div>
         <Link
@@ -448,7 +448,7 @@ export function VendorDetailPageClient({ vendorId }: { vendorId: string }) {
                   {vendor.category}
                 </span>
                 <span className="rounded-full bg-[#f8fafc] px-3 py-1 text-[11px] font-semibold text-[#64748b]">
-                  Vendor ID: {vendor.id}
+                  Service Provider ID: {vendor.id}
                 </span>
                 <span
                   className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
@@ -500,8 +500,8 @@ export function VendorDetailPageClient({ vendorId }: { vendorId: string }) {
       <section className="rounded-[24px] border border-[#e6ecf7] bg-white p-5 shadow-[0_10px_32px_rgba(15,23,42,0.05)]">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="m-0 text-[18px] font-semibold text-[#1d2a43]">Vendor actions</h3>
-            <p className="m-0 mt-1 text-[12px] text-[#7b89a3]">Approve, block, or cancel directly from this vendor page.</p>
+            <h3 className="m-0 text-[18px] font-semibold text-[#1d2a43]">Service provider actions</h3>
+            <p className="m-0 mt-1 text-[12px] text-[#7b89a3]">Approve, block, or cancel directly from this service provider page.</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <button
@@ -575,7 +575,7 @@ export function VendorDetailPageClient({ vendorId }: { vendorId: string }) {
               <div>
                 <h3 className="m-0 text-[18px] font-semibold text-[#1d2a43]">Verification documents</h3>
                 <p className="m-0 mt-1 text-[13px] text-[#7b89a3]">
-                  Live previews from vendor verification records.
+                  Live previews from service provider verification records.
                 </p>
               </div>
             </div>
@@ -647,12 +647,12 @@ export function VendorDetailPageClient({ vendorId }: { vendorId: string }) {
             </h3>
             <p className="m-0 mt-3 text-[13px] leading-6 text-[#60718f]">
               {pendingAction === "approve"
-                ? `Approve ${vendor.businessName}? This vendor will be allowed to operate on the platform.`
+                ? `Approve ${vendor.businessName}? This service provider will be allowed to operate on the platform.`
                 : pendingAction === "unblock"
-                  ? `Unblock ${vendor.businessName}? This vendor will regain access to operate on the platform.`
+                  ? `Unblock ${vendor.businessName}? This service provider will regain access to operate on the platform.`
                   : pendingAction === "cancel"
-                    ? `Cancel the current review for ${vendor.businessName}? This will move the vendor back to pending review.`
-                    : `Block ${vendor.businessName}? This vendor will lose access to operate on the platform.`}
+                    ? `Cancel the current review for ${vendor.businessName}? This will move the service provider back to pending review.`
+                    : `Block ${vendor.businessName}? This service provider will lose access to operate on the platform.`}
             </p>
             <div className="mt-6 flex items-center justify-end gap-3">
               <button

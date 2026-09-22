@@ -28,7 +28,7 @@ type NavItem = RouteNavItem | PanelNavItem;
 const navItems: NavItem[] = [
   { type: "route", href: "/dashboard", label: "Dashboard", icon: <LuLayoutDashboard /> },
   { type: "route", href: "/users", label: "Users", icon: <GoPeople /> },
-  { type: "route", href: "/vendors", label: "Vendors", icon: <TbBuildingStore /> },
+  { type: "route", href: "/vendors", label: "Service Providers", icon: <TbBuildingStore /> },
   { type: "route", href: "/content-moderation", label: "Content Moderation", icon: <TbNotebook /> },
   { type: "route", href: "/offers", label: "Offers", icon: <GoGift /> },
   { type: "route", href: "/billing", label: "Billing", icon: <FiCreditCard /> },

@@ -245,9 +245,9 @@ export function buildVendorSummaryCards(vendors: DashboardVendor[]) {
   const blocked = vendors.filter((vendor) => vendor.status === "BLOCKED").length;
 
   return [
-    { label: "Total Vendors", value: total.toLocaleString(), note: "All registered vendors", tone: "text-[#64748b]" },
+    { label: "Total Service Providers", value: total.toLocaleString(), note: "All registered service providers", tone: "text-[#64748b]" },
     { label: "Pending Approval", value: pending.toLocaleString(), note: "Awaiting admin review", tone: "text-[#f59e0b]" },
-    { label: "Approved Vendors", value: approved.toLocaleString(), note: "Currently approved", tone: "text-[#16a34a]" },
-    { label: "Blocked Vendors", value: blocked.toLocaleString(), note: "Restricted by admin", tone: "text-[#ef4444]" },
+    { label: "Approved Service Providers", value: approved.toLocaleString(), note: "Currently approved", tone: "text-[#16a34a]" },
+    { label: "Blocked Service Providers", value: blocked.toLocaleString(), note: "Restricted by admin", tone: "text-[#ef4444]" },
   ];
 }
