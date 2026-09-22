@@ -1,0 +1,2328 @@
+import csv
+import html
+import re
+from datetime import UTC, datetime, timedelta
+from io import StringIO
+from typing import Any
+
+from bson import ObjectId
+from bson.errors import InvalidId
+from pymongo import DESCENDING
+from pymongo.collection import Collection
+from pymongo.database import Database
+
+from app.domain.event_categories import normalize_event_category
+from app.domain.service_listings import SERVICE_SETTINGS_TYPES, SERVICE_TYPES, collection_name_for, normalize_service_setting_type, normalize_service_type
+from app.domain.vendor_categories import normalize_account_categories
+
+
+class VendorPortalRepository:
+    def __init__(self, db: Database):
+        self.bookings: Collection = db["vendor_bookings"]
+        self.users: Collection = db["users"]
+        self.assets: Collection = db["vendor_assets"]
+        self.rooms: Collection = db["vendor_rooms"]
+        self.services: Collection = db["vendor_services"]
+        self.events: Collection = db["vendor_events"]
+        self.happy_hours: Collection = db["vendor_happy_hours"]
+        self.promotions: Collection = db["vendor_promotions"]
+        self.platform_campaigns: Collection = db["platform_campaigns"]
+        self.loyalty_settings: Collection = db["vendor_loyalty_settings"]
+        self.reviews: Collection = db["vendor_reviews"]
+        self.settings: Collection = db["vendor_portal_settings"]
+        self.support_tickets: Collection = db["vendor_support_tickets"]
+        self.notifications: Collection = db["vendor_notifications"]
+        self.notification_settings: Collection = db["vendor_notification_settings"]
+        # Public service listings are intentionally split by service type.
+        # These are publication projections; operational data remains keyed
+        # by vendor_id in the existing vendor collections.
+        self.service_collections: dict[str, Collection] = {
+            service_type: db[collection_name_for(service_type)] for service_type in SERVICE_TYPES
+        }
+
+        # Indexes are installed out of band by the deployment migration. This
+        # constructor runs per request and must remain free of database writes.
+
+    @staticmethod
+    def _sanitize_payload(payload: dict[str, Any]) -> dict[str, Any]:
+        blocked_keys = {"_id", "id", "vendor_id", "created_at", "updated_at"}
+        return {key: value for key, value in payload.items() if key not in blocked_keys}
+
+    @staticmethod
+    def _to_float(value: Any, default: float = 0.0) -> float:
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            cleaned = "".join(char for char in value if char.isdigit() or char in ".-")
+            if cleaned:
+                try:
+                    return float(cleaned)
+                except ValueError:
+                    return default
+        return default
+
+    @classmethod
+    def _to_int(cls, value: Any, default: int = 0) -> int:
+        return int(round(cls._to_float(value, float(default))))
+
+    @staticmethod
+    def _month_offset(month_start: datetime, offset: int) -> datetime:
+        """Move between real calendar months without fixed-day approximations."""
+        month_index = month_start.year * 12 + month_start.month - 1 + offset
+        return month_start.replace(
+            year=month_index // 12,
+            month=month_index % 12 + 1,
+            day=1,
+        )
+
+    @staticmethod
+    def _as_utc_datetime(value: Any) -> datetime | None:
+        if isinstance(value, datetime):
+            return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+        text = str(value or "").strip()
+        if not text:
+            return None
+        try:
+            parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        return parsed.replace(tzinfo=UTC) if parsed.tzinfo is None else parsed.astimezone(UTC)
+
+    @classmethod
+    def _booking_activity_datetime(cls, booking: dict[str, Any]) -> datetime | None:
+        """Use request time for booking demand, with legacy fallbacks."""
+        for key in ("requested_at", "created_at", "scheduled_date"):
+            parsed = cls._as_utc_datetime(booking.get(key))
+            if parsed is not None:
+                return parsed
+        return None
+
+    def _bookings_for_activity_period(
+        self,
+        vendor_id: str,
+        start: datetime,
+        end: datetime,
+    ) -> list[dict[str, Any]]:
+        start_text = start.date().isoformat()
+        end_text = end.date().isoformat()
+        date_conditions: list[dict[str, Any]] = []
+        for field in ("requested_at", "created_at", "scheduled_date"):
+            date_conditions.extend(
+                [
+                    {field: {"$gte": start, "$lt": end}},
+                    {field: {"$gte": start_text, "$lt": end_text}},
+                ]
+            )
+        candidates = self.bookings.find(
+            {
+                "vendor_id": ObjectId(vendor_id),
+                "$or": date_conditions,
+            }
+        )
+        return [
+            booking
+            for booking in candidates
+            if (
+                (activity_at := self._booking_activity_datetime(booking)) is not None
+                and start <= activity_at < end
+            )
+        ]
+
+    @staticmethod
+    def _promotion_type_label(offer_type: str) -> str:
+        normalized = offer_type.strip().lower()
+        if normalized == "fixed_amount":
+            return "FIXED"
+        if normalized == "happy_hour":
+            return "HAPPY HOUR"
+        if normalized == "custom_deal":
+            return "CUSTOM DEAL"
+        return normalized.replace("_", " ").upper() or "PERCENTAGE"
+
+    def _allowed_vendor_categories(self, vendor_id: str) -> list[str]:
+        settings_doc = self.get_settings(vendor_id)
+        profile_settings = (
+            settings_doc.get("profile", {})
+            if isinstance(settings_doc.get("profile"), dict)
+            else {}
+        )
+        vendor, profile, business, verification = self._get_vendor_records(vendor_id)
+        categories: list[str] = []
+        for source in (profile_settings, profile, verification, vendor, business):
+            source_categories = source.get("categories")
+            if isinstance(source_categories, list) and source_categories:
+                categories = normalize_account_categories(source_categories)
+                break
+        if not categories:
+            for source in (profile_settings, profile, verification, vendor, business):
+                category = str(source.get("category") or "").strip()
+                if category:
+                    categories = normalize_account_categories([category])
+                    break
+        if not categories:
+            categories = ["Restaurant"]
+        if "Happy Hour" not in categories:
+            categories.append("Happy Hour")
+        return categories
+
+    @staticmethod
+    def _legacy_happy_hour_match() -> dict[str, Any]:
+        expression = {"$regex": r"^\s*happy[\s_-]*hour\s*$", "$options": "i"}
+        return {
+            "$or": [
+                {"event_type": expression},
+                {"category": expression},
+                {"entity_type": expression},
+                {"legacy_happy_hour": True},
+            ]
+        }
+
+    def _with_inferred_content_modules(
+        self,
+        vendor_id: str,
+        categories: list[str],
+    ) -> list[str]:
+        inferred = list(categories)
+        vendor_obj_id = ObjectId(vendor_id)
+        legacy_happy_hour = self._legacy_happy_hour_match()
+        standard_event_query = {
+            "vendor_id": vendor_obj_id,
+            "$nor": [legacy_happy_hour],
+        }
+        if self.events.find_one(standard_event_query, {"_id": 1}) and "Event" not in inferred:
+            inferred.append("Event")
+        if (
+            self.happy_hours.find_one({"vendor_id": vendor_obj_id}, {"_id": 1})
+            or self.events.find_one(
+                {"vendor_id": vendor_obj_id, **legacy_happy_hour},
+                {"_id": 1},
+            )
+        ) and "Happy Hour" not in inferred:
+            inferred.append("Happy Hour")
+        return inferred
+
+    def _validate_vendor_module_access(self, vendor_id: str, module: str) -> None:
+        allowed_categories = self._allowed_vendor_categories(vendor_id)
+        if module not in allowed_categories:
+            raise ValueError(
+                f"{module} is not enabled for this vendor. Enable it in onboarding settings first."
+            )
+
+    def _validate_vendor_category_access(self, vendor_id: str, category: str) -> None:
+        allowed_categories = self._allowed_vendor_categories(vendor_id)
+        if category not in allowed_categories:
+            raise ValueError(
+                f"Category '{category}' is not enabled for this vendor. Allowed categories: {', '.join(allowed_categories)}."
+            )
+
+    @staticmethod
+    def _build_location_label(category: str) -> str:
+        normalized_category = str(category or "").strip().lower()
+        if not normalized_category:
+            return "Your location"
+        return f"Your {normalized_category} location"
+
+    @classmethod
+    def _normalize_location_label(cls, label: Any, category: str) -> str:
+        normalized_label = str(label or "").strip()
+        if not normalized_label:
+            return cls._build_location_label(category)
+        if normalized_label.lower() in {"test", "testing", "sample", "demo"}:
+            return cls._build_location_label(category)
+        return normalized_label
+
+    @classmethod
+    def _promotion_value_label(cls, row: dict[str, Any]) -> str:
+        offer_type = str(row.get("offer_type", "")).strip().lower()
+        discount_value = cls._to_float(row.get("discount_value"))
+        if offer_type == "percentage":
+            return f"{discount_value:g}% Off"
+        if offer_type == "fixed_amount":
+            return f"${discount_value:,.2f} Off"
+        if offer_type == "happy_hour":
+            return f"${discount_value:,.2f} Happy Hour"
+        if discount_value > 0:
+            return f"${discount_value:,.2f}"
+        return str(row.get("value") or "").strip()
+
+    @staticmethod
+    def _promotion_schedule_label(row: dict[str, Any]) -> str:
+        recurring_days = row.get("recurring_days")
+        if isinstance(recurring_days, list):
+            days = [str(day).strip() for day in recurring_days if str(day).strip()]
+            if days:
+                return " - ".join(days)
+        start_date = str(row.get("start_date") or "").strip()
+        end_date = str(row.get("end_date") or "").strip()
+        if start_date and end_date:
+            return f"{start_date} - {end_date}"
+        return start_date or end_date or "No schedule"
+
+    @classmethod
+    def _normalize_promotion_row(cls, row: dict[str, Any]) -> dict[str, Any]:
+        normalized = dict(row)
+        usage_count = cls._to_int(
+            row.get("usage_count", row.get("usageCount", row.get("redemptions", 0))),
+        )
+        usage_max = cls._to_int(
+            row.get("usage_max", row.get("usageMax", row.get("campaign_reach", 0))),
+        )
+        normalized["name"] = row.get("name") or row.get("promotion_name") or ""
+        normalized["description"] = row.get("description") or row.get("internal_description") or ""
+        normalized["type"] = row.get("type") or cls._promotion_type_label(str(row.get("offer_type", "percentage")))
+        normalized["value"] = row.get("value") or cls._promotion_value_label(row)
+        normalized["schedule"] = row.get("schedule") or cls._promotion_schedule_label(row)
+        normalized["usage_count"] = usage_count
+        normalized["usage_max"] = max(usage_max, usage_count)
+        today = datetime.now(UTC).date().isoformat()
+        configured_active = bool(row.get("is_active", row.get("active", False)))
+        within_schedule = (
+            (not row.get("start_date") or str(row["start_date"])[:10] <= today)
+            and (not row.get("end_date") or str(row["end_date"])[:10] >= today)
+        )
+        normalized["is_active"] = configured_active
+        normalized["is_currently_available"] = configured_active and within_schedule
+        return normalized
+
+    @classmethod
+    def summarize_promotions(cls, promotions: list[dict[str, Any]]) -> dict[str, Any]:
+        active_promotions = 0
+        campaign_reach = 0
+        total_conversion = 0.0
+        conversion_bases = 0
+        total_promo_revenue = 0.0
+
+        for row in promotions:
+            if bool(row.get("is_currently_available", row.get("active"))):
+                active_promotions += 1
+
+            usage_count = cls._to_int(row.get("usage_count", row.get("usageCount", row.get("redemptions", 0))))
+            usage_max = cls._to_int(row.get("usage_max", row.get("usageMax", row.get("campaign_reach", 0))))
+            campaign_reach += max(usage_max, usage_count)
+
+            if usage_max > 0:
+                total_conversion += (usage_count / usage_max) * 100
+                conversion_bases += 1
+
+            explicit_revenue = row.get("total_promo_revenue", row.get("promo_revenue", row.get("revenue_generated")))
+            if explicit_revenue not in (None, ""):
+                total_promo_revenue += cls._to_float(explicit_revenue)
+                continue
+
+            discount_value = cls._to_float(row.get("discount_value"))
+            minimum_spend = cls._to_float(row.get("minimum_spend"))
+            offer_type = str(row.get("offer_type", "")).strip().lower()
+            if offer_type == "percentage" and minimum_spend > 0:
+                total_promo_revenue += usage_count * ((minimum_spend * discount_value) / 100)
+            elif offer_type == "fixed_amount":
+                total_promo_revenue += usage_count * discount_value
+
+        avg_conversion_percent = round(total_conversion / conversion_bases, 1) if conversion_bases else 0.0
+        return {
+            "total_promotions": len(promotions),
+            "active_promotions": active_promotions,
+            "campaign_reach": campaign_reach,
+            "avg_conversion_percent": avg_conversion_percent,
+            "total_promo_revenue": round(total_promo_revenue, 2),
+        }
+
+    def ensure_seed_data(self, vendor_id: str) -> None:
+        _ = vendor_id
+        # Demo/static seeding is intentionally disabled.
+        return None
+
+    def _get_vendor_records(self, vendor_id: str) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+        vendor_obj_id = ObjectId(vendor_id)
+        vendor = self.settings.database["vendors"].find_one({"_id": vendor_obj_id}) or {}
+        profile = self.settings.database["vendor_profiles"].find_one({"vendor_id": vendor_obj_id}) or {}
+        business = self.settings.database["vendor_business_details"].find_one({"vendor_id": vendor_obj_id}) or {}
+        verification = self.settings.database["vendor_verification_details"].find_one({"vendor_id": vendor_obj_id}) or {}
+        for record in (vendor, profile, business, verification):
+            record.pop("_id", None)
+            record.pop("vendor_id", None)
+            record.pop("password_hash", None)
+        return vendor, profile, business, verification
+
+    def _serialize(self, doc: dict[str, Any] | None) -> dict[str, Any] | None:
+        if not doc:
+            return None
+        out = dict(doc)
+        if out.get("_id") is not None:
+            out["id"] = str(out.pop("_id"))
+        if isinstance(out.get("vendor_id"), ObjectId):
+            out["vendor_id"] = str(out["vendor_id"])
+        for key, value in list(out.items()):
+            if isinstance(value, datetime):
+                out[key] = value.isoformat()
+            if isinstance(value, ObjectId):
+                out[key] = str(value)
+        if not out.get("status_history"):
+            history = [{
+                "status": "pending",
+                "at": out.get("created_at"),
+                "actor": "customer",
+                "label": "Booking request sent by customer",
+            }]
+            if out.get("accepted_at"):
+                history.append({
+                    "status": "confirmed",
+                    "at": out["accepted_at"],
+                    "actor": "service_provider",
+                    "label": "Booking approved by service provider",
+                })
+            out["status_history"] = history
+        return out
+
+    def _serialize_event(
+        self,
+        doc: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        out = self._serialize(doc)
+        if out is None:
+            return None
+        event_category = normalize_event_category(
+            out.get("event_type"),
+            fallback="Culture",
+        )
+        out.pop("category", None)
+        out.pop("booking_mode", None)
+        out["event_type"] = event_category
+        out["event_category"] = event_category
+        return out
+
+    def list_bookings(
+        self,
+        vendor_id: str,
+        limit: int,
+        skip: int,
+        search: str | None = None,
+        status: str | None = None,
+        provider_type: str | None = None,
+        event_id: str | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+    ) -> dict[str, Any]:
+        query: dict[str, Any] = {"vendor_id": ObjectId(vendor_id)}
+        if search:
+            query["$or"] = [
+                {"booking_code": {"$regex": search, "$options": "i"}},
+                {"customer_name": {"$regex": search, "$options": "i"}},
+            ]
+        if status and status.lower() not in {"all", ""}:
+            status_norm = status.strip().lower()
+            if status_norm in {"cancelled", "canceled"}:
+                query["status"] = "canceled"
+            elif status_norm == "completed":
+                query["status"] = "complete"
+            elif status_norm == "upcoming":
+                query["status"] = {"$in": ["confirmed", "pending", "check_in"]}
+                query["scheduled_date"] = {"$gte": datetime.now(UTC).date().isoformat()}
+            else:
+                query["status"] = status_norm
+        if date_from or date_to:
+            range_q: dict[str, Any] = {}
+            if date_from:
+                range_q["$gte"] = date_from
+            if date_to:
+                range_q["$lte"] = date_to
+            query["scheduled_date"] = range_q
+        if provider_type:
+            values = [value.strip().lower() for value in provider_type.split(",") if value.strip()]
+            if len(values) == 1:
+                query["provider_type"] = values[0]
+            elif values:
+                query["provider_type"] = {"$in": values}
+        if event_id:
+            query["event_id"] = ObjectId(event_id)
+        total = int(self.bookings.count_documents(query))
+        docs = self.bookings.find(query).sort("created_at", DESCENDING).skip(skip).limit(limit)
+        return {"items": [self._enrich_booking_customer(doc) for doc in docs], "total": total}
+
+    def _enrich_booking_customer(self, booking: dict[str, Any]) -> dict[str, Any]:
+        result = self._serialize(booking) or {}
+        customer_id = booking.get("customer_id")
+        if not isinstance(customer_id, ObjectId):
+            try:
+                customer_id = ObjectId(str(customer_id))
+            except (InvalidId, TypeError, ValueError):
+                return result
+        customer = self.users.find_one(
+            {"_id": customer_id},
+            {"profile_image_url": 1, "profile_image": 1, "avatar_url": 1, "created_at": 1},
+        ) or {}
+        result["customer_avatar"] = (
+            customer.get("profile_image_url")
+            or customer.get("profile_image")
+            or customer.get("avatar_url")
+            or ""
+        )
+        if customer.get("created_at"):
+            created_at = customer["created_at"]
+            if isinstance(created_at, datetime):
+                result["customer_since"] = created_at.strftime("%B %Y")
+            else:
+                created_at_text = str(created_at)
+                try:
+                    result["customer_since"] = datetime.fromisoformat(
+                        created_at_text.replace("Z", "+00:00")
+                    ).strftime("%B %Y")
+                except ValueError:
+                    result["customer_since"] = created_at_text[:4]
+        return result
+
+    def get_booking(self, vendor_id: str, booking_id: str) -> dict[str, Any] | None:
+        booking = self.bookings.find_one({"_id": ObjectId(booking_id), "vendor_id": ObjectId(vendor_id)})
+        return self._enrich_booking_customer(booking) if booking else None
+
+    def update_booking_status(self, vendor_id: str, booking_id: str, status: str, note: str | None = None) -> dict[str, Any] | None:
+        status_normalized = status.lower().strip()
+        if status_normalized == "cancelled":
+            status_normalized = "canceled"
+        if status_normalized == "completed":
+            status_normalized = "complete"
+        booking = self.bookings.find_one({"_id": ObjectId(booking_id), "vendor_id": ObjectId(vendor_id)})
+        if not booking:
+            return None
+        now = datetime.now(UTC)
+        payload: dict[str, Any] = {"status": status_normalized, "updated_at": now}
+        if note:
+            payload["status_note"] = note
+        if status_normalized == "confirmed" and not booking.get("accepted_at"):
+            payload["accepted_at"] = now
+        if status_normalized == "complete" and not booking.get("completed_at"):
+            payload["completed_at"] = now
+        if status_normalized == "canceled" and not booking.get("canceled_at"):
+            payload["canceled_at"] = now
+        points_awarded = int(booking.get("points_awarded") or 0)
+        if status_normalized == "complete" and not booking.get("loyalty_awarded_at"):
+            points_awarded = self._calculate_booking_points(vendor_id, booking)
+            payload["points_awarded"] = points_awarded
+            payload["loyalty_awarded_at"] = now
+            settings = self.loyalty_settings.find_one({"vendor_id": ObjectId(vendor_id)}) or {}
+            expiry_policy = str(settings.get("points_expiry_policy") or "1 Year")
+            if expiry_policy != "No Expiry":
+                years = 2 if expiry_policy == "2 Years" else 1
+                try:
+                    payload["points_expires_at"] = now.replace(year=now.year + years)
+                except ValueError:
+                    payload["points_expires_at"] = now.replace(month=2, day=28, year=now.year + years)
+            if points_awarded > 0 and booking.get("customer_id"):
+                self.users.update_one(
+                    {"_id": booking["customer_id"]},
+                    {"$inc": {"points_balance": points_awarded}, "$set": {"updated_at": datetime.now(UTC)}},
+                )
+        if status_normalized == "complete" and booking.get("promotion_id") and not booking.get("promotion_counted_at"):
+            payload["promotion_counted_at"] = now
+            self.promotions.update_one(
+                {"_id": booking["promotion_id"], "vendor_id": ObjectId(vendor_id)},
+                {
+                    "$inc": {
+                        "usage_count": 1,
+                        "total_promo_revenue": self._to_float(booking.get("total_amount")),
+                    },
+                    "$set": {"updated_at": now},
+                },
+            )
+        updated = self.bookings.update_one(
+            {"_id": ObjectId(booking_id), "vendor_id": ObjectId(vendor_id)},
+            {
+                "$set": payload,
+                "$push": {
+                    "status_history": {
+                        "status": status_normalized,
+                        "at": now,
+                        "note": note or "",
+                        "actor": "service_provider",
+                    }
+                },
+            },
+        )
+        self.bookings.database["bookings"].update_many(
+            {"booking_id": ObjectId(booking_id)},
+            {"$set": {"status": status_normalized, "updated_at": payload["updated_at"], "points_awarded": points_awarded}},
+        )
+        return self.get_booking(vendor_id, booking_id)
+
+    def _calculate_booking_points(self, vendor_id: str, booking: dict[str, Any]) -> int:
+        settings = self.loyalty_settings.find_one({"vendor_id": ObjectId(vendor_id)}) or {}
+        if not settings or settings.get("enable_loyalty_program") is not True:
+            return 0
+        amount = max(float(booking.get("total_amount") or 0), 0)
+        rule = str(settings.get("points_rule_type") or "points_per_currency")
+        if rule == "percentage_based":
+            points = max(int(amount * float(settings.get("percentage_value") or 0) / 100), 0)
+        else:
+            points_per_currency = float(settings.get("points_earned") or 0)
+            currency_unit = float(settings.get("currency_unit") or 1)
+            points = max(int((amount / currency_unit) * points_per_currency), 0) if currency_unit > 0 else 0
+        customer_id = booking.get("customer_id")
+        if customer_id:
+            prior_query: dict[str, Any] = {
+                "vendor_id": ObjectId(vendor_id),
+                "customer_id": customer_id,
+                "status": {"$in": ["complete", "completed"]},
+            }
+            if booking.get("_id"):
+                prior_query["_id"] = {"$ne": booking["_id"]}
+            if self.bookings.count_documents(prior_query) == 0:
+                points += max(int(settings.get("first_booking_bonus") or 0), 0)
+        return points
+
+    def reschedule_booking(self, vendor_id: str, booking_id: str, date: str, time: str, note: str | None = None) -> dict[str, Any] | None:
+        object_id = ObjectId(booking_id)
+        vendor_object_id = ObjectId(vendor_id)
+        booking = self.bookings.find_one({"_id": object_id, "vendor_id": vendor_object_id})
+        if not booking:
+            return None
+        booking_status = str(booking.get("status") or "").strip().lower().replace("_", " ")
+        if booking_status not in {"pending", "confirmed", "check in"}:
+            raise ValueError("Only active bookings can be rescheduled.")
+
+        payload: dict[str, Any] = {"scheduled_date": date, "scheduled_time": time, "updated_at": datetime.now(UTC)}
+        if note:
+            payload["reschedule_note"] = note
+        self.bookings.update_one(
+            {"_id": object_id, "vendor_id": vendor_object_id},
+            {"$set": payload},
+        )
+        return self.get_booking(vendor_id, booking_id)
+
+    def generate_receipt(self, vendor_id: str, booking_id: str) -> dict[str, Any] | None:
+        booking = self.get_booking(vendor_id, booking_id)
+        if not booking:
+            return None
+        subtotal = float(booking.get("total_amount", 0))
+        taxes = round(subtotal * 0.05, 2)
+        receipt = {
+            "booking_id": booking.get("id"),
+            "booking_code": booking.get("booking_code"),
+            "customer_name": booking.get("customer_name"),
+            "service": booking.get("service"),
+            "subtotal": subtotal,
+            "taxes": taxes,
+            "total": round(subtotal + taxes, 2),
+            "generated_at": datetime.now(UTC).isoformat(),
+        }
+        raw_code = str(receipt.get("booking_code") or receipt["booking_id"] or "booking")
+        safe_code = "".join(char for char in raw_code if char.isalnum() or char in {"-", "_"})[:80] or "booking"
+        customer_label = html.escape(str(receipt.get("customer_name") or ""))
+        service_label = html.escape(str(receipt.get("service") or ""))
+        booking_label = html.escape(raw_code)
+        receipt["filename"] = f"receipt-{safe_code}.html"
+        receipt["content_type"] = "text/html;charset=utf-8"
+        receipt["content"] = (
+            "<!doctype html><html><head><meta charset='utf-8'><title>Booking receipt</title>"
+            "<style>body{font-family:Arial,sans-serif;max-width:640px;margin:40px auto;color:#1e293b}"
+            "h1{margin-bottom:24px}.row{display:flex;justify-content:space-between;padding:10px 0;"
+            "border-bottom:1px solid #e2e8f0}.total{font-size:20px;font-weight:700}</style></head><body>"
+            f"<h1>Booking Receipt</h1><div class='row'><span>Booking</span><span>{booking_label}</span></div>"
+            f"<div class='row'><span>Customer</span><span>{customer_label}</span></div>"
+            f"<div class='row'><span>Service</span><span>{service_label}</span></div>"
+            f"<div class='row'><span>Subtotal</span><span>${receipt['subtotal']:.2f}</span></div>"
+            f"<div class='row'><span>Taxes</span><span>${receipt['taxes']:.2f}</span></div>"
+            f"<div class='row total'><span>Total</span><span>${receipt['total']:.2f}</span></div>"
+            "</body></html>"
+        )
+        return receipt
+
+    def get_dashboard_overview(self, vendor_id: str) -> dict[str, Any]:
+        now = datetime.now(UTC)
+        today = now.date().isoformat()
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        month_end = self._month_offset(month_start, 1)
+        month_bookings = self._bookings_for_activity_period(
+            vendor_id, month_start, month_end
+        )
+        monthly_revenue = 0.0
+        todays_bookings = 0
+        service_counts: dict[str, int] = {}
+        for booking in month_bookings:
+            booking_status = str(booking.get("status") or "").strip().lower()
+            if booking_status in {"complete", "completed"}:
+                monthly_revenue += self._to_float(booking.get("total_amount"))
+            scheduled_at = self._as_utc_datetime(booking.get("scheduled_date"))
+            if scheduled_at and scheduled_at.date().isoformat() == today:
+                todays_bookings += 1
+            provider_type = str(
+                booking.get("provider_type") or booking.get("booking_type") or booking.get("service") or "other"
+            ).strip().lower()
+            if any(token in provider_type for token in ("restaurant", "dining", "table")):
+                provider_type = "restaurant"
+            elif any(token in provider_type for token in ("hotel", "room")):
+                provider_type = "hotel"
+            elif "spa" in provider_type:
+                provider_type = "spa"
+            elif "event" in provider_type:
+                provider_type = "event"
+            else:
+                provider_type = provider_type.replace("_room", "")
+            service_counts[provider_type] = service_counts.get(provider_type, 0) + 1
+        total_bookings_month = len(month_bookings)
+        review_summary = self.get_reviews_summary(vendor_id)
+        booking_trends = self.get_booking_trends(vendor_id)
+        booking_rows = [
+            self._enrich_booking_customer(booking)
+            for booking in sorted(
+                month_bookings,
+                key=lambda row: self._booking_activity_datetime(row)
+                or datetime.min.replace(tzinfo=UTC),
+                reverse=True,
+            )[:50]
+        ]
+        kpis = {
+            "total_bookings": total_bookings_month,
+            "total_bookings_month": total_bookings_month,
+            "todays_bookings": todays_bookings,
+            "monthly_revenue": round(monthly_revenue, 2),
+            "occupancy_rate": self.get_occupancy_metrics(vendor_id).get("occupancy_rate", 0),
+            "average_rating": review_summary["average_rating"],
+        }
+        return {
+            "kpis": kpis,
+            "booking_breakdown": {"by_service": service_counts},
+            "booking_rows": booking_rows,
+            "booking_trends": booking_trends,
+            "calendar_preview": self.get_calendar_preview(vendor_id),
+            "upcoming_bookings": self.list_bookings(vendor_id, limit=10, skip=0, status="upcoming").get("items", []),
+            "recent_reviews": self.list_reviews(vendor_id, limit=5, skip=0).get("items", []),
+        }
+
+    def get_booking_trends(self, vendor_id: str) -> list[dict[str, Any]]:
+        now = datetime.now(UTC)
+        current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        earliest = self._month_offset(current_month, -11)
+        range_end = self._month_offset(current_month, 1)
+        buckets: dict[str, int] = {}
+        for booking in self._bookings_for_activity_period(
+            vendor_id, earliest, range_end
+        ):
+            activity_at = self._booking_activity_datetime(booking)
+            if activity_at is not None:
+                month = activity_at.strftime("%Y-%m")
+                buckets[month] = buckets.get(month, 0) + 1
+        points: list[dict[str, Any]] = []
+        for offset in range(-11, 1):
+            dt = self._month_offset(current_month, offset)
+            key = dt.strftime("%Y-%m")
+            points.append(
+                {
+                    "period": key,
+                    "month": dt.strftime("%b"),
+                    "bookings": buckets.get(key, 0),
+                }
+            )
+        return points
+
+    def get_calendar_preview(self, vendor_id: str, month: str | None = None) -> dict[str, Any]:
+        month_key = month or datetime.now(UTC).strftime("%Y-%m")
+        counts: dict[int, int] = {}
+        for b in self.bookings.find(
+            {"vendor_id": ObjectId(vendor_id), "scheduled_date": {"$regex": f"^{month_key}"}},
+            {"scheduled_date": 1},
+        ):
+            day = int(str(b["scheduled_date"]).split("-")[-1])
+            counts[day] = counts.get(day, 0) + 1
+        return {"month": month_key, "busy_days": [{"day": d, "count": c} for d, c in sorted(counts.items())]}
+
+    def list_assets(
+        self,
+        vendor_id: str,
+        asset_type: str | None = None,
+        service_type: str | None = None,
+    ) -> list[dict[str, Any]]:
+        query: dict[str, Any] = {"vendor_id": ObjectId(vendor_id)}
+        if asset_type:
+            query["asset_type"] = asset_type
+        if service_type:
+            normalized = normalize_service_type(service_type)
+            _, profile, _, verification = self._get_vendor_records(vendor_id)
+            legacy_category = str(
+                verification.get("category") or profile.get("category") or "Restaurant"
+            )
+            try:
+                legacy_service_type = normalize_service_type(legacy_category)
+            except ValueError:
+                legacy_service_type = "restaurant"
+            if normalized == legacy_service_type:
+                query["$or"] = [
+                    {"service_type": normalized},
+                    {"service_type": {"$exists": False}},
+                ]
+            else:
+                query["service_type"] = normalized
+        docs = self.assets.find(query).sort("created_at", DESCENDING)
+        return [self._serialize(doc) for doc in docs]
+
+    def add_asset(self, vendor_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        sanitized = self._sanitize_payload(payload)
+        inserted = self.assets.insert_one(
+            {"vendor_id": ObjectId(vendor_id), **sanitized, "created_at": datetime.now(UTC)}
+        )
+        created = self.assets.find_one({"_id": inserted.inserted_id})
+        return self._serialize(created)  # type: ignore[return-value]
+
+    def delete_asset(self, vendor_id: str, asset_id: str) -> bool:
+        result = self.assets.delete_one({"_id": ObjectId(asset_id), "vendor_id": ObjectId(vendor_id)})
+        return result.deleted_count > 0
+
+    def list_rooms(self, vendor_id: str) -> list[dict[str, Any]]:
+        docs = self.rooms.find({"vendor_id": ObjectId(vendor_id)}).sort("created_at", DESCENDING)
+        return [self._serialize(doc) for doc in docs]
+
+    def create_room(self, vendor_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        now = datetime.now(UTC)
+        sanitized = self._sanitize_payload(payload)
+        profile = self.get_settings_profile(vendor_id)
+        service_settings = profile.get("hotel_settings") if isinstance(profile.get("hotel_settings"), dict) else {}
+        sanitized.setdefault("location_label", service_settings.get("address") or profile.get("location_label") or profile.get("office_address"))
+        sanitized.setdefault("latitude", service_settings.get("latitude") or profile.get("latitude"))
+        sanitized.setdefault("longitude", service_settings.get("longitude") or profile.get("longitude"))
+        inserted = self.rooms.insert_one(
+            {
+                "vendor_id": ObjectId(vendor_id),
+                **sanitized,
+                "available": sanitized.get("active_status", True),
+                "created_at": now,
+                "updated_at": now,
+            }
+        )
+        created = self.rooms.find_one({"_id": inserted.inserted_id})
+        return self._serialize(created)  # type: ignore[return-value]
+
+    def get_room(self, vendor_id: str, room_id: str) -> dict[str, Any] | None:
+        return self._serialize(
+            self.rooms.find_one({"_id": ObjectId(room_id), "vendor_id": ObjectId(vendor_id)})
+        )
+
+    def update_room(self, vendor_id: str, room_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+        sanitized = self._sanitize_payload(payload)
+        if "active_status" in sanitized:
+            sanitized["available"] = bool(sanitized["active_status"])
+        self.rooms.update_one(
+            {"_id": ObjectId(room_id), "vendor_id": ObjectId(vendor_id)},
+            {"$set": {**sanitized, "updated_at": datetime.now(UTC)}},
+        )
+        return self.get_room(vendor_id, room_id)
+
+    def update_room_availability(
+        self,
+        vendor_id: str,
+        room_id: str,
+        available: bool,
+        maintenance_note: str | None = None,
+    ) -> dict[str, Any] | None:
+        self.rooms.update_one(
+            {"_id": ObjectId(room_id), "vendor_id": ObjectId(vendor_id)},
+            {
+                "$set": {
+                    "available": available,
+                    "active_status": available,
+                    "maintenance_note": maintenance_note,
+                    "updated_at": datetime.now(UTC),
+                }
+            },
+        )
+        return self.get_room(vendor_id, room_id)
+
+    def delete_room(self, vendor_id: str, room_id: str) -> bool:
+        result = self.rooms.delete_one({"_id": ObjectId(room_id), "vendor_id": ObjectId(vendor_id)})
+        return result.deleted_count > 0
+
+    def list_services(
+        self, vendor_id: str, service_type: str | None = None
+    ) -> list[dict[str, Any]]:
+        query: dict[str, Any] = {"vendor_id": ObjectId(vendor_id)}
+        if service_type:
+            normalized = normalize_service_type(service_type)
+            if normalized == "hotel":
+                query["$or"] = [
+                    {"service_type": "hotel"},
+                    {"service_type": {"$exists": False}},
+                ]
+            else:
+                query["service_type"] = normalized
+        docs = self.services.find(query).sort("created_at", DESCENDING)
+        return [self._serialize(doc) for doc in docs]
+
+    def create_service(self, vendor_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        now = datetime.now(UTC)
+        sanitized = self._sanitize_payload(payload)
+        profile = self.get_settings_profile(vendor_id)
+        service_type = normalize_service_type(
+            str(sanitized.get("service_type") or "hotel")
+        )
+        service_settings = (
+            profile.get(f"{service_type}_settings")
+            if isinstance(profile.get(f"{service_type}_settings"), dict)
+            else {}
+        )
+        sanitized.setdefault("location_label", service_settings.get("address") or profile.get("location_label") or profile.get("office_address"))
+        sanitized.setdefault("latitude", service_settings.get("latitude") or profile.get("latitude"))
+        sanitized.setdefault("longitude", service_settings.get("longitude") or profile.get("longitude"))
+        inserted = self.services.insert_one(
+            {
+                "vendor_id": ObjectId(vendor_id),
+                **sanitized,
+                "available": sanitized.get("active_status", True),
+                "created_at": now,
+                "updated_at": now,
+            }
+        )
+        created = self.services.find_one({"_id": inserted.inserted_id})
+        return self._serialize(created)  # type: ignore[return-value]
+
+    def list_events(
+        self,
+        vendor_id: str,
+        search: str | None = None,
+        status: str | None = None,
+    ) -> list[dict[str, Any]]:
+        query: dict[str, Any] = {
+            "vendor_id": ObjectId(vendor_id),
+            "$nor": [self._legacy_happy_hour_match()],
+        }
+        if search:
+            query["$and"] = [{
+                "$or": [
+                {"title": {"$regex": search, "$options": "i"}},
+                {"venue": {"$regex": search, "$options": "i"}},
+                {"event_type": {"$regex": search, "$options": "i"}},
+                ]
+            }]
+        if status and status.lower() not in {"all", ""}:
+            query["status"] = status.strip().lower()
+        docs = self.events.find(query).sort([("event_date", 1), ("start_time", 1), ("created_at", DESCENDING)])
+        return [
+            serialized
+            for doc in docs
+            if (serialized := self._serialize_event(doc)) is not None
+        ]
+
+    def create_event(self, vendor_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        now = datetime.now(UTC)
+        sanitized = self._sanitize_payload(payload)
+        self._validate_vendor_module_access(vendor_id, "Event")
+        sanitized.pop("category", None)
+        sanitized.pop("booking_mode", None)
+        inserted = self.events.insert_one(
+            {
+                "vendor_id": ObjectId(vendor_id),
+                **sanitized,
+                "status": str(sanitized.get("status") or "draft").lower(),
+                "active": bool(sanitized.get("active_status", True)),
+                "created_at": now,
+                "updated_at": now,
+            }
+        )
+        created = self.events.find_one({"_id": inserted.inserted_id})
+        return self._serialize_event(created)  # type: ignore[return-value]
+
+    def get_event(self, vendor_id: str, event_id: str) -> dict[str, Any] | None:
+        return self._serialize_event(
+            self.events.find_one({"_id": ObjectId(event_id), "vendor_id": ObjectId(vendor_id)})
+        )
+
+    def update_event(self, vendor_id: str, event_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+        sanitized = self._sanitize_payload(payload)
+        sanitized.pop("category", None)
+        sanitized.pop("booking_mode", None)
+        if "status" in sanitized:
+            sanitized["status"] = str(sanitized["status"]).lower()
+        if "active_status" in sanitized:
+            sanitized["active"] = bool(sanitized["active_status"])
+        self.events.update_one(
+            {"_id": ObjectId(event_id), "vendor_id": ObjectId(vendor_id)},
+            {
+                "$set": {**sanitized, "updated_at": datetime.now(UTC)},
+                "$unset": {"category": "", "booking_mode": ""},
+            },
+        )
+        return self.get_event(vendor_id, event_id)
+
+    def update_event_status(self, vendor_id: str, event_id: str, status: str) -> dict[str, Any] | None:
+        normalized = status.strip().lower()
+        self.events.update_one(
+            {"_id": ObjectId(event_id), "vendor_id": ObjectId(vendor_id)},
+            {"$set": {"status": normalized, "updated_at": datetime.now(UTC)}},
+        )
+        return self.get_event(vendor_id, event_id)
+
+    def delete_event(self, vendor_id: str, event_id: str) -> bool:
+        result = self.events.delete_one({"_id": ObjectId(event_id), "vendor_id": ObjectId(vendor_id)})
+        return result.deleted_count > 0
+
+    def _migrate_legacy_happy_hours(self, vendor_id: str) -> None:
+        vendor_obj_id = ObjectId(vendor_id)
+        for happy_hour in self.happy_hours.find(
+            {
+                "vendor_id": vendor_obj_id,
+                "legacy_event_id": {"$exists": True, "$ne": None},
+            },
+            {"_id": 1, "legacy_event_id": 1},
+        ):
+            legacy_event_id = str(happy_hour.get("legacy_event_id") or "")
+            if not ObjectId.is_valid(legacy_event_id):
+                continue
+            source_id = ObjectId(legacy_event_id)
+            source_event = self.events.find_one(
+                {"_id": source_id, "vendor_id": vendor_obj_id},
+                {"_id": 1},
+            )
+            explicitly_marked = self.events.find_one(
+                {
+                    "_id": source_id,
+                    "vendor_id": vendor_obj_id,
+                    **self._legacy_happy_hour_match(),
+                },
+                {"_id": 1},
+            )
+            if source_event and not explicitly_marked:
+                self.happy_hours.delete_one({"_id": happy_hour["_id"]})
+
+        query = {"vendor_id": vendor_obj_id, **self._legacy_happy_hour_match()}
+        for event in self.events.find(query):
+            event_date = str(event.get("event_date") or "").strip()
+            try:
+                day_name = datetime.fromisoformat(event_date).strftime("%A").lower()
+            except ValueError:
+                day_name = "monday"
+            category = str(event.get("category") or "").strip().lower()
+            venue_type = category if category in {"restaurant", "hotel", "spa"} else "other"
+            ticket_price = event.get("ticket_price")
+            self.happy_hours.update_one(
+                {"_id": event["_id"]},
+                {
+                    "$setOnInsert": {
+                        "_id": event["_id"],
+                        "vendor_id": vendor_obj_id,
+                        "title": event.get("title") or "Happy Hour",
+                        "venue_type": venue_type,
+                        "offer_text": event.get("event_type") or event.get("title") or "Happy Hour",
+                        "start_date": event_date,
+                        "end_date": event_date,
+                        "days_of_week": [day_name],
+                        "start_time": event.get("start_time") or "17:00",
+                        "end_time": event.get("end_time") or "19:00",
+                        "timezone": event.get("timezone") or "Asia/Dhaka",
+                        "venue": event.get("venue") or "Venue available",
+                        "latitude": event.get("latitude"),
+                        "longitude": event.get("longitude"),
+                        "original_price": ticket_price,
+                        "happy_hour_price": ticket_price,
+                        "discount_percent": None,
+                        "description": event.get("description") or "",
+                        "terms_and_conditions": "",
+                        "banner_image_url": event.get("banner_image_url"),
+                        "active_status": bool(event.get("active_status", event.get("active", True))),
+                        "active": bool(event.get("active_status", event.get("active", True))),
+                        "status": str(event.get("status") or "draft").lower(),
+                        "legacy_event_id": str(event["_id"]),
+                        "created_at": event.get("created_at") or datetime.now(UTC),
+                        "updated_at": event.get("updated_at") or datetime.now(UTC),
+                    }
+                },
+                upsert=True,
+            )
+
+    def list_happy_hours(
+        self,
+        vendor_id: str,
+        search: str | None = None,
+        status: str | None = None,
+    ) -> list[dict[str, Any]]:
+        self._migrate_legacy_happy_hours(vendor_id)
+        query: dict[str, Any] = {"vendor_id": ObjectId(vendor_id)}
+        if search:
+            query["$or"] = [
+                {"title": {"$regex": search, "$options": "i"}},
+                {"venue": {"$regex": search, "$options": "i"}},
+                {"offer_text": {"$regex": search, "$options": "i"}},
+            ]
+        if status and status.lower() not in {"all", ""}:
+            query["status"] = status.strip().lower()
+        docs = self.happy_hours.find(query).sort(
+            [("start_date", 1), ("start_time", 1), ("created_at", DESCENDING)]
+        )
+        return [self._serialize(doc) for doc in docs]
+
+    def create_happy_hour(self, vendor_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        self._validate_vendor_module_access(vendor_id, "Happy Hour")
+        now = datetime.now(UTC)
+        sanitized = self._sanitize_payload(payload)
+        inserted = self.happy_hours.insert_one(
+            {
+                "vendor_id": ObjectId(vendor_id),
+                **sanitized,
+                "status": str(sanitized.get("status") or "draft").lower(),
+                "active": bool(sanitized.get("active_status", True)),
+                "created_at": now,
+                "updated_at": now,
+            }
+        )
+        return self._serialize(
+            self.happy_hours.find_one({"_id": inserted.inserted_id})
+        )  # type: ignore[return-value]
+
+    def get_happy_hour(self, vendor_id: str, happy_hour_id: str) -> dict[str, Any] | None:
+        self._migrate_legacy_happy_hours(vendor_id)
+        return self._serialize(
+            self.happy_hours.find_one(
+                {"_id": ObjectId(happy_hour_id), "vendor_id": ObjectId(vendor_id)}
+            )
+        )
+
+    def update_happy_hour(
+        self,
+        vendor_id: str,
+        happy_hour_id: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        self._validate_vendor_module_access(vendor_id, "Happy Hour")
+        self._migrate_legacy_happy_hours(vendor_id)
+        sanitized = self._sanitize_payload(payload)
+        if "status" in sanitized:
+            sanitized["status"] = str(sanitized["status"]).lower()
+        if "active_status" in sanitized:
+            sanitized["active"] = bool(sanitized["active_status"])
+        self.happy_hours.update_one(
+            {"_id": ObjectId(happy_hour_id), "vendor_id": ObjectId(vendor_id)},
+            {"$set": {**sanitized, "updated_at": datetime.now(UTC)}},
+        )
+        return self.get_happy_hour(vendor_id, happy_hour_id)
+
+    def update_happy_hour_status(
+        self,
+        vendor_id: str,
+        happy_hour_id: str,
+        status: str,
+    ) -> dict[str, Any] | None:
+        self._validate_vendor_module_access(vendor_id, "Happy Hour")
+        self._migrate_legacy_happy_hours(vendor_id)
+        self.happy_hours.update_one(
+            {"_id": ObjectId(happy_hour_id), "vendor_id": ObjectId(vendor_id)},
+            {
+                "$set": {
+                    "status": status.strip().lower(),
+                    "updated_at": datetime.now(UTC),
+                }
+            },
+        )
+        return self.get_happy_hour(vendor_id, happy_hour_id)
+
+    def delete_happy_hour(self, vendor_id: str, happy_hour_id: str) -> bool:
+        self._migrate_legacy_happy_hours(vendor_id)
+        happy_hour_obj_id = ObjectId(happy_hour_id)
+        row = self.happy_hours.find_one(
+            {"_id": happy_hour_obj_id, "vendor_id": ObjectId(vendor_id)}
+        )
+        if not row:
+            return False
+        self.happy_hours.delete_one(
+            {"_id": happy_hour_obj_id, "vendor_id": ObjectId(vendor_id)}
+        )
+        if row.get("legacy_event_id"):
+            self.events.delete_one(
+                {"_id": happy_hour_obj_id, "vendor_id": ObjectId(vendor_id)}
+            )
+        return True
+
+    def get_service(self, vendor_id: str, service_id: str) -> dict[str, Any] | None:
+        return self._serialize(
+            self.services.find_one({"_id": ObjectId(service_id), "vendor_id": ObjectId(vendor_id)})
+        )
+
+    def update_service(self, vendor_id: str, service_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+        sanitized = self._sanitize_payload(payload)
+        if "active_status" in sanitized:
+            sanitized["available"] = bool(sanitized["active_status"])
+        self.services.update_one(
+            {"_id": ObjectId(service_id), "vendor_id": ObjectId(vendor_id)},
+            {"$set": {**sanitized, "updated_at": datetime.now(UTC)}},
+        )
+        return self.get_service(vendor_id, service_id)
+
+    def update_service_status(self, vendor_id: str, service_id: str, active: bool) -> dict[str, Any] | None:
+        self.services.update_one(
+            {"_id": ObjectId(service_id), "vendor_id": ObjectId(vendor_id)},
+            {
+                "$set": {
+                    "available": active,
+                    "active_status": active,
+                    "updated_at": datetime.now(UTC),
+                }
+            },
+        )
+        return self.get_service(vendor_id, service_id)
+
+    def delete_service(self, vendor_id: str, service_id: str) -> bool:
+        result = self.services.delete_one({"_id": ObjectId(service_id), "vendor_id": ObjectId(vendor_id)})
+        return result.deleted_count > 0
+
+    def list_promotions(
+        self, vendor_id: str, search: str | None = None, active: bool | None = None
+    ) -> list[dict[str, Any]]:
+        query: dict[str, Any] = {"vendor_id": ObjectId(vendor_id)}
+        if search:
+            query["promotion_name"] = {"$regex": search, "$options": "i"}
+        if active is not None:
+            query["active"] = active
+        docs = self.promotions.find(query).sort("created_at", DESCENDING)
+        return [self._normalize_promotion_row(self._serialize(doc) or {}) for doc in docs]
+
+    def create_promotion(self, vendor_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        now = datetime.now(UTC)
+        sanitized = self._sanitize_payload(payload)
+        promo_code = str(sanitized.get("promo_code") or "").strip().upper()
+        if promo_code and self.promotions.find_one(
+            {
+                "vendor_id": ObjectId(vendor_id),
+                "promo_code": {"$regex": f"^{re.escape(promo_code)}$", "$options": "i"},
+            }
+        ):
+            raise ValueError("That promo code is already used by another promotion.")
+        sanitized["promo_code"] = promo_code or None
+        inserted = self.promotions.insert_one(
+            {
+                "vendor_id": ObjectId(vendor_id),
+                **sanitized,
+                "usage_count": 0,
+                "total_promo_revenue": 0.0,
+                "created_at": now,
+                "updated_at": now,
+            }
+        )
+        created = self.promotions.find_one({"_id": inserted.inserted_id})
+        return self._serialize(created)  # type: ignore[return-value]
+
+    def get_promotion(self, vendor_id: str, promotion_id: str) -> dict[str, Any] | None:
+        return self._serialize(
+            self.promotions.find_one({"_id": ObjectId(promotion_id), "vendor_id": ObjectId(vendor_id)})
+        )
+
+    def update_promotion(self, vendor_id: str, promotion_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+        sanitized = self._sanitize_payload(payload)
+        if "promo_code" in sanitized:
+            promo_code = str(sanitized.get("promo_code") or "").strip().upper()
+            if promo_code and self.promotions.find_one(
+                {
+                    "vendor_id": ObjectId(vendor_id),
+                    "promo_code": {"$regex": f"^{re.escape(promo_code)}$", "$options": "i"},
+                    "_id": {"$ne": ObjectId(promotion_id)},
+                }
+            ):
+                raise ValueError("That promo code is already used by another promotion.")
+            sanitized["promo_code"] = promo_code or None
+        existing = self.promotions.find_one(
+            {"_id": ObjectId(promotion_id), "vendor_id": ObjectId(vendor_id)}
+        )
+        if not existing:
+            return None
+        start_date = str(sanitized.get("start_date") or existing.get("start_date") or "")
+        end_date = str(sanitized.get("end_date") or existing.get("end_date") or "")
+        if start_date and end_date and end_date[:10] < start_date[:10]:
+            raise ValueError("Promotion end date must be on or after its start date.")
+        offer_type = str(sanitized.get("offer_type") or existing.get("offer_type") or "")
+        discount_value = self._to_float(
+            sanitized.get("discount_value", existing.get("discount_value"))
+        )
+        if offer_type == "percentage" and discount_value > 100:
+            raise ValueError("Percentage discounts cannot exceed 100%.")
+        requires_code = bool(
+            sanitized.get("require_promo_code", existing.get("require_promo_code", False))
+        )
+        effective_code = sanitized.get("promo_code", existing.get("promo_code"))
+        if requires_code and not effective_code:
+            raise ValueError("A promo code is required when promo-code restriction is enabled.")
+        self.promotions.update_one(
+            {"_id": ObjectId(promotion_id), "vendor_id": ObjectId(vendor_id)},
+            {"$set": {**sanitized, "updated_at": datetime.now(UTC)}},
+        )
+        return self.get_promotion(vendor_id, promotion_id)
+
+    def update_promotion_status(self, vendor_id: str, promotion_id: str, active: bool) -> dict[str, Any] | None:
+        return self.update_promotion(vendor_id, promotion_id, {"active": active})
+
+    def delete_promotion(self, vendor_id: str, promotion_id: str) -> bool:
+        result = self.promotions.delete_one({"_id": ObjectId(promotion_id), "vendor_id": ObjectId(vendor_id)})
+        return result.deleted_count > 0
+
+    def list_platform_campaigns(self, vendor_id: str) -> list[dict[str, Any]]:
+        campaigns = [self._serialize(doc) for doc in self.platform_campaigns.find({"active": True})]
+        joined_ids = {
+            str(row.get("source_campaign_id"))
+            for row in self.promotions.find(
+                {"vendor_id": ObjectId(vendor_id), "source": "platform", "active": True},
+                {"source_campaign_id": 1},
+            )
+            if row.get("source_campaign_id")
+        }
+        for campaign in campaigns:
+            campaign["joined"] = campaign.get("id") in joined_ids
+            campaign["title"] = campaign.get("title") or campaign.get("campaign_name") or campaign.get("name") or ""
+            campaign["is_active"] = bool(campaign.get("joined"))
+        return campaigns
+
+    def set_platform_campaign_join(self, vendor_id: str, campaign_id: str, join: bool) -> dict[str, Any]:
+        campaign = self.platform_campaigns.find_one({"_id": ObjectId(campaign_id)})
+        if not campaign:
+            raise ValueError("Campaign not found.")
+        if join:
+            self.promotions.update_one(
+                {
+                    "vendor_id": ObjectId(vendor_id),
+                    "source": "platform",
+                    "source_campaign_id": ObjectId(campaign_id),
+                },
+                {
+                    "$set": {
+                        "active": True,
+                        "updated_at": datetime.now(UTC),
+                        "promotion_name": campaign.get("campaign_name"),
+                    },
+                    "$setOnInsert": {
+                        "vendor_id": ObjectId(vendor_id),
+                        "source": "platform",
+                        "source_campaign_id": ObjectId(campaign_id),
+                        "created_at": datetime.now(UTC),
+                    },
+                },
+                upsert=True,
+            )
+        else:
+            self.promotions.update_many(
+                {
+                    "vendor_id": ObjectId(vendor_id),
+                    "source": "platform",
+                    "source_campaign_id": ObjectId(campaign_id),
+                },
+                {"$set": {"active": False, "updated_at": datetime.now(UTC)}},
+            )
+        return {"campaign_id": campaign_id, "joined": join}
+
+    def get_occupancy_metrics(self, vendor_id: str, on_date: str | None = None) -> dict[str, Any]:
+        target_date = on_date or datetime.now(UTC).date().isoformat()
+        total_rooms = sum(
+            self._to_int(row.get("inventory_count") or row.get("total_inventory") or row.get("room_count"))
+            for row in self.rooms.find(
+                {"vendor_id": ObjectId(vendor_id)},
+                {"inventory_count": 1, "total_inventory": 1, "room_count": 1},
+            )
+        )
+        active_bookings = self.bookings.count_documents(
+            {
+                "vendor_id": ObjectId(vendor_id),
+                "scheduled_date": target_date,
+                "status": {"$in": ["confirmed", "check_in"]},
+            }
+        )
+        occupancy_rate = round((active_bookings / total_rooms) * 100, 1) if total_rooms else 0
+        return {
+            "occupancy_rate": occupancy_rate,
+            "rooms_available": max(total_rooms - active_bookings, 0),
+            "rooms_total": total_rooms,
+            "active_bookings": active_bookings,
+            "date": target_date,
+        }
+
+    def get_reviews_summary(
+        self,
+        vendor_id: str,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        provider_type: str | None = None,
+    ) -> dict[str, Any]:
+        query: dict[str, Any] = {"vendor_id": ObjectId(vendor_id)}
+        normalized_provider_type = str(provider_type or "").strip().lower()
+        if normalized_provider_type == "hotel":
+            query["provider_type"] = {"$in": ["hotel", "hotel_room"]}
+        elif normalized_provider_type in {"restaurant", "spa", "event"}:
+            query["provider_type"] = normalized_provider_type
+        if date_from or date_to:
+            created_range: dict[str, Any] = {}
+            if date_from:
+                created_range["$gte"] = datetime.fromisoformat(date_from).replace(tzinfo=UTC)
+            if date_to:
+                created_range["$lt"] = datetime.fromisoformat(date_to).replace(tzinfo=UTC) + timedelta(days=1)
+            query["created_at"] = created_range
+        rows = list(self.reviews.find(query, {"rating": 1, "star_rating": 1}))
+        total = len(rows)
+        ratings = [float(row.get("rating") or row.get("star_rating") or 0) for row in rows]
+        average = round(sum(ratings) / total, 1) if total else 0.0
+        breakdown = {str(star): 0 for star in [5, 4, 3, 2, 1]}
+        for rating in ratings:
+            star = str(int(rating))
+            if star in breakdown:
+                breakdown[star] += 1
+        return {"average_rating": average, "total_reviews": total, "breakdown": breakdown}
+
+    def get_analytics_overview(
+        self,
+        vendor_id: str,
+        date_from: str | None = None,
+        date_to: str | None = None,
+    ) -> dict[str, Any]:
+        now = datetime.now(UTC)
+        start = date_from or now.strftime("%Y-%m-01")
+        end = date_to or now.date().isoformat()
+        if start > end:
+            raise ValueError("date_from must be on or before date_to.")
+        all_bookings = list(self.bookings.find({"vendor_id": ObjectId(vendor_id)}))
+
+        def is_in_range(value: Any) -> bool:
+            if isinstance(value, datetime):
+                value = value.date().isoformat()
+            else:
+                value = str(value or "")[:10]
+            return bool(value) and start <= value <= end
+
+        bookings = [
+            row for row in all_bookings
+            if is_in_range(row.get("scheduled_date")) or is_in_range(row.get("created_at"))
+        ]
+        total_bookings = len(bookings)
+        revenue = sum(
+            self._to_float(row.get("total_amount"))
+            for row in bookings
+            if str(row.get("status") or "").strip().lower() in {"complete", "completed"}
+        )
+        status_counts = {"completed": 0, "cancelled": 0, "pending": 0, "confirmed": 0}
+        service_counts: dict[str, int] = {}
+        for row in bookings:
+            raw_status = str(row.get("status") or "pending").strip().lower()
+            status_key = "cancelled" if raw_status in {"cancelled", "canceled"} else "completed" if raw_status in {"complete", "completed"} else raw_status
+            if status_key in status_counts:
+                status_counts[status_key] += 1
+            provider_type = str(row.get("provider_type") or row.get("booking_type") or row.get("service") or "other").strip().lower()
+            if any(token in provider_type for token in ("restaurant", "dining", "table")):
+                provider_type = "restaurant"
+            elif any(token in provider_type for token in ("hotel", "room")):
+                provider_type = "hotel"
+            elif "spa" in provider_type:
+                provider_type = "spa"
+            elif "event" in provider_type:
+                provider_type = "event"
+            else:
+                provider_type = provider_type.replace("_room", "")
+            service_counts[provider_type] = service_counts.get(provider_type, 0) + 1
+        review_summary = self.get_reviews_summary(vendor_id, start, end)
+        return {
+            "date_from": start,
+            "date_to": end,
+            "total_bookings": total_bookings,
+            "total_bookings_month": total_bookings,
+            "booking_breakdown": {
+                **status_counts,
+                "by_service": service_counts,
+            },
+            "todays_bookings": sum(1 for row in bookings if str(row.get("scheduled_date") or "")[:10] == end),
+            "monthly_revenue": round(revenue, 2),
+            "occupancy_rate": self.get_occupancy_metrics(vendor_id, end)["occupancy_rate"],
+            "average_rating": review_summary["average_rating"],
+            "demographics": self.get_demographics(vendor_id, start, end),
+            "occupancy_tracking": self.get_occupancy_metrics(vendor_id, end),
+            "reviews_summary": review_summary,
+        }
+
+    def get_demographics(
+        self,
+        vendor_id: str,
+        date_from: str | None = None,
+        date_to: str | None = None,
+    ) -> dict[str, Any]:
+        all_bookings = list(self.bookings.find({"vendor_id": ObjectId(vendor_id)}))
+
+        def is_in_range(value: Any) -> bool:
+            if not (date_from or date_to):
+                return True
+            if isinstance(value, datetime):
+                value = value.date().isoformat()
+            else:
+                value = str(value or "")[:10]
+            return bool(value) and (not date_from or value >= date_from) and (not date_to or value <= date_to)
+
+        bookings = [
+            booking for booking in all_bookings
+            if is_in_range(booking.get("scheduled_date")) or is_in_range(booking.get("created_at"))
+        ]
+        gender_counts = {"female": 0, "male": 0, "other": 0}
+        age_counts = {"under_18": 0, "18-25": 0, "26-40": 0, "41-60": 0, "60+": 0}
+        known_gender = 0
+        known_age = 0
+        today = datetime.now(UTC).date()
+        for booking in bookings:
+            customer = {}
+            customer_id = booking.get("customer_id")
+            if customer_id:
+                try:
+                    customer = self.users.find_one(
+                        {"_id": customer_id if isinstance(customer_id, ObjectId) else ObjectId(str(customer_id))},
+                        {"gender": 1, "date_of_birth": 1},
+                    ) or {}
+                except (InvalidId, TypeError, ValueError):
+                    customer = {}
+
+            gender = str(booking.get("customer_gender") or customer.get("gender") or "").strip().lower()
+            if gender:
+                gender_counts[gender if gender in {"female", "male"} else "other"] += 1
+                known_gender += 1
+            age = self._to_int(booking.get("customer_age"), -1)
+            date_of_birth = customer.get("date_of_birth")
+            if age < 0 and date_of_birth:
+                try:
+                    birth_date = date_of_birth if hasattr(date_of_birth, "year") else datetime.fromisoformat(str(date_of_birth)[:10]).date()
+                    age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+                except (TypeError, ValueError):
+                    age = -1
+            if age >= 0:
+                bucket = "under_18" if age < 18 else "18-25" if age <= 25 else "26-40" if age <= 40 else "41-60" if age <= 60 else "60+"
+                age_counts[bucket] += 1
+                known_age += 1
+
+        def percentages(values: dict[str, int], total: int) -> dict[str, int]:
+            return {key: round(value * 100 / total) if total else 0 for key, value in values.items()}
+
+        return {
+            "available": bool(known_gender or known_age),
+            "gender_distribution": percentages(gender_counts, known_gender),
+            "age_groups": percentages(age_counts, known_age),
+            "sample_size": max(known_gender, known_age),
+        }
+
+    def export_analytics(
+        self,
+        vendor_id: str,
+        date_from: str | None = None,
+        date_to: str | None = None,
+    ) -> dict[str, Any]:
+        analytics = self.get_analytics_overview(vendor_id, date_from, date_to)
+        output = StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["Metric", "Value"])
+        writer.writerows(
+            [
+                ["Date from", analytics["date_from"]],
+                ["Date to", analytics["date_to"]],
+                ["Total bookings", analytics["total_bookings"]],
+                ["Revenue", analytics["monthly_revenue"]],
+                ["Occupancy rate", analytics["occupancy_rate"]],
+                ["Average rating", analytics["average_rating"]],
+            ]
+        )
+        return {
+            "message": "Analytics export prepared.",
+            "filename": f"vendor-analytics-{analytics['date_from']}-{analytics['date_to']}.csv",
+            "content_type": "text/csv;charset=utf-8",
+            "content": output.getvalue(),
+        }
+
+    def get_loyalty_settings(self, vendor_id: str) -> dict[str, Any]:
+        vendor_obj_id = ObjectId(vendor_id)
+        settings = self._serialize(self.loyalty_settings.find_one({"vendor_id": vendor_obj_id})) or {}
+        defaults = {
+            "enable_loyalty_program": False,
+            "points_rule_type": "points_per_currency",
+            "points_earned": 1,
+            "currency_unit": 1,
+            "percentage_value": 0,
+            "first_booking_bonus": 0,
+            "review_bonus_points": 0,
+            "points_expiry_policy": "1 Year",
+        }
+        completed = list(
+            self.bookings.find(
+                {"vendor_id": vendor_obj_id, "status": {"$in": ["complete", "completed"]}},
+                {"customer_id": 1, "customer_name": 1, "booking_code": 1, "points_awarded": 1, "completed_at": 1, "updated_at": 1},
+            )
+        )
+        reviews = list(
+            self.reviews.find(
+                {"vendor_id": vendor_obj_id, "points_awarded": {"$gt": 0}},
+                {"customer_id": 1, "customer_name": 1, "points_awarded": 1, "created_at": 1},
+            )
+        )
+        completed_by_customer: dict[str, int] = {}
+        active_members: set[str] = set()
+        total_points = 0
+        activity: list[dict[str, Any]] = []
+        for booking in completed:
+            customer_key = str(booking.get("customer_id") or "")
+            if customer_key:
+                completed_by_customer[customer_key] = completed_by_customer.get(customer_key, 0) + 1
+            points = max(self._to_int(booking.get("points_awarded")), 0)
+            total_points += points
+            if customer_key and points:
+                active_members.add(customer_key)
+            if points:
+                activity.append(
+                    {
+                        "type": "booking",
+                        "customer_name": booking.get("customer_name") or "Customer",
+                        "reference": booking.get("booking_code") or "",
+                        "points": points,
+                        "created_at": booking.get("completed_at") or booking.get("updated_at"),
+                    }
+                )
+        for review in reviews:
+            customer_key = str(review.get("customer_id") or "")
+            points = max(self._to_int(review.get("points_awarded")), 0)
+            total_points += points
+            if customer_key and points:
+                active_members.add(customer_key)
+            activity.append(
+                {
+                    "type": "review",
+                    "customer_name": review.get("customer_name") or "Customer",
+                    "reference": "Verified review",
+                    "points": points,
+                    "created_at": review.get("created_at"),
+                }
+            )
+        member_count = len(completed_by_customer)
+        repeat_members = sum(1 for count in completed_by_customer.values() if count > 1)
+        for row in activity:
+            if isinstance(row.get("created_at"), datetime):
+                row["created_at"] = row["created_at"].isoformat()
+        activity.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+        return {
+            **defaults,
+            **settings,
+            "total_points_issued": total_points,
+            "active_members": len(active_members),
+            "repeat_booking_rate": round((repeat_members / member_count) * 100, 1) if member_count else 0.0,
+            "recent_activity": activity[:10],
+        }
+
+    def update_loyalty_settings(self, vendor_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        sanitized = self._sanitize_payload(payload)
+        self.loyalty_settings.update_one(
+            {"vendor_id": ObjectId(vendor_id)},
+            {"$set": {**sanitized, "updated_at": datetime.now(UTC)}},
+            upsert=True,
+        )
+        return self.get_loyalty_settings(vendor_id)
+
+    def list_reviews(
+        self,
+        vendor_id: str,
+        limit: int,
+        skip: int,
+        search: str | None = None,
+        star_rating: int | None = None,
+        replied: bool | None = None,
+        provider_type: str | None = None,
+    ) -> dict[str, Any]:
+        query: dict[str, Any] = {"vendor_id": ObjectId(vendor_id)}
+        normalized_provider_type = str(provider_type or "").strip().lower()
+        if normalized_provider_type == "hotel":
+            query["provider_type"] = {"$in": ["hotel", "hotel_room"]}
+        elif normalized_provider_type in {"restaurant", "spa", "event"}:
+            query["provider_type"] = normalized_provider_type
+        filters: list[dict[str, Any]] = []
+        if search:
+            filters.append(
+                {
+                    "$or": [
+                        {"customer_name": {"$regex": search, "$options": "i"}},
+                        {"review_text": {"$regex": search, "$options": "i"}},
+                    ]
+                }
+            )
+        if star_rating:
+            filters.append({"$or": [{"rating": star_rating}, {"star_rating": star_rating}]})
+        if replied is True:
+            filters.append({"vendor_reply": {"$exists": True, "$ne": ""}})
+        if replied is False:
+            filters.append({"$or": [{"vendor_reply": {"$exists": False}}, {"vendor_reply": ""}]})
+        if filters:
+            query["$and"] = filters
+        total = int(self.reviews.count_documents(query))
+        docs = self.reviews.find(query).sort("created_at", DESCENDING).skip(skip).limit(limit)
+        items: list[dict[str, Any]] = []
+        for doc in docs:
+            serialized = self._serialize(doc) or {}
+            rating = int(doc.get("rating") or doc.get("star_rating") or 0)
+            items.append(
+                {
+                    **serialized,
+                    "rating": rating,
+                    "star_rating": rating,
+                    "review_text": doc.get("review_text") or doc.get("comment") or "",
+                    "avatar_url": doc.get("customer_avatar") or doc.get("avatar_url") or "",
+                    "vendor_reply": doc.get("vendor_reply") or doc.get("reply"),
+                }
+            )
+        return {"items": items, "total": total}
+
+    def reply_review(self, vendor_id: str, review_id: str, reply_text: str) -> dict[str, Any] | None:
+        self.reviews.update_one(
+            {"_id": ObjectId(review_id), "vendor_id": ObjectId(vendor_id)},
+            {"$set": {"vendor_reply": reply_text, "replied_at": datetime.now(UTC), "updated_at": datetime.now(UTC)}},
+        )
+        return self._serialize(
+            self.reviews.find_one({"_id": ObjectId(review_id), "vendor_id": ObjectId(vendor_id)})
+        )
+
+    def get_settings(self, vendor_id: str) -> dict[str, Any]:
+        doc = self.settings.find_one({"vendor_id": ObjectId(vendor_id)}) or {}
+        doc.pop("_id", None)
+        doc.pop("vendor_id", None)
+        return doc
+
+    def sync_service_listing(self, vendor_id: str, service_type: str, settings: dict[str, Any]) -> dict[str, Any]:
+        """Publish one service identity into its dedicated public collection."""
+        normalized = normalize_service_type(service_type)
+        collection = self.service_collections[normalized]
+
+        now = datetime.now(UTC)
+        payload = self._sanitize_payload(dict(settings))
+        payload.update({
+            "vendor_id": ObjectId(vendor_id),
+            "service_type": normalized,
+            # A listing is public only after the vendor explicitly publishes it.
+            "published": bool(payload.get("published") is True),
+            "updated_at": now,
+        })
+        collection.update_one(
+            {"vendor_id": ObjectId(vendor_id)},
+            {"$set": payload, "$setOnInsert": {"created_at": now}},
+            upsert=True,
+        )
+        return self._serialize(collection.find_one({"vendor_id": ObjectId(vendor_id)})) or {}
+
+    def add_service_amenity(
+        self,
+        vendor_id: str,
+        service_type: str,
+        amenity_name: str,
+    ) -> dict[str, Any]:
+        """Append one amenity without overwriting the service's other settings."""
+        normalized = normalize_service_setting_type(service_type)
+        profile = self.get_settings_profile(vendor_id)
+        settings_key = f"{normalized}_settings"
+        service_settings = dict(profile.get(settings_key, {}) or {})
+        amenities = list(
+            dict.fromkeys(
+                str(item).strip()
+                for item in service_settings.get("amenities", [])
+                if str(item).strip()
+            )
+        )
+        existing = next(
+            (
+                item
+                for item in amenities
+                if item.casefold() == amenity_name.casefold()
+            ),
+            None,
+        )
+        created = existing is None
+        amenity = existing or amenity_name
+        if created:
+            if len(amenities) >= 50:
+                raise ValueError("A service can have at most 50 amenities.")
+            amenities.append(amenity)
+
+        service_settings["amenities"] = amenities
+        updated = self.update_settings_profile(
+            vendor_id,
+            {settings_key: service_settings},
+        )
+        saved_settings = updated.get(settings_key, service_settings)
+        return {
+            "service_type": normalized,
+            "amenity": amenity,
+            "created": created,
+            "amenities": saved_settings.get("amenities", amenities),
+            "settings": saved_settings,
+        }
+
+    def get_settings_general(self, vendor_id: str) -> dict[str, Any]:
+        settings_general = self.get_settings(vendor_id).get("general", {})
+        vendor, profile, business, _ = self._get_vendor_records(vendor_id)
+        return {
+            "business_name": settings_general.get("business_name")
+            or vendor.get("business_name")
+            or profile.get("business_name")
+            or "",
+            "legal_entity_name": settings_general.get("legal_entity_name") or business.get("legal_entity_name") or "",
+            "business_address": settings_general.get("business_address") or business.get("address") or "",
+            "logo_url": settings_general.get("logo_url") or "",
+            "cover_image_url": settings_general.get("cover_image_url") or "",
+            "booking_availability_slots": settings_general.get("booking_availability_slots") or [],
+            "buffer_time_minutes": settings_general.get("buffer_time_minutes") or 15,
+            "front_desk_phone": settings_general.get("front_desk_phone") or vendor.get("phone") or profile.get("phone") or "",
+            "reservations_email": settings_general.get("reservations_email") or vendor.get("email") or profile.get("email") or "",
+            "emergency_contact": settings_general.get("emergency_contact") or vendor.get("phone") or "",
+        }
+
+    def update_settings_general(self, vendor_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        sanitized = self._sanitize_payload(payload)
+        self.settings.update_one(
+            {"vendor_id": ObjectId(vendor_id)},
+            {"$set": {"general": sanitized, "updated_at": datetime.now(UTC)}},
+            upsert=True,
+        )
+        vendor_updates = {
+            "business_name": sanitized.get("business_name"),
+            "updated_at": datetime.now(UTC),
+        }
+        self.settings.database["vendors"].update_one(
+            {"_id": ObjectId(vendor_id)},
+            {"$set": {key: value for key, value in vendor_updates.items() if value not in (None, "")}},
+        )
+        business_updates = {
+            "address": sanitized.get("business_address"),
+            "updated_at": datetime.now(UTC),
+        }
+        self.settings.database["vendor_business_details"].update_one(
+            {"vendor_id": ObjectId(vendor_id)},
+            {
+                "$set": {key: value for key, value in business_updates.items() if value not in (None, "")},
+                "$setOnInsert": {"created_at": datetime.now(UTC)},
+            },
+            upsert=True,
+        )
+        return self.get_settings_general(vendor_id)
+
+    def get_settings_commission(self, vendor_id: str) -> dict[str, Any]:
+        platform_settings = self.settings.database["platform_admin_settings"].find_one(
+            {"_id": "platform_admin_settings"},
+            {"commission": 1},
+        ) or {}
+        stored_commission = platform_settings.get("commission")
+        commission = stored_commission if isinstance(stored_commission, dict) else {}
+        global_rate = self._to_float(commission.get("globalRate", commission.get("global_rate", 12.5)))
+        category_rate = self._to_float(commission.get("categoryRate", commission.get("category_rate", global_rate)))
+        category_label = str(commission.get("categoryLabel") or commission.get("category_label") or "").strip()
+
+        business = self.settings.database["vendor_business_details"].find_one(
+            {"vendor_id": ObjectId(vendor_id)},
+            {"category": 1, "categories": 1},
+        ) or {}
+        vendor_categories = business.get("categories") if isinstance(business.get("categories"), list) else []
+        if business.get("category"):
+            vendor_categories.append(business["category"])
+        category_applies = bool(category_label) and any(
+            str(category).strip().casefold() == category_label.casefold() for category in vendor_categories
+        )
+        effective_rate = category_rate if category_applies else global_rate
+        return {
+            "commission_percent": effective_rate,
+            "globalRate": str(commission.get("globalRate") or commission.get("global_rate") or global_rate),
+            "categoryRate": str(commission.get("categoryRate") or commission.get("category_rate") or category_rate),
+            "categoryLabel": category_label,
+            "category_applies": category_applies,
+            "source": "platform_admin_settings",
+        }
+
+    def _default_legal_docs(self) -> dict[str, Any]:
+        return {
+            "documents": {
+                "terms": "Terms of Service",
+                "privacy": "Privacy Policy",
+            },
+            "content": {
+                "terms": {
+                    "business": "# Business Terms of Service\n\n### 1. Commercial Eligibility\nBusiness accounts must provide accurate company information and maintain an active point of contact for compliance updates.",
+                },
+                "privacy": {
+                    "business": "# Business Privacy Policy\n\n### 1. Business Contact Data\nWe collect administrator details, team member information, and account-level configuration data required to deliver business services.",
+                },
+            },
+            "lastUpdated": "January 15, 2025 at 2:30 PM",
+        }
+
+    def _platform_legal_content(self) -> dict[str, Any]:
+        settings_doc = self.settings.database["platform_admin_settings"].find_one({"_id": "platform_admin_settings"}) or {}
+        legal_content = settings_doc.get("legalContent")
+        if isinstance(legal_content, dict):
+            return legal_content
+        return self._default_legal_docs()
+
+    @staticmethod
+    def _validate_legal_doc_type(doc_type: str) -> str:
+        normalized = str(doc_type).strip().lower()
+        if normalized not in {"terms", "privacy"}:
+            raise ValueError("Unsupported legal document type.")
+        return normalized
+
+    def get_public_legal_doc(self, doc_type: str) -> dict[str, Any]:
+        normalized_doc_type = self._validate_legal_doc_type(doc_type)
+        legal_content = self._platform_legal_content()
+        content_map = legal_content.get("content", {}).get(normalized_doc_type, {})
+        return {
+            "doc_type": normalized_doc_type,
+            "title": legal_content.get("documents", {}).get(normalized_doc_type, normalized_doc_type.title()),
+            "content": str(content_map.get("business") or ""),
+            "content_by_audience": {
+                "apps": str(content_map.get("apps") or ""),
+                "business": str(content_map.get("business") or ""),
+            },
+            "audience": "business",
+            "last_updated": legal_content.get("lastUpdated", ""),
+        }
+
+    def get_legal_doc(self, vendor_id: str, doc_type: str) -> dict[str, Any]:
+        normalized_doc_type = self._validate_legal_doc_type(doc_type)
+        platform_doc = self.get_public_legal_doc(normalized_doc_type)
+        settings_doc = self.settings.find_one(
+            {"vendor_id": ObjectId(vendor_id)},
+            {"legal_content": 1},
+        ) or {}
+        vendor_legal = settings_doc.get("legal_content", {})
+        content_map = vendor_legal.get("content", {}).get(normalized_doc_type, {})
+        fallback = platform_doc["content_by_audience"]
+        content_by_audience = {
+            "apps": str(content_map.get("apps") or fallback.get("apps") or ""),
+            "business": str(content_map.get("business") or fallback.get("business") or ""),
+        }
+        return {
+            **platform_doc,
+            "content": content_by_audience["business"],
+            "content_by_audience": content_by_audience,
+            "last_updated": vendor_legal.get("lastUpdated") or platform_doc["last_updated"],
+        }
+
+    def update_legal_doc(self, vendor_id: str, doc_type: str, content: str, audience: str) -> dict[str, Any]:
+        normalized_doc_type = self._validate_legal_doc_type(doc_type)
+        normalized_audience = str(audience).strip().lower() or "business"
+        if normalized_audience not in {"apps", "business"}:
+            raise ValueError("Unsupported legal document audience.")
+        now = datetime.now(UTC)
+        last_updated = now.strftime("%B %d, %Y at %I:%M %p").replace(" 0", " ")
+        self.settings.update_one(
+            {"vendor_id": ObjectId(vendor_id)},
+            {
+                "$set": {
+                    f"legal_content.content.{normalized_doc_type}.{normalized_audience}": content,
+                    "legal_content.lastUpdated": last_updated,
+                    "updated_at": now,
+                },
+                "$setOnInsert": {"created_at": now},
+            },
+            upsert=True,
+        )
+        return self.get_legal_doc(vendor_id, doc_type)
+
+    def get_settings_profile(self, vendor_id: str) -> dict[str, Any]:
+        settings_doc = self.get_settings(vendor_id)
+        profile_settings = settings_doc.get("profile", {})
+        general_settings = settings_doc.get("general", {})
+        vendor, profile, business, verification = self._get_vendor_records(vendor_id)
+        raw_category = (
+            profile_settings.get("category")
+            or verification.get("category")
+            or vendor.get("category")
+            or "Restaurant"
+        )
+        categories = normalize_account_categories(
+            profile_settings.get("categories")
+            or verification.get("categories")
+            or vendor.get("categories")
+            or ([profile_settings.get("category")] if profile_settings.get("category") else None)
+            or ([verification.get("category")] if verification.get("category") else None)
+            or ([vendor.get("category")] if vendor.get("category") else ["Restaurant"])
+        )
+        categories = [category for category in categories if category != "Happy Hour"]
+        category = (
+            categories[0]
+            if str(raw_category).strip().casefold() == "event venue"
+            else raw_category
+        )
+
+        business_name = (
+            profile_settings.get("business_name")
+            or general_settings.get("business_name")
+            or vendor.get("business_name")
+            or profile.get("business_name")
+            or ""
+        )
+        email = profile_settings.get("email_address") or vendor.get("email") or profile.get("email") or ""
+        phone = profile_settings.get("phone_number") or vendor.get("phone") or profile.get("phone") or ""
+        address = (
+            profile_settings.get("office_address")
+            or general_settings.get("business_address")
+            or business.get("address")
+            or ""
+        )
+        description = profile_settings.get("about_business") or business.get("business_description") or ""
+        website = profile_settings.get("website") or business.get("website") or ""
+        location_value = (
+            profile_settings.get("office_address")
+            or general_settings.get("business_address")
+            or business.get("address")
+            or ""
+        )
+        location_label = self._normalize_location_label(
+            profile_settings.get("location_label")
+            or verification.get("location_label")
+            or business.get("location_label"),
+            category,
+        )
+
+        return {
+            **profile_settings,
+            "business_name": business_name,
+            "category": category,
+            "categories": categories,
+            "email_address": email,
+            "phone_number": phone,
+            "about_business": description,
+            "office_address": location_value,
+            "website": website,
+            "avatar_url": profile_settings.get("avatar_url") or "",
+            "owner_full_name": profile_settings.get("owner_full_name") or vendor.get("owner_full_name") or "",
+            "email": email,
+            "phone": phone,
+            "address": location_value,
+            "location_label": location_label,
+            "location_value": location_value,
+            "description": description,
+            "name": business_name,
+            "unread_notifications": int(
+                self.notifications.count_documents(
+                    {"vendor_id": ObjectId(vendor_id), "read": {"$ne": True}}
+                )
+            ),
+        }
+
+    def update_settings_profile(self, vendor_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        sanitized = self._sanitize_payload(payload)
+        current = self.settings.find_one({"vendor_id": ObjectId(vendor_id)}) or {}
+        current_profile = current.get("profile", {}) if isinstance(current.get("profile"), dict) else {}
+        current_general = current.get("general", {}) if isinstance(current.get("general"), dict) else {}
+        vendor, _, _, verification = self._get_vendor_records(vendor_id)
+
+        # Optional service blocks are independently owned. A profile update
+        # that omits Restaurant must not erase Hotel or Spa settings.
+        next_profile = {
+            **current_profile,
+            **{key: value for key, value in sanitized.items() if value is not None},
+        }
+        next_category = (
+            sanitized.get("category")
+            or current_profile.get("category")
+            or verification.get("category")
+            or vendor.get("category")
+            or "Restaurant"
+        )
+        next_categories = normalize_account_categories(
+            next_profile.get("categories") or [next_category]
+        )
+        next_categories = [category for category in next_categories if category != "Happy Hour"]
+        if str(next_category).strip().casefold() == "event venue":
+            next_category = next_categories[0]
+        next_profile["category"] = next_category
+        next_profile["categories"] = next_categories
+        next_profile["location_label"] = self._normalize_location_label(
+            next_profile.get("location_label"),
+            str(next_category),
+        )
+        update_doc: dict[str, Any] = {
+            "profile": next_profile,
+            "updated_at": datetime.now(UTC),
+        }
+
+        office_address = sanitized.get("office_address")
+        if office_address:
+            update_doc["general"] = {
+                **current_general,
+                "business_address": office_address,
+            }
+
+        self.settings.update_one(
+            {"vendor_id": ObjectId(vendor_id)},
+            {"$set": update_doc},
+            upsert=True,
+        )
+        vendor_updates = {
+            "business_name": sanitized.get("business_name"),
+            "categories": next_categories,
+            "category": next_category,
+            "updated_at": datetime.now(UTC),
+        }
+        self.settings.database["vendors"].update_one(
+            {"_id": ObjectId(vendor_id)},
+            {"$set": {key: value for key, value in vendor_updates.items() if value not in (None, "")}},
+        )
+        business_updates = {
+            "address": sanitized.get("office_address"),
+            "website": sanitized.get("website"),
+            "business_description": sanitized.get("about_business"),
+            "updated_at": datetime.now(UTC),
+        }
+        self.settings.database["vendor_business_details"].update_one(
+            {"vendor_id": ObjectId(vendor_id)},
+            {
+                "$set": {key: value for key, value in business_updates.items() if value not in (None, "")},
+                "$setOnInsert": {"created_at": datetime.now(UTC)},
+            },
+            upsert=True,
+        )
+        profile_updates = {
+            "business_name": sanitized.get("business_name"),
+            "owner_full_name": sanitized.get("owner_full_name"),
+            "email": sanitized.get("email_address"),
+            "phone": sanitized.get("phone_number"),
+            "updated_at": datetime.now(UTC),
+        }
+        self.settings.database["vendor_profiles"].update_one(
+            {"vendor_id": ObjectId(vendor_id)},
+            {
+                "$set": {key: value for key, value in profile_updates.items() if value not in (None, "")},
+                "$setOnInsert": {"created_at": datetime.now(UTC)},
+            },
+            upsert=True,
+        )
+        for service_type in SERVICE_SETTINGS_TYPES:
+            settings_key = f"{service_type}_settings"
+            service_settings = next_profile.get(settings_key)
+            if settings_key in sanitized and isinstance(service_settings, dict):
+                if service_type in SERVICE_TYPES:
+                    self.sync_service_listing(vendor_id, service_type, service_settings)
+        return self.get_settings_profile(vendor_id)
+
+    # ------------------------------------------------------------------
+    # Targeted image URL helpers — update only a single image field so
+    # the rest of the vendor settings document is never overwritten.
+    # ------------------------------------------------------------------
+
+    def update_logo_url(self, vendor_id: str, url: str) -> dict[str, Any]:
+        """Persist a Cloudinary secure_url as the vendor's logo."""
+        self.settings.update_one(
+            {"vendor_id": ObjectId(vendor_id)},
+            {"$set": {"general.logo_url": url, "updated_at": datetime.now(UTC)}},
+            upsert=True,
+        )
+        return self.get_settings_general(vendor_id)
+
+    def update_cover_image_url(self, vendor_id: str, url: str) -> dict[str, Any]:
+        """Persist a Cloudinary secure_url as the vendor's cover image."""
+        self.settings.update_one(
+            {"vendor_id": ObjectId(vendor_id)},
+            {"$set": {"general.cover_image_url": url, "updated_at": datetime.now(UTC)}},
+            upsert=True,
+        )
+        return self.get_settings_general(vendor_id)
+
+    def update_avatar_url(self, vendor_id: str, url: str) -> dict[str, Any]:
+        """Persist a Cloudinary secure_url as the vendor's profile avatar."""
+        self.settings.update_one(
+            {"vendor_id": ObjectId(vendor_id)},
+            {"$set": {"profile.avatar_url": url, "updated_at": datetime.now(UTC)}},
+            upsert=True,
+        )
+        return self.get_settings_profile(vendor_id)
+
+
+    def create_support_ticket(self, vendor_id: str, subject: str, description: str) -> dict[str, Any]:
+        ticket_code = f"#SP-{datetime.now(UTC).year}-{str(ObjectId())[-3:]}"
+        inserted = self.support_tickets.insert_one(
+            {
+                "vendor_id": ObjectId(vendor_id),
+                "ticket_code": ticket_code,
+                "subject": subject,
+                "description": description,
+                "status": "open",
+                "messages": [],
+                "created_at": datetime.now(UTC),
+                "updated_at": datetime.now(UTC),
+            }
+        )
+        created = self.support_tickets.find_one({"_id": inserted.inserted_id})
+        return self._serialize(created)  # type: ignore[return-value]
+
+    def list_support_tickets(self, vendor_id: str, limit: int, skip: int) -> dict[str, Any]:
+        query = {"vendor_id": ObjectId(vendor_id)}
+        total = int(self.support_tickets.count_documents(query))
+        docs = self.support_tickets.find(query).sort("created_at", DESCENDING).skip(skip).limit(limit)
+        return {"items": [self._serialize(doc) for doc in docs], "total": total}
+
+    def get_support_ticket(self, vendor_id: str, ticket_id: str) -> dict[str, Any] | None:
+        return self._serialize(
+            self.support_tickets.find_one({"_id": ObjectId(ticket_id), "vendor_id": ObjectId(vendor_id)})
+        )
+
+    def add_support_ticket_message(
+        self, vendor_id: str, ticket_id: str, message: str, metadata: dict | None = None
+    ) -> dict[str, Any] | None:
+        msg_entry = {"sender": "vendor", "message": message, "metadata": metadata or {}, "sent_at": datetime.now(UTC)}
+        result = self.support_tickets.find_one_and_update(
+            {"_id": ObjectId(ticket_id), "vendor_id": ObjectId(vendor_id)},
+            {"$push": {"messages": msg_entry}, "$set": {"updated_at": datetime.now(UTC)}},
+            return_document=True,
+        )
+        return self._serialize(result)
+
+    def list_notifications(self, vendor_id: str, limit: int, skip: int) -> dict[str, Any]:
+        query = {"vendor_id": ObjectId(vendor_id)}
+        total = int(self.notifications.count_documents(query))
+        unread_count = int(
+            self.notifications.count_documents(
+                {
+                    **query,
+                    "read": {"$ne": True},
+                    "is_read": {"$ne": True},
+                }
+            )
+        )
+        docs = self.notifications.find(query).sort("created_at", DESCENDING).skip(skip).limit(limit)
+        return {
+            "items": [self._serialize(doc) for doc in docs],
+            "total": total,
+            "unread_count": unread_count,
+            "settings": self.get_notification_settings(vendor_id),
+        }
+
+    def clear_notifications(self, vendor_id: str) -> int:
+        result = self.notifications.delete_many({"vendor_id": ObjectId(vendor_id)})
+        return int(result.deleted_count)
+
+    def create_notification(
+        self,
+        vendor_id: str,
+        notification_type: str,
+        title: str,
+        message: str,
+        *,
+        action_type: str = "mark_read",
+        action_label: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        respect_settings_key: str | None = None,
+    ) -> dict[str, Any] | None:
+        if respect_settings_key:
+            settings = self.get_notification_settings(vendor_id)
+            if not bool(settings.get(respect_settings_key, False)):
+                return None
+
+        now = datetime.now(UTC)
+        payload = {
+            "vendor_id": ObjectId(vendor_id),
+            "type": notification_type,
+            "title": title.strip(),
+            "message": message.strip(),
+            "read": False,
+            "action_type": action_type,
+            "action_label": action_label or "Mark as Read",
+            "metadata": metadata or {},
+            "created_at": now,
+            "updated_at": now,
+        }
+        inserted = self.notifications.insert_one(payload)
+        created = self.notifications.find_one({"_id": inserted.inserted_id})
+        return self._serialize(created)
+
+    def create_booking_notification(self, vendor_id: str, booking: dict[str, Any]) -> dict[str, Any] | None:
+        customer_name = str(booking.get("customer_name") or "A customer").strip()
+        booking_code = str(booking.get("booking_code") or "").strip()
+        scheduled_date = str(booking.get("scheduled_date") or "").strip()
+        scheduled_time = str(booking.get("scheduled_time") or "").strip()
+        service = str(booking.get("service") or "booking").strip()
+        schedule_label = " ".join(part for part in [scheduled_date, scheduled_time] if part).strip()
+        message = f"{customer_name} created a new {service.lower()}."
+        if schedule_label:
+            message = f"{message} Scheduled for {schedule_label}."
+        if booking_code:
+            message = f"{message} Reference: {booking_code}."
+
+        return self.create_notification(
+            vendor_id,
+            "new_booking",
+            "New Booking Received",
+            message,
+            action_type="view_details",
+            action_label="View Booking",
+            metadata={
+                "booking_id": str(booking.get("id") or booking.get("_id") or ""),
+                "booking_code": booking_code,
+                "status": booking.get("status"),
+            },
+            respect_settings_key="new_booking",
+        )
+
+    def broadcast_platform_update(
+        self,
+        title: str,
+        message: str,
+        *,
+        action_label: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        vendor_ids: list[str] | None = None,
+    ) -> int:
+        vendor_filter: dict[str, Any] = {}
+        if vendor_ids:
+            vendor_filter = {"vendor_id": {"$in": [ObjectId(vendor_id) for vendor_id in vendor_ids]}}
+
+        opted_in_rows = list(
+            self.notification_settings.find(
+                {
+                    "platform_updates": True,
+                    **vendor_filter,
+                },
+                {"vendor_id": 1},
+            )
+        )
+        if not opted_in_rows:
+            return 0
+
+        vendor_id_values = [row.get("vendor_id") for row in opted_in_rows if row.get("vendor_id")]
+        if not vendor_id_values:
+            return 0
+
+        now = datetime.now(UTC)
+        docs = [
+            {
+                "vendor_id": vendor_oid,
+                "type": "platform_update",
+                "title": title.strip(),
+                "message": message.strip(),
+                "read": False,
+                "action_type": "view_details",
+                "action_label": action_label or "View Update",
+                "metadata": metadata or {},
+                "created_at": now,
+                "updated_at": now,
+            }
+            for vendor_oid in vendor_id_values
+        ]
+        result = self.notifications.insert_many(docs)
+        return len(result.inserted_ids)
+
+    def get_notification_settings(self, vendor_id: str) -> dict[str, Any]:
+        setting = self.notification_settings.find_one({"vendor_id": ObjectId(vendor_id)}) or {}
+        setting.pop("_id", None)
+        setting.pop("vendor_id", None)
+        return {
+            "new_booking": bool(setting.get("new_booking", setting.get("booking_alerts", True))),
+            "booking_cancellation": bool(setting.get("booking_cancellation", True)),
+            "new_review": bool(setting.get("new_review", setting.get("review_alerts", True))),
+            "platform_updates": bool(setting.get("platform_updates", False)),
+        }
+
+    def update_notification_settings(self, vendor_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        sanitized = self._sanitize_payload(payload)
+        normalized = {
+            "new_booking": bool(sanitized.get("new_booking", sanitized.get("booking_alerts", True))),
+            "booking_cancellation": bool(sanitized.get("booking_cancellation", True)),
+            "new_review": bool(sanitized.get("new_review", sanitized.get("review_alerts", True))),
+            "platform_updates": bool(sanitized.get("platform_updates", False)),
+        }
+        self.notification_settings.update_one(
+            {"vendor_id": ObjectId(vendor_id)},
+            {
+                "$set": {**normalized, "updated_at": datetime.now(UTC)},
+                "$unset": {"booking_alerts": "", "review_alerts": ""},
+            },
+            upsert=True,
+        )
+        return self.get_notification_settings(vendor_id)
+
+    def apply_notification_action(self, vendor_id: str, notification_id: str, action: str) -> dict[str, Any] | None:
+        row = self.notifications.find_one({"_id": ObjectId(notification_id), "vendor_id": ObjectId(vendor_id)})
+        if not row:
+            return None
+        self.notifications.update_one(
+            {"_id": row["_id"]},
+            {"$set": {"read": True, "last_action": action, "updated_at": datetime.now(UTC)}},
+        )
+        return self._serialize(self.notifications.find_one({"_id": row["_id"]}))
