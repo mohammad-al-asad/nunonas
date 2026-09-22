@@ -1,0 +1,450 @@
+{
+  "summaryCards": [
+    {
+      "label": "ACTIVE OFFERS",
+      "value": "124",
+      "note": "+12%",
+      "tone": "text-[#16a34a]"
+    },
+    {
+      "label": "EXPIRED OFFERS",
+      "value": "58",
+      "note": "Stable",
+      "tone": "text-[#8b96ad]"
+    },
+    {
+      "label": "TOTAL REDEMPTIONS",
+      "value": "18,294",
+      "note": "+24%",
+      "tone": "text-[#16a34a]"
+    },
+    {
+      "label": "REVENUE GENERATED",
+      "value": "$45,200",
+      "note": "+8%",
+      "tone": "text-[#16a34a]"
+    }
+  ],
+  "offers": [
+    {
+      "id": "#OFR-2402",
+      "name": "Flash Friday Deal",
+      "discount": "$15.00 Flat",
+      "validity": "May 10 - May 11",
+      "appliedTo": "All Vendors",
+      "status": "Active",
+      "redemptions": 890,
+      "kind": "FLAT"
+    },
+    {
+      "id": "#OFR-2403",
+      "name": "New User Welcome",
+      "discount": "BOGO Free",
+      "validity": "Ongoing",
+      "appliedTo": "Platform Wide",
+      "status": "Inactive",
+      "redemptions": 5122,
+      "kind": "BOGO"
+    },
+    {
+      "id": "#OFR-2404",
+      "name": "Weekend Deal",
+      "discount": "BOGO Free",
+      "validity": "Mar 01 - Apr 01",
+      "appliedTo": "Selected Vendors",
+      "status": "Active",
+      "redemptions": 330,
+      "kind": "BOGO"
+    },
+    {
+      "id": "#OFR-2405",
+      "name": "Flash Special",
+      "discount": "$25.00 Flat",
+      "validity": "Mar 01 - Apr 01",
+      "appliedTo": "Selected Vendors",
+      "status": "Active",
+      "redemptions": 5777,
+      "kind": "FLAT"
+    },
+    {
+      "id": "#OFR-2406",
+      "name": "Holiday Deal",
+      "discount": "BOGO Free",
+      "validity": "Dec 01 - Dec 31",
+      "appliedTo": "All Vendors",
+      "status": "Active",
+      "redemptions": 4756,
+      "kind": "BOGO"
+    },
+    {
+      "id": "#OFR-2407",
+      "name": "Member Boost",
+      "discount": "20% OFF",
+      "validity": "Dec 01 - Dec 31",
+      "appliedTo": "Selected Vendors",
+      "status": "Inactive",
+      "redemptions": 2915,
+      "kind": "PERCENT"
+    },
+    {
+      "id": "#OFR-2408",
+      "name": "Holiday Savings",
+      "discount": "25% OFF",
+      "validity": "Sep 01 - Oct 15",
+      "appliedTo": "Selected Vendors",
+      "status": "Inactive",
+      "redemptions": 3886,
+      "kind": "PERCENT"
+    },
+    {
+      "id": "#OFR-2409",
+      "name": "Flash Special",
+      "discount": "BOGO Free",
+      "validity": "Dec 01 - Dec 31",
+      "appliedTo": "Selected Vendors",
+      "status": "Active",
+      "redemptions": 2332,
+      "kind": "BOGO"
+    },
+    {
+      "id": "#OFR-2410",
+      "name": "Flash Savings",
+      "discount": "BOGO Free",
+      "validity": "Dec 01 - Dec 31",
+      "appliedTo": "Platform Wide",
+      "status": "Inactive",
+      "redemptions": 2760,
+      "kind": "BOGO"
+    },
+    {
+      "id": "#OFR-2411",
+      "name": "Flash Special",
+      "discount": "10% OFF",
+      "validity": "Ongoing",
+      "appliedTo": "Selected Vendors",
+      "status": "Inactive",
+      "redemptions": 5119,
+      "kind": "PERCENT"
+    },
+    {
+      "id": "#OFR-2412",
+      "name": "Member Boost",
+      "discount": "BOGO Free",
+      "validity": "Ongoing",
+      "appliedTo": "Platform Wide",
+      "status": "Inactive",
+      "redemptions": 1609,
+      "kind": "BOGO"
+    },
+    {
+      "id": "#OFR-2413",
+      "name": "Member Deal",
+      "discount": "$10.00 Flat",
+      "validity": "Sep 01 - Oct 15",
+      "appliedTo": "Selected Vendors",
+      "status": "Inactive",
+      "redemptions": 5864,
+      "kind": "FLAT"
+    },
+    {
+      "id": "#OFR-2414",
+      "name": "VIP Special",
+      "discount": "$25.00 Flat",
+      "validity": "Mar 01 - Apr 01",
+      "appliedTo": "All Vendors",
+      "status": "Active",
+      "redemptions": 6018,
+      "kind": "FLAT"
+    },
+    {
+      "id": "#OFR-2415",
+      "name": "Flash Savings",
+      "discount": "$20.00 Flat",
+      "validity": "Ongoing",
+      "appliedTo": "All Vendors",
+      "status": "Active",
+      "redemptions": 882,
+      "kind": "FLAT"
+    },
+    {
+      "id": "#OFR-2416",
+      "name": "Weekend Deal",
+      "discount": "$10.00 Flat",
+      "validity": "Dec 01 - Dec 31",
+      "appliedTo": "Platform Wide",
+      "status": "Inactive",
+      "redemptions": 3996,
+      "kind": "FLAT"
+    },
+    {
+      "id": "#OFR-2417",
+      "name": "Flash Deal",
+      "discount": "BOGO Free",
+      "validity": "Sep 01 - Oct 15",
+      "appliedTo": "Selected Vendors",
+      "status": "Inactive",
+      "redemptions": 3837,
+      "kind": "BOGO"
+    },
+    {
+      "id": "#OFR-2418",
+      "name": "Weekend Boost",
+      "discount": "$15.00 Flat",
+      "validity": "Jun 15 - Jul 15",
+      "appliedTo": "Platform Wide",
+      "status": "Inactive",
+      "redemptions": 1099,
+      "kind": "FLAT"
+    },
+    {
+      "id": "#OFR-2419",
+      "name": "Weekend Special",
+      "discount": "BOGO Free",
+      "validity": "Ongoing",
+      "appliedTo": "Platform Wide",
+      "status": "Active",
+      "redemptions": 6055,
+      "kind": "BOGO"
+    },
+    {
+      "id": "#OFR-2420",
+      "name": "Holiday Special",
+      "discount": "BOGO Free",
+      "validity": "Sep 01 - Oct 15",
+      "appliedTo": "All Vendors",
+      "status": "Inactive",
+      "redemptions": 3076,
+      "kind": "BOGO"
+    },
+    {
+      "id": "#OFR-2421",
+      "name": "VIP Special",
+      "discount": "20% OFF",
+      "validity": "Sep 01 - Oct 15",
+      "appliedTo": "All Vendors",
+      "status": "Active",
+      "redemptions": 566,
+      "kind": "PERCENT"
+    },
+    {
+      "id": "#OFR-2422",
+      "name": "Weekend Savings",
+      "discount": "BOGO Free",
+      "validity": "Mar 01 - Apr 01",
+      "appliedTo": "All Vendors",
+      "status": "Inactive",
+      "redemptions": 4822,
+      "kind": "BOGO"
+    },
+    {
+      "id": "#OFR-2423",
+      "name": "Flash Deal",
+      "discount": "$20.00 Flat",
+      "validity": "Jun 15 - Jul 15",
+      "appliedTo": "All Vendors",
+      "status": "Inactive",
+      "redemptions": 2188,
+      "kind": "FLAT"
+    },
+    {
+      "id": "#OFR-2424",
+      "name": "Weekend Deal",
+      "discount": "BOGO Free",
+      "validity": "Mar 01 - Apr 01",
+      "appliedTo": "Selected Vendors",
+      "status": "Active",
+      "redemptions": 330,
+      "kind": "BOGO"
+    },
+    {
+      "id": "#OFR-2425",
+      "name": "Flash Special",
+      "discount": "$25.00 Flat",
+      "validity": "Mar 01 - Apr 01",
+      "appliedTo": "Selected Vendors",
+      "status": "Inactive",
+      "redemptions": 5777,
+      "kind": "FLAT"
+    },
+    {
+      "id": "#OFR-2426",
+      "name": "Holiday Deal",
+      "discount": "BOGO Free",
+      "validity": "Dec 01 - Dec 31",
+      "appliedTo": "All Vendors",
+      "status": "Active",
+      "redemptions": 4756,
+      "kind": "BOGO"
+    },
+    {
+      "id": "#OFR-2427",
+      "name": "Member Boost",
+      "discount": "20% OFF",
+      "validity": "Dec 01 - Dec 31",
+      "appliedTo": "Selected Vendors",
+      "status": "Inactive",
+      "redemptions": 2915,
+      "kind": "PERCENT"
+    },
+    {
+      "id": "#OFR-2428",
+      "name": "Holiday Savings",
+      "discount": "25% OFF",
+      "validity": "Sep 01 - Oct 15",
+      "appliedTo": "Selected Vendors",
+      "status": "Inactive",
+      "redemptions": 3886,
+      "kind": "PERCENT"
+    },
+    {
+      "id": "#OFR-2429",
+      "name": "Flash Special",
+      "discount": "BOGO Free",
+      "validity": "Dec 01 - Dec 31",
+      "appliedTo": "Selected Vendors",
+      "status": "Active",
+      "redemptions": 2332,
+      "kind": "BOGO"
+    },
+    {
+      "id": "#OFR-2430",
+      "name": "Flash Savings",
+      "discount": "BOGO Free",
+      "validity": "Dec 01 - Dec 31",
+      "appliedTo": "Platform Wide",
+      "status": "Inactive",
+      "redemptions": 2760,
+      "kind": "BOGO"
+    },
+    {
+      "id": "#OFR-2431",
+      "name": "Flash Special",
+      "discount": "10% OFF",
+      "validity": "Ongoing",
+      "appliedTo": "Selected Vendors",
+      "status": "Inactive",
+      "redemptions": 5119,
+      "kind": "PERCENT"
+    },
+    {
+      "id": "#OFR-2432",
+      "name": "Member Boost",
+      "discount": "BOGO Free",
+      "validity": "Ongoing",
+      "appliedTo": "Platform Wide",
+      "status": "Inactive",
+      "redemptions": 1609,
+      "kind": "BOGO"
+    },
+    {
+      "id": "#OFR-2433",
+      "name": "Member Deal",
+      "discount": "$10.00 Flat",
+      "validity": "Sep 01 - Oct 15",
+      "appliedTo": "Selected Vendors",
+      "status": "Inactive",
+      "redemptions": 5864,
+      "kind": "FLAT"
+    },
+    {
+      "id": "#OFR-2434",
+      "name": "VIP Special",
+      "discount": "$25.00 Flat",
+      "validity": "Mar 01 - Apr 01",
+      "appliedTo": "All Vendors",
+      "status": "Active",
+      "redemptions": 6018,
+      "kind": "FLAT"
+    },
+    {
+      "id": "#OFR-2435",
+      "name": "Flash Savings",
+      "discount": "$20.00 Flat",
+      "validity": "Ongoing",
+      "appliedTo": "All Vendors",
+      "status": "Active",
+      "redemptions": 882,
+      "kind": "FLAT"
+    },
+    {
+      "id": "#OFR-2436",
+      "name": "Weekend Deal",
+      "discount": "$10.00 Flat",
+      "validity": "Dec 01 - Dec 31",
+      "appliedTo": "Platform Wide",
+      "status": "Inactive",
+      "redemptions": 3996,
+      "kind": "FLAT"
+    },
+    {
+      "id": "#OFR-2437",
+      "name": "Flash Deal",
+      "discount": "BOGO Free",
+      "validity": "Sep 01 - Oct 15",
+      "appliedTo": "Selected Vendors",
+      "status": "Inactive",
+      "redemptions": 3837,
+      "kind": "BOGO"
+    },
+    {
+      "id": "#OFR-2438",
+      "name": "Weekend Boost",
+      "discount": "$15.00 Flat",
+      "validity": "Jun 15 - Jul 15",
+      "appliedTo": "Platform Wide",
+      "status": "Inactive",
+      "redemptions": 1099,
+      "kind": "FLAT"
+    },
+    {
+      "id": "#OFR-2439",
+      "name": "Weekend Special",
+      "discount": "BOGO Free",
+      "validity": "Ongoing",
+      "appliedTo": "Platform Wide",
+      "status": "Active",
+      "redemptions": 6055,
+      "kind": "BOGO"
+    },
+    {
+      "id": "#OFR-2440",
+      "name": "Holiday Special",
+      "discount": "BOGO Free",
+      "validity": "Sep 01 - Oct 15",
+      "appliedTo": "All Vendors",
+      "status": "Inactive",
+      "redemptions": 3076,
+      "kind": "BOGO"
+    },
+    {
+      "id": "#OFR-2441",
+      "name": "VIP Special",
+      "discount": "20% OFF",
+      "validity": "Sep 01 - Oct 15",
+      "appliedTo": "All Vendors",
+      "status": "Active",
+      "redemptions": 566,
+      "kind": "PERCENT"
+    },
+    {
+      "id": "#OFR-2442",
+      "name": "Weekend Savings",
+      "discount": "BOGO Free",
+      "validity": "Mar 01 - Apr 01",
+      "appliedTo": "All Vendors",
+      "status": "Inactive",
+      "redemptions": 4822,
+      "kind": "BOGO"
+    },
+    {
+      "id": "#OFR-2443",
+      "name": "Flash Deal",
+      "discount": "$20.00 Flat",
+      "validity": "Jun 15 - Jul 15",
+      "appliedTo": "All Vendors",
+      "status": "Inactive",
+      "redemptions": 2188,
+      "kind": "FLAT"
+    }
+  ]
+}

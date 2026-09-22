@@ -1,0 +1,1148 @@
+{
+  "summaryCards": [
+    {
+      "label": "Total Vendors",
+      "value": "1,284",
+      "note": "+12% from last month",
+      "tone": "text-[#2da772]"
+    },
+    {
+      "label": "Pending Approval",
+      "value": "42",
+      "note": "Requires attention",
+      "tone": "text-[#f59e0b]"
+    },
+    {
+      "label": "Approved Vendors",
+      "value": "1,198",
+      "note": "Active businesses",
+      "tone": "text-[#2da772]"
+    },
+    {
+      "label": "Rejected Vendors",
+      "value": "44",
+      "note": "Audit complete",
+      "tone": "text-[#ef4444]"
+    }
+  ],
+  "vendors": [
+    {
+      "id": "#V-89312",
+      "businessName": "Azure Bay Resort",
+      "owner": "Marcus Sterling",
+      "category": "HOSPITALITY",
+      "bookings": 1240,
+      "rating": 4.8,
+      "status": "APPROVED",
+      "avatar": "https://picsum.photos/seed/vendor-azure/80/80",
+      "verification": {
+        "description": "Luxury 5-star oceanfront resort offering premium suites and private beach access.",
+        "address": "482 Coastal Highway, Marina Bay, CA 90210",
+        "reviewScore": 4.8,
+        "reviewCount": 1240,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Tax_ID_Proof.jpg",
+            "state": "Rejected"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89313",
+      "businessName": "The Golden Grill",
+      "owner": "Elena Rodriguez",
+      "category": "DINING",
+      "bookings": 856,
+      "rating": 5,
+      "status": "REJECTED",
+      "avatar": "https://picsum.photos/seed/vendor-grill/80/80",
+      "verification": {
+        "description": "Fine dining destination known for chef-curated tasting menus and premium service.",
+        "address": "118 Market Street, San Francisco, CA 94105",
+        "reviewScore": 5,
+        "reviewCount": 980,
+        "docs": [
+          {
+            "title": "Food_Safety_Certificate.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Owner_ID_Proof.jpg",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89314",
+      "businessName": "Speedy Rentals",
+      "owner": "John Wickson",
+      "category": "RENTALS",
+      "bookings": 432,
+      "rating": 3.6,
+      "status": "APPROVED",
+      "avatar": "https://picsum.photos/seed/vendor-speedy/80/80",
+      "verification": {
+        "description": "Urban mobility rental service with scooters and compact city vehicles.",
+        "address": "23 Transit Plaza, Oakland, CA 94612",
+        "reviewScore": 3.6,
+        "reviewCount": 315,
+        "docs": [
+          {
+            "title": "Vehicle_Compliance.pdf",
+            "state": "Rejected"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89315",
+      "businessName": "Azure Suites",
+      "owner": "Mason Baker",
+      "category": "RENTALS",
+      "bookings": 291,
+      "rating": 4.1,
+      "status": "PENDING",
+      "avatar": "https://picsum.photos/seed/vendor-89315/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "325 Pine St, San Francisco, CA 92941",
+        "reviewScore": 4.1,
+        "reviewCount": 291,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89316",
+      "businessName": "Canyon Bay",
+      "owner": "Mason Scott",
+      "category": "DINING",
+      "bookings": 1089,
+      "rating": 4.6,
+      "status": "REJECTED",
+      "avatar": "https://picsum.photos/seed/vendor-89316/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "895 Ocean Ave, Austin, CA 93387",
+        "reviewScore": 4.6,
+        "reviewCount": 1089,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89317",
+      "businessName": "Canyon Grill",
+      "owner": "Ethan Lopez",
+      "category": "DINING",
+      "bookings": 562,
+      "rating": 4.7,
+      "status": "PENDING",
+      "avatar": "https://picsum.photos/seed/vendor-89317/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "401 Market St, Denver, CA 91832",
+        "reviewScore": 4.7,
+        "reviewCount": 562,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Rejected"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89318",
+      "businessName": "Urban Grill",
+      "owner": "James Lopez",
+      "category": "HOSPITALITY",
+      "bookings": 1464,
+      "rating": 3.7,
+      "status": "REJECTED",
+      "avatar": "https://picsum.photos/seed/vendor-89318/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "295 Market St, Miami, CA 92886",
+        "reviewScore": 3.7,
+        "reviewCount": 1464,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Rejected"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Rejected"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89319",
+      "businessName": "Azure Bay",
+      "owner": "Sophia Adams",
+      "category": "RENTALS",
+      "bookings": 1899,
+      "rating": 3.5,
+      "status": "APPROVED",
+      "avatar": "https://picsum.photos/seed/vendor-89319/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "363 Pine St, Denver, CA 94976",
+        "reviewScore": 3.5,
+        "reviewCount": 1899,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Rejected"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89320",
+      "businessName": "Summit Vista",
+      "owner": "Sophia Nguyen",
+      "category": "RENTALS",
+      "bookings": 927,
+      "rating": 3.4,
+      "status": "APPROVED",
+      "avatar": "https://picsum.photos/seed/vendor-89320/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "382 Broadway, San Francisco, CA 92714",
+        "reviewScore": 3.4,
+        "reviewCount": 927,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Rejected"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89321",
+      "businessName": "Canyon Grill",
+      "owner": "Harper Wright",
+      "category": "RENTALS",
+      "bookings": 1331,
+      "rating": 3.9,
+      "status": "APPROVED",
+      "avatar": "https://picsum.photos/seed/vendor-89321/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "577 Ocean Ave, Austin, CA 93454",
+        "reviewScore": 3.9,
+        "reviewCount": 1331,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Rejected"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89322",
+      "businessName": "Summit Stay",
+      "owner": "Lucas Martin",
+      "category": "RENTALS",
+      "bookings": 980,
+      "rating": 3.9,
+      "status": "PENDING",
+      "avatar": "https://picsum.photos/seed/vendor-89322/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "450 Hill Rd, Seattle, CA 92649",
+        "reviewScore": 3.9,
+        "reviewCount": 980,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Rejected"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Rejected"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89323",
+      "businessName": "Coastal Rentals",
+      "owner": "Mia Allen",
+      "category": "DINING",
+      "bookings": 467,
+      "rating": 3.7,
+      "status": "REJECTED",
+      "avatar": "https://picsum.photos/seed/vendor-89323/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "300 Hill Rd, Seattle, CA 92755",
+        "reviewScore": 3.7,
+        "reviewCount": 467,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89324",
+      "businessName": "Canyon Grill",
+      "owner": "James Khan",
+      "category": "HOSPITALITY",
+      "bookings": 2066,
+      "rating": 3.5,
+      "status": "PENDING",
+      "avatar": "https://picsum.photos/seed/vendor-89324/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "635 Market St, Denver, CA 93405",
+        "reviewScore": 3.5,
+        "reviewCount": 2066,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Rejected"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89325",
+      "businessName": "Coastal Roast",
+      "owner": "James Brown",
+      "category": "RENTALS",
+      "bookings": 556,
+      "rating": 3.4,
+      "status": "REJECTED",
+      "avatar": "https://picsum.photos/seed/vendor-89325/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "807 Broadway, Austin, CA 91450",
+        "reviewScore": 3.4,
+        "reviewCount": 556,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Rejected"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89326",
+      "businessName": "Summit Vista",
+      "owner": "Emma Perez",
+      "category": "HOSPITALITY",
+      "bookings": 1419,
+      "rating": 4.5,
+      "status": "APPROVED",
+      "avatar": "https://picsum.photos/seed/vendor-89326/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "982 Broadway, Seattle, CA 94145",
+        "reviewScore": 4.5,
+        "reviewCount": 1419,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Rejected"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Rejected"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89327",
+      "businessName": "Golden Rentals",
+      "owner": "Logan Perez",
+      "category": "DINING",
+      "bookings": 1255,
+      "rating": 4.7,
+      "status": "PENDING",
+      "avatar": "https://picsum.photos/seed/vendor-89327/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "794 Hill Rd, Denver, CA 91969",
+        "reviewScore": 4.7,
+        "reviewCount": 1255,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Rejected"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Rejected"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89328",
+      "businessName": "Azure Rentals",
+      "owner": "Lucas Lopez",
+      "category": "DINING",
+      "bookings": 450,
+      "rating": 3.9,
+      "status": "APPROVED",
+      "avatar": "https://picsum.photos/seed/vendor-89328/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "151 Ocean Ave, Austin, CA 93147",
+        "reviewScore": 3.9,
+        "reviewCount": 450,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89329",
+      "businessName": "Azure Roast",
+      "owner": "Ethan Hill",
+      "category": "RENTALS",
+      "bookings": 967,
+      "rating": 4.1,
+      "status": "APPROVED",
+      "avatar": "https://picsum.photos/seed/vendor-89329/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "862 Broadway, Denver, CA 94794",
+        "reviewScore": 4.1,
+        "reviewCount": 967,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Rejected"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89330",
+      "businessName": "Coastal Bay",
+      "owner": "Mason Wright",
+      "category": "DINING",
+      "bookings": 1023,
+      "rating": 4.3,
+      "status": "APPROVED",
+      "avatar": "https://picsum.photos/seed/vendor-89330/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "509 Ocean Ave, Miami, CA 93580",
+        "reviewScore": 4.3,
+        "reviewCount": 1023,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Rejected"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89331",
+      "businessName": "Coastal Grill",
+      "owner": "Isabella Adams",
+      "category": "DINING",
+      "bookings": 230,
+      "rating": 5,
+      "status": "PENDING",
+      "avatar": "https://picsum.photos/seed/vendor-89331/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "938 Broadway, Seattle, CA 94633",
+        "reviewScore": 5,
+        "reviewCount": 230,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89332",
+      "businessName": "Canyon Roast",
+      "owner": "Ava Perez",
+      "category": "HOSPITALITY",
+      "bookings": 1460,
+      "rating": 3.8,
+      "status": "PENDING",
+      "avatar": "https://picsum.photos/seed/vendor-89332/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "226 Broadway, Miami, CA 92774",
+        "reviewScore": 3.8,
+        "reviewCount": 1460,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Rejected"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Rejected"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89333",
+      "businessName": "Harbor Suites",
+      "owner": "Ethan Turner",
+      "category": "HOSPITALITY",
+      "bookings": 333,
+      "rating": 3.4,
+      "status": "APPROVED",
+      "avatar": "https://picsum.photos/seed/vendor-89333/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "984 Pine St, Austin, CA 90572",
+        "reviewScore": 3.4,
+        "reviewCount": 333,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89334",
+      "businessName": "Golden Vista",
+      "owner": "Liam Rivera",
+      "category": "HOSPITALITY",
+      "bookings": 588,
+      "rating": 3.6,
+      "status": "PENDING",
+      "avatar": "https://picsum.photos/seed/vendor-89334/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "587 Ocean Ave, Denver, CA 92109",
+        "reviewScore": 3.6,
+        "reviewCount": 588,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Rejected"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89335",
+      "businessName": "Azure Suites",
+      "owner": "Mason Baker",
+      "category": "RENTALS",
+      "bookings": 291,
+      "rating": 4.1,
+      "status": "PENDING",
+      "avatar": "https://picsum.photos/seed/vendor-89335/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "325 Pine St, San Francisco, CA 92941",
+        "reviewScore": 4.1,
+        "reviewCount": 291,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89336",
+      "businessName": "Canyon Bay",
+      "owner": "Mason Scott",
+      "category": "DINING",
+      "bookings": 1089,
+      "rating": 4.6,
+      "status": "REJECTED",
+      "avatar": "https://picsum.photos/seed/vendor-89336/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "895 Ocean Ave, Austin, CA 93387",
+        "reviewScore": 4.6,
+        "reviewCount": 1089,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89337",
+      "businessName": "Canyon Grill",
+      "owner": "Ethan Lopez",
+      "category": "DINING",
+      "bookings": 562,
+      "rating": 4.7,
+      "status": "PENDING",
+      "avatar": "https://picsum.photos/seed/vendor-89337/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "401 Market St, Denver, CA 91832",
+        "reviewScore": 4.7,
+        "reviewCount": 562,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Rejected"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89338",
+      "businessName": "Urban Grill",
+      "owner": "James Lopez",
+      "category": "HOSPITALITY",
+      "bookings": 1464,
+      "rating": 3.7,
+      "status": "REJECTED",
+      "avatar": "https://picsum.photos/seed/vendor-89338/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "295 Market St, Miami, CA 92886",
+        "reviewScore": 3.7,
+        "reviewCount": 1464,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Rejected"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Rejected"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89339",
+      "businessName": "Azure Bay",
+      "owner": "Sophia Adams",
+      "category": "RENTALS",
+      "bookings": 1899,
+      "rating": 3.5,
+      "status": "APPROVED",
+      "avatar": "https://picsum.photos/seed/vendor-89339/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "363 Pine St, Denver, CA 94976",
+        "reviewScore": 3.5,
+        "reviewCount": 1899,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Rejected"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89340",
+      "businessName": "Summit Vista",
+      "owner": "Sophia Nguyen",
+      "category": "RENTALS",
+      "bookings": 927,
+      "rating": 3.4,
+      "status": "APPROVED",
+      "avatar": "https://picsum.photos/seed/vendor-89340/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "382 Broadway, San Francisco, CA 92714",
+        "reviewScore": 3.4,
+        "reviewCount": 927,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Rejected"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89341",
+      "businessName": "Canyon Grill",
+      "owner": "Harper Wright",
+      "category": "RENTALS",
+      "bookings": 1331,
+      "rating": 3.9,
+      "status": "APPROVED",
+      "avatar": "https://picsum.photos/seed/vendor-89341/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "577 Ocean Ave, Austin, CA 93454",
+        "reviewScore": 3.9,
+        "reviewCount": 1331,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Rejected"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89342",
+      "businessName": "Summit Stay",
+      "owner": "Lucas Martin",
+      "category": "RENTALS",
+      "bookings": 980,
+      "rating": 3.9,
+      "status": "PENDING",
+      "avatar": "https://picsum.photos/seed/vendor-89342/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "450 Hill Rd, Seattle, CA 92649",
+        "reviewScore": 3.9,
+        "reviewCount": 980,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Rejected"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Rejected"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89343",
+      "businessName": "Coastal Rentals",
+      "owner": "Mia Allen",
+      "category": "DINING",
+      "bookings": 467,
+      "rating": 3.7,
+      "status": "REJECTED",
+      "avatar": "https://picsum.photos/seed/vendor-89343/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "300 Hill Rd, Seattle, CA 92755",
+        "reviewScore": 3.7,
+        "reviewCount": 467,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89344",
+      "businessName": "Canyon Grill",
+      "owner": "James Khan",
+      "category": "HOSPITALITY",
+      "bookings": 2066,
+      "rating": 3.5,
+      "status": "PENDING",
+      "avatar": "https://picsum.photos/seed/vendor-89344/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "635 Market St, Denver, CA 93405",
+        "reviewScore": 3.5,
+        "reviewCount": 2066,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Rejected"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89345",
+      "businessName": "Coastal Roast",
+      "owner": "James Brown",
+      "category": "RENTALS",
+      "bookings": 556,
+      "rating": 3.4,
+      "status": "REJECTED",
+      "avatar": "https://picsum.photos/seed/vendor-89345/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "807 Broadway, Austin, CA 91450",
+        "reviewScore": 3.4,
+        "reviewCount": 556,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Rejected"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89346",
+      "businessName": "Summit Vista",
+      "owner": "Emma Perez",
+      "category": "HOSPITALITY",
+      "bookings": 1419,
+      "rating": 4.5,
+      "status": "APPROVED",
+      "avatar": "https://picsum.photos/seed/vendor-89346/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "982 Broadway, Seattle, CA 94145",
+        "reviewScore": 4.5,
+        "reviewCount": 1419,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Rejected"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Rejected"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89347",
+      "businessName": "Golden Rentals",
+      "owner": "Logan Perez",
+      "category": "DINING",
+      "bookings": 1255,
+      "rating": 4.7,
+      "status": "PENDING",
+      "avatar": "https://picsum.photos/seed/vendor-89347/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "794 Hill Rd, Denver, CA 91969",
+        "reviewScore": 4.7,
+        "reviewCount": 1255,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Rejected"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Rejected"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89348",
+      "businessName": "Azure Rentals",
+      "owner": "Lucas Lopez",
+      "category": "DINING",
+      "bookings": 450,
+      "rating": 3.9,
+      "status": "APPROVED",
+      "avatar": "https://picsum.photos/seed/vendor-89348/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "151 Ocean Ave, Austin, CA 93147",
+        "reviewScore": 3.9,
+        "reviewCount": 450,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89349",
+      "businessName": "Azure Roast",
+      "owner": "Ethan Hill",
+      "category": "RENTALS",
+      "bookings": 967,
+      "rating": 4.1,
+      "status": "APPROVED",
+      "avatar": "https://picsum.photos/seed/vendor-89349/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "862 Broadway, Denver, CA 94794",
+        "reviewScore": 4.1,
+        "reviewCount": 967,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Rejected"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89350",
+      "businessName": "Coastal Bay",
+      "owner": "Mason Wright",
+      "category": "DINING",
+      "bookings": 1023,
+      "rating": 4.3,
+      "status": "APPROVED",
+      "avatar": "https://picsum.photos/seed/vendor-89350/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "509 Ocean Ave, Miami, CA 93580",
+        "reviewScore": 4.3,
+        "reviewCount": 1023,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Rejected"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89351",
+      "businessName": "Coastal Grill",
+      "owner": "Isabella Adams",
+      "category": "DINING",
+      "bookings": 230,
+      "rating": 5,
+      "status": "PENDING",
+      "avatar": "https://picsum.photos/seed/vendor-89351/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "938 Broadway, Seattle, CA 94633",
+        "reviewScore": 5,
+        "reviewCount": 230,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89352",
+      "businessName": "Canyon Roast",
+      "owner": "Ava Perez",
+      "category": "HOSPITALITY",
+      "bookings": 1460,
+      "rating": 3.8,
+      "status": "PENDING",
+      "avatar": "https://picsum.photos/seed/vendor-89352/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "226 Broadway, Miami, CA 92774",
+        "reviewScore": 3.8,
+        "reviewCount": 1460,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Rejected"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Rejected"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89353",
+      "businessName": "Harbor Suites",
+      "owner": "Ethan Turner",
+      "category": "HOSPITALITY",
+      "bookings": 333,
+      "rating": 3.4,
+      "status": "APPROVED",
+      "avatar": "https://picsum.photos/seed/vendor-89353/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "984 Pine St, Austin, CA 90572",
+        "reviewScore": 3.4,
+        "reviewCount": 333,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Verified"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    },
+    {
+      "id": "#V-89354",
+      "businessName": "Golden Vista",
+      "owner": "Liam Rivera",
+      "category": "HOSPITALITY",
+      "bookings": 588,
+      "rating": 3.6,
+      "status": "PENDING",
+      "avatar": "https://picsum.photos/seed/vendor-89354/80/80",
+      "verification": {
+        "description": "Updated listing awaiting verification for new assets and compliance documents.",
+        "address": "587 Ocean Ave, Denver, CA 92109",
+        "reviewScore": 3.6,
+        "reviewCount": 588,
+        "docs": [
+          {
+            "title": "Business_License.pdf",
+            "state": "Rejected"
+          },
+          {
+            "title": "Insurance_Record.pdf",
+            "state": "Verified"
+          }
+        ]
+      }
+    }
+  ]
+}

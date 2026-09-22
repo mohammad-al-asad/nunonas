@@ -1,0 +1,53 @@
+{
+  "totalSubmissions": 2482,
+  "items": [
+    {
+      "id": "#D-99236",
+      "title": "The Blue Lagoon Bar",
+      "age": "3m ago",
+      "subtitle": "New atmospheric interior photo",
+      "venue": "The Blue Lagoon Bar",
+      "location": "128 Waterfront Ave, Miami, FL",
+      "vendorId": "V-40496",
+      "queueType": "PHOTO",
+      "previewImage": "https://picsum.photos/seed/content-cocktail/320/220",
+      "state": "approved"
+    },
+    {
+      "id": "#D-99237",
+      "title": "Saffron Spice Garden",
+      "age": "5m ago",
+      "subtitle": "Summer seasonal menu PDF",
+      "venue": "Saffron Spice Garden",
+      "location": "44 Ocean Drive, San Diego, CA",
+      "vendorId": "V-40497",
+      "queueType": "MENU",
+      "previewImage": "https://picsum.photos/seed/content-menu/320/220",
+      "state": "approved"
+    },
+    {
+      "id": "#D-99238",
+      "title": "Urban Roast Cafe",
+      "age": "6m ago",
+      "subtitle": "Updated storefront lighting",
+      "venue": "Urban Roast Cafe",
+      "location": "7 Center Plaza, Austin, TX",
+      "vendorId": "V-40498",
+      "queueType": "PHOTO",
+      "previewImage": "https://picsum.photos/seed/content-cafe/320/220",
+      "state": "approved"
+    },
+    {
+      "id": "#D-99239",
+      "title": "Bella Napoli",
+      "age": "11m ago",
+      "subtitle": "Updated operating hours",
+      "venue": "Bella Napoli",
+      "location": "601 Pine St, Seattle, WA",
+      "vendorId": "V-40499",
+      "queueType": "INFO",
+      "previewImage": "https://picsum.photos/seed/content-info/320/220",
+      "state": "rejected"
+    }
+  ]
+}

@@ -1,0 +1,2634 @@
+{
+  "summaryCards": [
+    {
+      "label": "TOTAL USERS",
+      "value": "12,845",
+      "trend": "+12%",
+      "tone": "text-[#18b67a] bg-[#dcf7ea]",
+      "icon": "users",
+      "iconWrap": "bg-[#e8eefb] text-[#27409b]"
+    },
+    {
+      "label": "ACTIVE USERS",
+      "value": "11,203",
+      "trend": "+5%",
+      "tone": "text-[#18b67a] bg-[#dcf7ea]",
+      "icon": "user",
+      "iconWrap": "bg-[#dcf7ea] text-[#27409b]"
+    },
+    {
+      "label": "BLOCKED USERS",
+      "value": "452",
+      "trend": "-2%",
+      "tone": "text-[#d94848] bg-[#fde7e7]",
+      "icon": "blocked",
+      "iconWrap": "bg-[#fde7e7] text-[#e11d48]"
+    },
+    {
+      "label": "NEW THIS MONTH",
+      "value": "1,092",
+      "trend": "+18%",
+      "tone": "text-[#f08a1e] bg-[#ffefdc]",
+      "icon": "new",
+      "iconWrap": "bg-[#fff4d8] text-[#f59e0b]"
+    }
+  ],
+  "users": [
+    {
+      "id": "#USR-82910",
+      "name": "Sarah Jenkins",
+      "email": "sarah.j@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=32",
+      "status": "ACTIVE",
+      "totalBookings": 42,
+      "joinedDate": "Feb 10, 2026",
+      "memberSince": "Oct 2025",
+      "age": 29,
+      "stats": {
+        "bookings": 42,
+        "spent": "$4.2K",
+        "rating": "4.9"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "sarah.j@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 902-3481"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "San Francisco, CA"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Grand Plaza Resort & Spa",
+          "range": "Feb 10 - Feb 15, 2026",
+          "amount": "$1,240",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/sarah-1/80/80"
+        },
+        {
+          "hotel": "Skyline View Penthouse",
+          "range": "Jan 22 - Jan 24, 2026",
+          "amount": "$580",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/sarah-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83415",
+      "name": "Michael Ross",
+      "email": "m.ross@corp.com",
+      "avatar": "https://i.pravatar.cc/120?img=59",
+      "status": "BLOCKED",
+      "totalBookings": 18,
+      "joinedDate": "Feb 11, 2026",
+      "memberSince": "Jan 2025",
+      "age": 34,
+      "stats": {
+        "bookings": 18,
+        "spent": "$1.6K",
+        "rating": "4.6"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "m.ross@corp.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 441-1022"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Chicago, IL"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Oceanfront Suites",
+          "range": "Mar 2 - Mar 5, 2026",
+          "amount": "$740",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/michael-1/80/80"
+        },
+        {
+          "hotel": "Lakeview Hotel",
+          "range": "Jan 11 - Jan 13, 2026",
+          "amount": "$410",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/michael-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Unblock Account",
+          "tone": "neutral"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-82741",
+      "name": "David Lee",
+      "email": "david.lee@mail.com",
+      "avatar": "https://i.pravatar.cc/120?img=68",
+      "status": "ACTIVE",
+      "totalBookings": 2,
+      "joinedDate": "Feb 12, 2026",
+      "memberSince": "Aug 2024",
+      "age": 26,
+      "stats": {
+        "bookings": 2,
+        "spent": "$220",
+        "rating": "3.9"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "david.lee@mail.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 718-2290"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Austin, TX"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Metro Stay Inn",
+          "range": "Feb 1 - Feb 2, 2026",
+          "amount": "$120",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/david-1/80/80"
+        },
+        {
+          "hotel": "Cityline Apartments",
+          "range": "Nov 6 - Nov 7, 2025",
+          "amount": "$100",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/david-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-82109",
+      "name": "Emma Wilson",
+      "email": "emma.wilson@live.com",
+      "avatar": "https://i.pravatar.cc/120?img=44",
+      "status": "ACTIVE",
+      "totalBookings": 112,
+      "joinedDate": "Feb 13, 2026",
+      "memberSince": "May 2023",
+      "age": 31,
+      "stats": {
+        "bookings": 112,
+        "spent": "$12.8K",
+        "rating": "4.9"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "emma.wilson@live.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 223-8855"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Seattle, WA"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Mountain Peak Lodge",
+          "range": "Jan 16 - Jan 21, 2026",
+          "amount": "$2,140",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/emma-1/80/80"
+        },
+        {
+          "hotel": "Downtown Executive Suites",
+          "range": "Dec 3 - Dec 7, 2025",
+          "amount": "$1,880",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/emma-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83001",
+      "name": "Liam Carter",
+      "email": "liam.carter@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=12",
+      "status": "BLOCKED",
+      "totalBookings": 29,
+      "joinedDate": "Feb 14, 2026",
+      "memberSince": "Jan 2025",
+      "age": 30,
+      "stats": {
+        "bookings": 29,
+        "spent": "$3.4K",
+        "rating": "3.9"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "liam.carter@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 854-2679"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Portland, OR"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Seaside Hotel",
+          "range": "Jan 3 - Jan 26, 2026",
+          "amount": "$503",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83001-1/80/80"
+        },
+        {
+          "hotel": "Skyline Inn",
+          "range": "Dec 19 - Dec 21, 2025",
+          "amount": "$1239",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83001-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Unblock Account",
+          "tone": "neutral"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83002",
+      "name": "Olivia Nguyen",
+      "email": "olivia.nguyen@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=15",
+      "status": "ACTIVE",
+      "totalBookings": 51,
+      "joinedDate": "Feb 15, 2026",
+      "memberSince": "Nov 2025",
+      "age": 44,
+      "stats": {
+        "bookings": 51,
+        "spent": "$7.2K",
+        "rating": "4.2"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "olivia.nguyen@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 559-5557"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "New York, NY"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Grand Hotel",
+          "range": "Jan 12 - Jan 27, 2026",
+          "amount": "$756",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83002-1/80/80"
+        },
+        {
+          "hotel": "Skyline Apartments",
+          "range": "Dec 6 - Dec 21, 2025",
+          "amount": "$868",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83002-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83003",
+      "name": "Noah Patel",
+      "email": "noah.patel@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=18",
+      "status": "ACTIVE",
+      "totalBookings": 25,
+      "joinedDate": "Feb 16, 2026",
+      "memberSince": "May 2024",
+      "age": 41,
+      "stats": {
+        "bookings": 25,
+        "spent": "$3.6K",
+        "rating": "4.7"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "noah.patel@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 847-8527"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Portland, OR"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Seaside Hotel",
+          "range": "Jan 4 - Jan 28, 2026",
+          "amount": "$1320",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83003-1/80/80"
+        },
+        {
+          "hotel": "Harbor Residences",
+          "range": "Dec 9 - Dec 21, 2025",
+          "amount": "$183",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83003-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83004",
+      "name": "Emma Garcia",
+      "email": "emma.garcia@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=21",
+      "status": "ACTIVE",
+      "totalBookings": 59,
+      "joinedDate": "Feb 17, 2026",
+      "memberSince": "May 2023",
+      "age": 29,
+      "stats": {
+        "bookings": 59,
+        "spent": "$1.5K",
+        "rating": "4.1"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "emma.garcia@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 564-6977"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Dallas, TX"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Metro Lodge",
+          "range": "Jan 8 - Jan 28, 2026",
+          "amount": "$1213",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83004-1/80/80"
+        },
+        {
+          "hotel": "Cityline Residences",
+          "range": "Dec 8 - Dec 22, 2025",
+          "amount": "$424",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83004-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83005",
+      "name": "Ava Brown",
+      "email": "ava.brown@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=24",
+      "status": "ACTIVE",
+      "totalBookings": 119,
+      "joinedDate": "Feb 18, 2026",
+      "memberSince": "Jul 2024",
+      "age": 42,
+      "stats": {
+        "bookings": 119,
+        "spent": "$9.1K",
+        "rating": "4.4"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "ava.brown@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 801-6313"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "New York, NY"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Grand Resort",
+          "range": "Jan 12 - Jan 27, 2026",
+          "amount": "$1216",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83005-1/80/80"
+        },
+        {
+          "hotel": "Cityline Inn",
+          "range": "Dec 13 - Dec 22, 2025",
+          "amount": "$1432",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83005-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83006",
+      "name": "Elijah Adams",
+      "email": "elijah.adams@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=27",
+      "status": "BLOCKED",
+      "totalBookings": 128,
+      "joinedDate": "Feb 19, 2026",
+      "memberSince": "Jul 2025",
+      "age": 36,
+      "stats": {
+        "bookings": 128,
+        "spent": "$2.1K",
+        "rating": "4.0"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "elijah.adams@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 352-9830"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Miami, FL"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Summit Hotel",
+          "range": "Jan 20 - Jan 27, 2026",
+          "amount": "$1602",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83006-1/80/80"
+        },
+        {
+          "hotel": "Skyline Inn",
+          "range": "Dec 19 - Dec 24, 2025",
+          "amount": "$276",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83006-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Unblock Account",
+          "tone": "neutral"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83007",
+      "name": "Mia Khan",
+      "email": "mia.khan@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=30",
+      "status": "ACTIVE",
+      "totalBookings": 13,
+      "joinedDate": "Feb 20, 2026",
+      "memberSince": "Jan 2023",
+      "age": 42,
+      "stats": {
+        "bookings": 13,
+        "spent": "$283",
+        "rating": "4.7"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "mia.khan@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 532-2040"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Phoenix, AZ"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Riverside Hotel",
+          "range": "Jan 18 - Jan 27, 2026",
+          "amount": "$2386",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83007-1/80/80"
+        },
+        {
+          "hotel": "Cityline Residences",
+          "range": "Dec 6 - Dec 23, 2025",
+          "amount": "$1402",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83007-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83008",
+      "name": "James Lopez",
+      "email": "james.lopez@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=33",
+      "status": "ACTIVE",
+      "totalBookings": 88,
+      "joinedDate": "Feb 21, 2026",
+      "memberSince": "Jan 2024",
+      "age": 35,
+      "stats": {
+        "bookings": 88,
+        "spent": "$2.3K",
+        "rating": "4.2"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "james.lopez@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 839-5315"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Portland, OR"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Grand Resort",
+          "range": "Jan 22 - Jan 27, 2026",
+          "amount": "$2199",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83008-1/80/80"
+        },
+        {
+          "hotel": "Skyline Inn",
+          "range": "Dec 14 - Dec 22, 2025",
+          "amount": "$1194",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83008-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83009",
+      "name": "Sophia Turner",
+      "email": "sophia.turner@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=36",
+      "status": "ACTIVE",
+      "totalBookings": 136,
+      "joinedDate": "Feb 22, 2026",
+      "memberSince": "Jan 2025",
+      "age": 32,
+      "stats": {
+        "bookings": 136,
+        "spent": "$6.5K",
+        "rating": "3.6"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "sophia.turner@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 471-6038"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Boston, MA"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Seaside Suites",
+          "range": "Jan 20 - Jan 26, 2026",
+          "amount": "$470",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83009-1/80/80"
+        },
+        {
+          "hotel": "Canyon Inn",
+          "range": "Dec 20 - Dec 22, 2025",
+          "amount": "$352",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83009-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83010",
+      "name": "Lucas Wright",
+      "email": "lucas.wright@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=39",
+      "status": "ACTIVE",
+      "totalBookings": 122,
+      "joinedDate": "Feb 23, 2026",
+      "memberSince": "Sep 2023",
+      "age": 30,
+      "stats": {
+        "bookings": 122,
+        "spent": "$7.0K",
+        "rating": "4.8"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "lucas.wright@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 533-4470"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Portland, OR"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Grand Lodge",
+          "range": "Jan 14 - Jan 28, 2026",
+          "amount": "$1649",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83010-1/80/80"
+        },
+        {
+          "hotel": "Canyon Residences",
+          "range": "Dec 17 - Dec 21, 2025",
+          "amount": "$597",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83010-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83011",
+      "name": "Amelia Hill",
+      "email": "amelia.hill@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=42",
+      "status": "BLOCKED",
+      "totalBookings": 58,
+      "joinedDate": "Feb 24, 2026",
+      "memberSince": "Jan 2024",
+      "age": 22,
+      "stats": {
+        "bookings": 58,
+        "spent": "$7.8K",
+        "rating": "4.4"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "amelia.hill@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 702-4608"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "New York, NY"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Seaside Resort",
+          "range": "Jan 9 - Jan 26, 2026",
+          "amount": "$248",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83011-1/80/80"
+        },
+        {
+          "hotel": "Harbor Inn",
+          "range": "Dec 19 - Dec 22, 2025",
+          "amount": "$660",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83011-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Unblock Account",
+          "tone": "neutral"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83012",
+      "name": "Mason Moore",
+      "email": "mason.moore@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=45",
+      "status": "ACTIVE",
+      "totalBookings": 125,
+      "joinedDate": "Feb 25, 2026",
+      "memberSince": "Mar 2025",
+      "age": 26,
+      "stats": {
+        "bookings": 125,
+        "spent": "$9.5K",
+        "rating": "4.9"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "mason.moore@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 684-8744"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Boston, MA"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Riverside Hotel",
+          "range": "Jan 8 - Jan 26, 2026",
+          "amount": "$517",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83012-1/80/80"
+        },
+        {
+          "hotel": "Canyon Apartments",
+          "range": "Dec 16 - Dec 24, 2025",
+          "amount": "$1046",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83012-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83013",
+      "name": "Isabella Martin",
+      "email": "isabella.martin@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=48",
+      "status": "ACTIVE",
+      "totalBookings": 14,
+      "joinedDate": "Feb 14, 2026",
+      "memberSince": "Nov 2025",
+      "age": 42,
+      "stats": {
+        "bookings": 14,
+        "spent": "$220",
+        "rating": "3.7"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "isabella.martin@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 845-6559"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Los Angeles, CA"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Grand Suites",
+          "range": "Jan 8 - Jan 28, 2026",
+          "amount": "$1957",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83013-1/80/80"
+        },
+        {
+          "hotel": "Skyline Apartments",
+          "range": "Dec 8 - Dec 23, 2025",
+          "amount": "$1037",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83013-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83014",
+      "name": "Ethan Lee",
+      "email": "ethan.lee@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=51",
+      "status": "ACTIVE",
+      "totalBookings": 64,
+      "joinedDate": "Feb 15, 2026",
+      "memberSince": "Jan 2024",
+      "age": 39,
+      "stats": {
+        "bookings": 64,
+        "spent": "$1.5K",
+        "rating": "3.7"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "ethan.lee@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 653-1241"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Los Angeles, CA"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Grand Suites",
+          "range": "Jan 15 - Jan 27, 2026",
+          "amount": "$2091",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83014-1/80/80"
+        },
+        {
+          "hotel": "Skyline Apartments",
+          "range": "Dec 4 - Dec 22, 2025",
+          "amount": "$866",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83014-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83015",
+      "name": "Charlotte Perez",
+      "email": "charlotte.perez@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=54",
+      "status": "ACTIVE",
+      "totalBookings": 1,
+      "joinedDate": "Feb 16, 2026",
+      "memberSince": "Jul 2024",
+      "age": 36,
+      "stats": {
+        "bookings": 1,
+        "spent": "$412",
+        "rating": "4.2"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "charlotte.perez@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 848-8973"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Dallas, TX"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Grand Lodge",
+          "range": "Jan 8 - Jan 26, 2026",
+          "amount": "$2340",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83015-1/80/80"
+        },
+        {
+          "hotel": "Cityline Residences",
+          "range": "Dec 13 - Dec 21, 2025",
+          "amount": "$192",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83015-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83016",
+      "name": "Logan Young",
+      "email": "logan.young@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=57",
+      "status": "BLOCKED",
+      "totalBookings": 150,
+      "joinedDate": "Feb 17, 2026",
+      "memberSince": "Jul 2025",
+      "age": 38,
+      "stats": {
+        "bookings": 150,
+        "spent": "$2.3K",
+        "rating": "3.7"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "logan.young@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 620-2312"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Dallas, TX"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Seaside Resort",
+          "range": "Jan 23 - Jan 26, 2026",
+          "amount": "$1773",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83016-1/80/80"
+        },
+        {
+          "hotel": "Cityline Residences",
+          "range": "Dec 10 - Dec 21, 2025",
+          "amount": "$1358",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83016-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Unblock Account",
+          "tone": "neutral"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83017",
+      "name": "Harper Allen",
+      "email": "harper.allen@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=60",
+      "status": "ACTIVE",
+      "totalBookings": 21,
+      "joinedDate": "Feb 18, 2026",
+      "memberSince": "Jul 2025",
+      "age": 40,
+      "stats": {
+        "bookings": 21,
+        "spent": "$7.5K",
+        "rating": "4.3"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "harper.allen@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 367-4346"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Denver, CO"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Grand Lodge",
+          "range": "Jan 14 - Jan 26, 2026",
+          "amount": "$1348",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83017-1/80/80"
+        },
+        {
+          "hotel": "Canyon Apartments",
+          "range": "Dec 5 - Dec 21, 2025",
+          "amount": "$1028",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83017-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83018",
+      "name": "Levi Scott",
+      "email": "levi.scott@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=63",
+      "status": "ACTIVE",
+      "totalBookings": 160,
+      "joinedDate": "Feb 19, 2026",
+      "memberSince": "Sep 2023",
+      "age": 24,
+      "stats": {
+        "bookings": 160,
+        "spent": "$7.1K",
+        "rating": "3.9"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "levi.scott@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 371-3170"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Denver, CO"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Seaside Suites",
+          "range": "Jan 13 - Jan 27, 2026",
+          "amount": "$766",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83018-1/80/80"
+        },
+        {
+          "hotel": "Canyon Residences",
+          "range": "Dec 12 - Dec 21, 2025",
+          "amount": "$1457",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83018-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83019",
+      "name": "Evelyn Baker",
+      "email": "evelyn.baker@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=66",
+      "status": "ACTIVE",
+      "totalBookings": 142,
+      "joinedDate": "Feb 20, 2026",
+      "memberSince": "May 2025",
+      "age": 25,
+      "stats": {
+        "bookings": 142,
+        "spent": "$2.0K",
+        "rating": "4.0"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "evelyn.baker@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 209-3546"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Miami, FL"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Metro Suites",
+          "range": "Jan 24 - Jan 27, 2026",
+          "amount": "$953",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83019-1/80/80"
+        },
+        {
+          "hotel": "Harbor Residences",
+          "range": "Dec 18 - Dec 23, 2025",
+          "amount": "$194",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83019-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83020",
+      "name": "Ben Rivera",
+      "email": "ben.rivera@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=69",
+      "status": "ACTIVE",
+      "totalBookings": 24,
+      "joinedDate": "Feb 21, 2026",
+      "memberSince": "Nov 2024",
+      "age": 30,
+      "stats": {
+        "bookings": 24,
+        "spent": "$0.8K",
+        "rating": "3.6"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "ben.rivera@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 889-3143"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Miami, FL"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Grand Hotel",
+          "range": "Jan 19 - Jan 28, 2026",
+          "amount": "$1871",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83020-1/80/80"
+        },
+        {
+          "hotel": "Cityline Inn",
+          "range": "Dec 5 - Dec 22, 2025",
+          "amount": "$1207",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83020-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83021",
+      "name": "Liam Carter",
+      "email": "liam.carter@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=12",
+      "status": "BLOCKED",
+      "totalBookings": 29,
+      "joinedDate": "Feb 14, 2026",
+      "memberSince": "Jan 2025",
+      "age": 30,
+      "stats": {
+        "bookings": 29,
+        "spent": "$3.4K",
+        "rating": "3.9"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "liam.carter@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 854-2679"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Portland, OR"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Seaside Hotel",
+          "range": "Jan 3 - Jan 26, 2026",
+          "amount": "$503",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83021-1/80/80"
+        },
+        {
+          "hotel": "Skyline Inn",
+          "range": "Dec 19 - Dec 21, 2025",
+          "amount": "$1239",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83021-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Unblock Account",
+          "tone": "neutral"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83022",
+      "name": "Olivia Nguyen",
+      "email": "olivia.nguyen@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=15",
+      "status": "ACTIVE",
+      "totalBookings": 51,
+      "joinedDate": "Feb 15, 2026",
+      "memberSince": "Nov 2025",
+      "age": 44,
+      "stats": {
+        "bookings": 51,
+        "spent": "$7.2K",
+        "rating": "4.2"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "olivia.nguyen@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 559-5557"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "New York, NY"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Grand Hotel",
+          "range": "Jan 12 - Jan 27, 2026",
+          "amount": "$756",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83022-1/80/80"
+        },
+        {
+          "hotel": "Skyline Apartments",
+          "range": "Dec 6 - Dec 21, 2025",
+          "amount": "$868",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83022-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83023",
+      "name": "Noah Patel",
+      "email": "noah.patel@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=18",
+      "status": "ACTIVE",
+      "totalBookings": 25,
+      "joinedDate": "Feb 16, 2026",
+      "memberSince": "May 2024",
+      "age": 41,
+      "stats": {
+        "bookings": 25,
+        "spent": "$3.6K",
+        "rating": "4.7"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "noah.patel@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 847-8527"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Portland, OR"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Seaside Hotel",
+          "range": "Jan 4 - Jan 28, 2026",
+          "amount": "$1320",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83023-1/80/80"
+        },
+        {
+          "hotel": "Harbor Residences",
+          "range": "Dec 9 - Dec 21, 2025",
+          "amount": "$183",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83023-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83024",
+      "name": "Emma Garcia",
+      "email": "emma.garcia@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=21",
+      "status": "ACTIVE",
+      "totalBookings": 59,
+      "joinedDate": "Feb 17, 2026",
+      "memberSince": "May 2023",
+      "age": 29,
+      "stats": {
+        "bookings": 59,
+        "spent": "$1.5K",
+        "rating": "4.1"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "emma.garcia@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 564-6977"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Dallas, TX"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Metro Lodge",
+          "range": "Jan 8 - Jan 28, 2026",
+          "amount": "$1213",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83024-1/80/80"
+        },
+        {
+          "hotel": "Cityline Residences",
+          "range": "Dec 8 - Dec 22, 2025",
+          "amount": "$424",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83024-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83025",
+      "name": "Ava Brown",
+      "email": "ava.brown@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=24",
+      "status": "ACTIVE",
+      "totalBookings": 119,
+      "joinedDate": "Feb 18, 2026",
+      "memberSince": "Jul 2024",
+      "age": 42,
+      "stats": {
+        "bookings": 119,
+        "spent": "$9.1K",
+        "rating": "4.4"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "ava.brown@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 801-6313"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "New York, NY"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Grand Resort",
+          "range": "Jan 12 - Jan 27, 2026",
+          "amount": "$1216",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83025-1/80/80"
+        },
+        {
+          "hotel": "Cityline Inn",
+          "range": "Dec 13 - Dec 22, 2025",
+          "amount": "$1432",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83025-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83026",
+      "name": "Elijah Adams",
+      "email": "elijah.adams@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=27",
+      "status": "BLOCKED",
+      "totalBookings": 128,
+      "joinedDate": "Feb 19, 2026",
+      "memberSince": "Jul 2025",
+      "age": 36,
+      "stats": {
+        "bookings": 128,
+        "spent": "$2.1K",
+        "rating": "4.0"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "elijah.adams@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 352-9830"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Miami, FL"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Summit Hotel",
+          "range": "Jan 20 - Jan 27, 2026",
+          "amount": "$1602",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83026-1/80/80"
+        },
+        {
+          "hotel": "Skyline Inn",
+          "range": "Dec 19 - Dec 24, 2025",
+          "amount": "$276",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83026-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Unblock Account",
+          "tone": "neutral"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83027",
+      "name": "Mia Khan",
+      "email": "mia.khan@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=30",
+      "status": "ACTIVE",
+      "totalBookings": 13,
+      "joinedDate": "Feb 20, 2026",
+      "memberSince": "Jan 2023",
+      "age": 42,
+      "stats": {
+        "bookings": 13,
+        "spent": "$283",
+        "rating": "4.7"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "mia.khan@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 532-2040"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Phoenix, AZ"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Riverside Hotel",
+          "range": "Jan 18 - Jan 27, 2026",
+          "amount": "$2386",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83027-1/80/80"
+        },
+        {
+          "hotel": "Cityline Residences",
+          "range": "Dec 6 - Dec 23, 2025",
+          "amount": "$1402",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83027-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83028",
+      "name": "James Lopez",
+      "email": "james.lopez@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=33",
+      "status": "ACTIVE",
+      "totalBookings": 88,
+      "joinedDate": "Feb 21, 2026",
+      "memberSince": "Jan 2024",
+      "age": 35,
+      "stats": {
+        "bookings": 88,
+        "spent": "$2.3K",
+        "rating": "4.2"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "james.lopez@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 839-5315"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Portland, OR"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Grand Resort",
+          "range": "Jan 22 - Jan 27, 2026",
+          "amount": "$2199",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83028-1/80/80"
+        },
+        {
+          "hotel": "Skyline Inn",
+          "range": "Dec 14 - Dec 22, 2025",
+          "amount": "$1194",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83028-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83029",
+      "name": "Sophia Turner",
+      "email": "sophia.turner@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=36",
+      "status": "ACTIVE",
+      "totalBookings": 136,
+      "joinedDate": "Feb 22, 2026",
+      "memberSince": "Jan 2025",
+      "age": 32,
+      "stats": {
+        "bookings": 136,
+        "spent": "$6.5K",
+        "rating": "3.6"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "sophia.turner@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 471-6038"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Boston, MA"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Seaside Suites",
+          "range": "Jan 20 - Jan 26, 2026",
+          "amount": "$470",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83029-1/80/80"
+        },
+        {
+          "hotel": "Canyon Inn",
+          "range": "Dec 20 - Dec 22, 2025",
+          "amount": "$352",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83029-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83030",
+      "name": "Lucas Wright",
+      "email": "lucas.wright@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=39",
+      "status": "ACTIVE",
+      "totalBookings": 122,
+      "joinedDate": "Feb 23, 2026",
+      "memberSince": "Sep 2023",
+      "age": 30,
+      "stats": {
+        "bookings": 122,
+        "spent": "$7.0K",
+        "rating": "4.8"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "lucas.wright@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 533-4470"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Portland, OR"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Grand Lodge",
+          "range": "Jan 14 - Jan 28, 2026",
+          "amount": "$1649",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83030-1/80/80"
+        },
+        {
+          "hotel": "Canyon Residences",
+          "range": "Dec 17 - Dec 21, 2025",
+          "amount": "$597",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83030-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83031",
+      "name": "Amelia Hill",
+      "email": "amelia.hill@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=42",
+      "status": "BLOCKED",
+      "totalBookings": 58,
+      "joinedDate": "Feb 24, 2026",
+      "memberSince": "Jan 2024",
+      "age": 22,
+      "stats": {
+        "bookings": 58,
+        "spent": "$7.8K",
+        "rating": "4.4"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "amelia.hill@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 702-4608"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "New York, NY"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Seaside Resort",
+          "range": "Jan 9 - Jan 26, 2026",
+          "amount": "$248",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83031-1/80/80"
+        },
+        {
+          "hotel": "Harbor Inn",
+          "range": "Dec 19 - Dec 22, 2025",
+          "amount": "$660",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83031-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Unblock Account",
+          "tone": "neutral"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83032",
+      "name": "Mason Moore",
+      "email": "mason.moore@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=45",
+      "status": "ACTIVE",
+      "totalBookings": 125,
+      "joinedDate": "Feb 25, 2026",
+      "memberSince": "Mar 2025",
+      "age": 26,
+      "stats": {
+        "bookings": 125,
+        "spent": "$9.5K",
+        "rating": "4.9"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "mason.moore@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 684-8744"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Boston, MA"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Riverside Hotel",
+          "range": "Jan 8 - Jan 26, 2026",
+          "amount": "$517",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83032-1/80/80"
+        },
+        {
+          "hotel": "Canyon Apartments",
+          "range": "Dec 16 - Dec 24, 2025",
+          "amount": "$1046",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83032-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83033",
+      "name": "Isabella Martin",
+      "email": "isabella.martin@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=48",
+      "status": "ACTIVE",
+      "totalBookings": 14,
+      "joinedDate": "Feb 14, 2026",
+      "memberSince": "Nov 2025",
+      "age": 42,
+      "stats": {
+        "bookings": 14,
+        "spent": "$220",
+        "rating": "3.7"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "isabella.martin@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 845-6559"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Los Angeles, CA"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Grand Suites",
+          "range": "Jan 8 - Jan 28, 2026",
+          "amount": "$1957",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83033-1/80/80"
+        },
+        {
+          "hotel": "Skyline Apartments",
+          "range": "Dec 8 - Dec 23, 2025",
+          "amount": "$1037",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83033-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83034",
+      "name": "Ethan Lee",
+      "email": "ethan.lee@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=51",
+      "status": "ACTIVE",
+      "totalBookings": 64,
+      "joinedDate": "Feb 15, 2026",
+      "memberSince": "Jan 2024",
+      "age": 39,
+      "stats": {
+        "bookings": 64,
+        "spent": "$1.5K",
+        "rating": "3.7"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "ethan.lee@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 653-1241"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Los Angeles, CA"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Grand Suites",
+          "range": "Jan 15 - Jan 27, 2026",
+          "amount": "$2091",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83034-1/80/80"
+        },
+        {
+          "hotel": "Skyline Apartments",
+          "range": "Dec 4 - Dec 22, 2025",
+          "amount": "$866",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83034-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83035",
+      "name": "Charlotte Perez",
+      "email": "charlotte.perez@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=54",
+      "status": "ACTIVE",
+      "totalBookings": 1,
+      "joinedDate": "Feb 16, 2026",
+      "memberSince": "Jul 2024",
+      "age": 36,
+      "stats": {
+        "bookings": 1,
+        "spent": "$412",
+        "rating": "4.2"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "charlotte.perez@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 848-8973"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Dallas, TX"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Grand Lodge",
+          "range": "Jan 8 - Jan 26, 2026",
+          "amount": "$2340",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83035-1/80/80"
+        },
+        {
+          "hotel": "Cityline Residences",
+          "range": "Dec 13 - Dec 21, 2025",
+          "amount": "$192",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83035-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83036",
+      "name": "Logan Young",
+      "email": "logan.young@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=57",
+      "status": "BLOCKED",
+      "totalBookings": 150,
+      "joinedDate": "Feb 17, 2026",
+      "memberSince": "Jul 2025",
+      "age": 38,
+      "stats": {
+        "bookings": 150,
+        "spent": "$2.3K",
+        "rating": "3.7"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "logan.young@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 620-2312"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Dallas, TX"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Seaside Resort",
+          "range": "Jan 23 - Jan 26, 2026",
+          "amount": "$1773",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83036-1/80/80"
+        },
+        {
+          "hotel": "Cityline Residences",
+          "range": "Dec 10 - Dec 21, 2025",
+          "amount": "$1358",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83036-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Unblock Account",
+          "tone": "neutral"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83037",
+      "name": "Harper Allen",
+      "email": "harper.allen@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=60",
+      "status": "ACTIVE",
+      "totalBookings": 21,
+      "joinedDate": "Feb 18, 2026",
+      "memberSince": "Jul 2025",
+      "age": 40,
+      "stats": {
+        "bookings": 21,
+        "spent": "$7.5K",
+        "rating": "4.3"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "harper.allen@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 367-4346"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Denver, CO"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Grand Lodge",
+          "range": "Jan 14 - Jan 26, 2026",
+          "amount": "$1348",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83037-1/80/80"
+        },
+        {
+          "hotel": "Canyon Apartments",
+          "range": "Dec 5 - Dec 21, 2025",
+          "amount": "$1028",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83037-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83038",
+      "name": "Levi Scott",
+      "email": "levi.scott@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=63",
+      "status": "ACTIVE",
+      "totalBookings": 160,
+      "joinedDate": "Feb 19, 2026",
+      "memberSince": "Sep 2023",
+      "age": 24,
+      "stats": {
+        "bookings": 160,
+        "spent": "$7.1K",
+        "rating": "3.9"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "levi.scott@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 371-3170"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Denver, CO"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Seaside Suites",
+          "range": "Jan 13 - Jan 27, 2026",
+          "amount": "$766",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83038-1/80/80"
+        },
+        {
+          "hotel": "Canyon Residences",
+          "range": "Dec 12 - Dec 21, 2025",
+          "amount": "$1457",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83038-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83039",
+      "name": "Evelyn Baker",
+      "email": "evelyn.baker@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=66",
+      "status": "ACTIVE",
+      "totalBookings": 142,
+      "joinedDate": "Feb 20, 2026",
+      "memberSince": "May 2025",
+      "age": 25,
+      "stats": {
+        "bookings": 142,
+        "spent": "$2.0K",
+        "rating": "4.0"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "evelyn.baker@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 209-3546"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Miami, FL"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Metro Suites",
+          "range": "Jan 24 - Jan 27, 2026",
+          "amount": "$953",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83039-1/80/80"
+        },
+        {
+          "hotel": "Harbor Residences",
+          "range": "Dec 18 - Dec 23, 2025",
+          "amount": "$194",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83039-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    },
+    {
+      "id": "#USR-83040",
+      "name": "Ben Rivera",
+      "email": "ben.rivera@example.com",
+      "avatar": "https://i.pravatar.cc/120?img=69",
+      "status": "ACTIVE",
+      "totalBookings": 24,
+      "joinedDate": "Feb 21, 2026",
+      "memberSince": "Nov 2024",
+      "age": 30,
+      "stats": {
+        "bookings": 24,
+        "spent": "$0.8K",
+        "rating": "3.6"
+      },
+      "contacts": [
+        {
+          "type": "mail",
+          "label": "Email Address",
+          "value": "ben.rivera@example.com"
+        },
+        {
+          "type": "phone",
+          "label": "Phone Number",
+          "value": "+1 (555) 889-3143"
+        },
+        {
+          "type": "pin",
+          "label": "Default Location",
+          "value": "Miami, FL"
+        }
+      ],
+      "recentBookings": [
+        {
+          "hotel": "Grand Hotel",
+          "range": "Jan 19 - Jan 28, 2026",
+          "amount": "$1871",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83040-1/80/80"
+        },
+        {
+          "hotel": "Cityline Inn",
+          "range": "Dec 5 - Dec 22, 2025",
+          "amount": "$1207",
+          "status": "PAID",
+          "image": "https://picsum.photos/seed/user-83040-2/80/80"
+        }
+      ],
+      "actions": [
+        {
+          "label": "Block Account",
+          "tone": "danger"
+        },
+        {
+          "label": "Reset Password",
+          "tone": "neutral"
+        }
+      ]
+    }
+  ]
+}
