@@ -149,7 +149,7 @@ export function OffersManagementView({
   const [formDiscountValue, setFormDiscountValue] = useState(0);
   const [formStartDate, setFormStartDate] = useState("");
   const [formEndDate, setFormEndDate] = useState("");
-  const [formApplyTo, setFormApplyTo] = useState("All Vendors");
+  const [formApplyTo, setFormApplyTo] = useState("All Service Providers");
   const [formSelectedVendorIds, setFormSelectedVendorIds] = useState<string[]>([]);
   const [formVendorSearch, setFormVendorSearch] = useState("");
   const [formActive, setFormActive] = useState(true);
@@ -353,7 +353,7 @@ export function OffersManagementView({
     setFormDiscountValue(0);
     setFormStartDate("");
     setFormEndDate("");
-    setFormApplyTo("All Vendors");
+    setFormApplyTo("All Service Providers");
     setFormSelectedVendorIds([]);
     setFormVendorSearch("");
     setFormActive(true);
@@ -402,8 +402,9 @@ export function OffersManagementView({
 
   const handleCreateOffer = async () => {
     if (!formName.trim() || createSaving) return;
-    if (formApplyTo === "Selected Vendors" && formSelectedVendorIds.length === 0) {
-      setFormError("Select at least one vendor for this offer.");
+    const isSelectedScope = formApplyTo === "Selected Service Providers" || formApplyTo === "Selected Vendors";
+    if (isSelectedScope && formSelectedVendorIds.length === 0) {
+      setFormError("Select at least one service provider for this offer.");
       return;
     }
     setFormError("");
@@ -420,7 +421,7 @@ export function OffersManagementView({
           startDate: formStartDate,
           endDate: formEndDate,
           appliedTo: formApplyTo,
-          selectedVendorIds: formApplyTo === "Selected Vendors" ? formSelectedVendorIds : [],
+          selectedVendorIds: isSelectedScope ? formSelectedVendorIds : [],
           active: formActive
         })
       });
@@ -918,7 +919,7 @@ export function OffersManagementView({
                     </button>
                     {applyMenuOpen && (
                       <div className="mt-2 overflow-hidden rounded-xl border border-[#e6ecf7] bg-white shadow-sm">
-                        {["All Vendors", "Selected Vendors", "Platform Wide"].map((option) => (
+                        {["All Service Providers", "Selected Service Providers", "Platform Wide"].map((option) => (
                           <button
                             key={option}
                             type="button"
@@ -936,7 +937,7 @@ export function OffersManagementView({
                         ))}
                       </div>
                     )}
-                    {formApplyTo === "Selected Vendors" && (
+                    {(formApplyTo === "Selected Service Providers" || formApplyTo === "Selected Vendors") && (
                       <div className="mt-3 space-y-2">
                         <div className="flex h-10 items-center gap-2 rounded-xl border border-[#e6ecf7] bg-white px-3">
                           <FiSearch size={12} className="text-[#94a3b8]" />
@@ -944,13 +945,13 @@ export function OffersManagementView({
                             type="text"
                             value={formVendorSearch}
                             onChange={(event) => setFormVendorSearch(event.target.value)}
-                            placeholder="Search vendors..."
+                            placeholder="Search service providers..."
                             className="w-full border-0 bg-transparent text-[11px] text-[#1f2d46] outline-none placeholder:text-[#94a3b8]"
                           />
                         </div>
                         <div className="flex items-center justify-between rounded-xl border border-[#e6ecf7] bg-[#f8fafc] px-3 py-2 text-[11px]">
                           <span className="text-[#64748b]">
-                            {formSelectedVendorIds.length} vendor{formSelectedVendorIds.length === 1 ? "" : "s"} selected
+                            {formSelectedVendorIds.length} service provider{formSelectedVendorIds.length === 1 ? "" : "s"} selected
                           </span>
                           <div className="flex items-center gap-2">
                             <button
@@ -972,11 +973,11 @@ export function OffersManagementView({
                         <div className="max-h-52 overflow-y-auto rounded-xl border border-[#e6ecf7] bg-white">
                         {selectableVendors.length === 0 ? (
                           <div className="px-3 py-3 text-[11px] text-[#94a3b8]">
-                            No approved vendors are available for selection.
+                            No approved service providers are available for selection.
                           </div>
                         ) : filteredSelectableVendors.length === 0 ? (
                           <div className="px-3 py-3 text-[11px] text-[#94a3b8]">
-                            No vendors match that search.
+                            No service providers match that search.
                           </div>
                         ) : (
                           vendorGroups.map(([category, vendors]) => {

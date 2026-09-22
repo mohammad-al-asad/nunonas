@@ -173,7 +173,7 @@ export function ContentManagementView({ data }: { data: { totalSubmissions: numb
                 <div className="mt-2 rounded-xl bg-[#f4f6fb] px-4 py-3">
                   <h6 className="m-0 text-[14px] font-semibold text-[#1f3d8f]">{selectedItem.venue}</h6>
                   <p className="m-0 text-[10px] text-[#7184a4]">{selectedItem.location}</p>
-                  <p className="m-0 text-[10px] text-[#7184a4]">Vendor ID: {selectedItem.vendorId}</p>
+                  <p className="m-0 text-[10px] text-[#7184a4]">Service Provider ID: {selectedItem.vendorId}</p>
                 </div>
               </section>
             </div>

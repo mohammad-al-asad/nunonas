@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 const titleByRoute: Record<string, string> = {
   "/dashboard": "Platform Overview",
   "/users": "User Management",
-  "/vendors": "Vendors Management",
+  "/vendors": "Service Providers Management",
   "/content-moderation": "Content Management",
   "/offers": "Offers",
   "/billing": "Billing",
@@ -44,11 +44,12 @@ export function Topbar({
         <button
           type="button"
           onClick={() => onOpenPanel("notifications")}
-          className="relative inline-flex text-[#4d5f82]"
+          className="group relative flex h-[34px] w-[34px] items-center justify-center rounded-full border border-transparent text-[#4d5f82] transition-all duration-200 hover:border-[#dbe2ef] hover:bg-white hover:text-[#1f3d8f] hover:shadow-sm active:scale-95 cursor-pointer"
           aria-label="Notifications"
+          title="Notifications"
         >
-          <FiBell size={18} />
-          <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-[#ef4444]" />
+          <FiBell size={18} className="transition-transform duration-200 group-hover:scale-110 group-hover:rotate-[8deg]" />
+          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#ef4444] ring-2 ring-white transition-transform duration-200 group-hover:scale-110" />
         </button>
         <button
           type="button"

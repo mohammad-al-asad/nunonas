@@ -169,6 +169,8 @@ async def _get_or_sync_billing_payments(db: AsyncIOMotorDatabase) -> list[dict]:
 
 @router.get("/dashboard/overview", tags=["Platform Admin - Dashboard"])
 async def get_platform_dashboard_overview(
+    start_date: str | None = None,
+    end_date: str | None = None,
     db: AsyncIOMotorDatabase = Depends(get_db),
 ) -> dict:
     """Return real platform KPI data for the admin dashboard."""
@@ -221,13 +223,61 @@ async def get_platform_dashboard_overview(
         ]).to_list(1)
         weekly_data.append({"period": label, "value": round(_number(revenue_result[0].get("total", 0) if revenue_result else 0), 2)})
 
+    # Custom date range calculation
+    custom_data = []
+    if start_date and end_date:
+        try:
+            from datetime import timedelta
+            s_dt = datetime.strptime(start_date.strip(), "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            e_dt = datetime.strptime(end_date.strip(), "%Y-%m-%d").replace(hour=23, minute=59, second=59, microsecond=999999, tzinfo=timezone.utc)
+            days_diff = (e_dt - s_dt).days + 1
+            if days_diff <= 31:
+                for d in range(max(1, days_diff)):
+                    cur_day = s_dt + timedelta(days=d)
+                    label = cur_day.strftime("%b %d")
+                    d_start = cur_day.replace(hour=0, minute=0, second=0, microsecond=0)
+                    d_end = cur_day.replace(hour=23, minute=59, second=59, microsecond=999999)
+                    rev_res = await db["bookings"].aggregate([
+                        {"$match": {"created_at": {"$gte": d_start, "$lte": d_end}}},
+                        {"$group": {"_id": None, "total": {"$sum": {"$convert": {"input": "$total_amount", "to": "double", "onError": 0, "onNull": 0}}}}}
+                    ]).to_list(1)
+                    custom_data.append({"period": label, "value": round(_number(rev_res[0].get("total", 0) if rev_res else 0), 2)})
+            elif days_diff <= 180:
+                cur_dt = s_dt
+                while cur_dt <= e_dt:
+                    next_dt = min(cur_dt + timedelta(days=6, hours=23, minutes=59, seconds=59), e_dt)
+                    label = cur_dt.strftime("%b %d")
+                    rev_res = await db["bookings"].aggregate([
+                        {"$match": {"created_at": {"$gte": cur_dt, "$lte": next_dt}}},
+                        {"$group": {"_id": None, "total": {"$sum": {"$convert": {"input": "$total_amount", "to": "double", "onError": 0, "onNull": 0}}}}}
+                    ]).to_list(1)
+                    custom_data.append({"period": label, "value": round(_number(rev_res[0].get("total", 0) if rev_res else 0), 2)})
+                    cur_dt = cur_dt + timedelta(days=7)
+            else:
+                cur_dt = s_dt
+                while cur_dt <= e_dt:
+                    if cur_dt.month == 12:
+                        next_month = cur_dt.replace(year=cur_dt.year + 1, month=1, day=1)
+                    else:
+                        next_month = cur_dt.replace(month=cur_dt.month + 1, day=1)
+                    period_end = min(next_month - timedelta(seconds=1), e_dt)
+                    label = cur_dt.strftime("%b '%y")
+                    rev_res = await db["bookings"].aggregate([
+                        {"$match": {"created_at": {"$gte": cur_dt, "$lte": period_end}}},
+                        {"$group": {"_id": None, "total": {"$sum": {"$convert": {"input": "$total_amount", "to": "double", "onError": 0, "onNull": 0}}}}}
+                    ]).to_list(1)
+                    custom_data.append({"period": label, "value": round(_number(rev_res[0].get("total", 0) if rev_res else 0), 2)})
+                    cur_dt = next_month
+        except Exception:
+            custom_data = []
+
     status_results = await db["bookings"].aggregate([
         {"$group": {"_id": {"$toLower": {"$ifNull": ["$status", "unknown"]}}, "count": {"$sum": 1}}}
     ]).to_list(20)
     booking_statuses = {str(item.get("_id") or "unknown"): int(item.get("count") or 0) for item in status_results}
     active_vendor_count = await db["vendors"].count_documents({"status": {"$in": ["active", "approved"]}})
     pending_vendor_count = await db["vendors"].count_documents({"status": {"$in": ["pending", "pending_review", "pending_approval"]}})
-    blocked_vendor_count = await db["vendors"].count_documents({"status": {"$in": ["blocked", "suspended"]}})
+    blocked_vendor_count = await db["vendors"].count_documents({"status": {"$in": ["blocked", "suspended"]}} )
     total_offers = await db["offers"].count_documents({})
     expired_offers = await db["offers"].count_documents({"is_active": {"$ne": True}})
 
@@ -274,16 +324,52 @@ async def get_platform_dashboard_overview(
             "bookings": len(vendor_bookings),
         })
 
-    recent_raw = await db["bookings"].find({}).sort("created_at", -1).limit(10).to_list(10)
-    recent_bookings = [{
-        "id": str(item.get("_id") or ""),
-        "customer": str(item.get("customer_name") or item.get("user_name") or "Customer"),
-        "vendor": str(item.get("vendor_name") or item.get("business_name") or "Vendor"),
-        "type": str(item.get("provider_type") or item.get("booking_type") or "other").replace("_", " ").title(),
-        "amount": round(_number(item.get("total_amount")), 2),
-        "status": str(item.get("status") or "unknown").replace("_", " ").title(),
-        "date": _date_label(item.get("created_at")),
-    } for item in recent_raw]
+    vendor_names_map = {str(v.get("_id")): (v.get("business_name") or v.get("name")) for v in vendors_raw}
+    recent_raw = await db["bookings"].find({}).sort("created_at", -1).limit(30).to_list(30)
+
+    needed_vids = []
+    needed_uids = []
+    for item in recent_raw:
+        vid = str(item.get("vendor_id") or "")
+        if vid and vid not in vendor_names_map:
+            needed_vids.append(ObjectId(vid) if ObjectId.is_valid(vid) else vid)
+        uid = str(item.get("user_id") or item.get("customer_id") or "")
+        if uid:
+            needed_uids.append(ObjectId(uid) if ObjectId.is_valid(uid) else uid)
+
+    if needed_vids:
+        extra_vendors = await db["vendors"].find({"_id": {"$in": needed_vids}}).to_list(100)
+        for ev in extra_vendors:
+            vendor_names_map[str(ev.get("_id"))] = ev.get("business_name") or ev.get("name") or "Service Provider"
+
+    user_names_map = {}
+    if needed_uids:
+        users = await db["users"].find({"_id": {"$in": needed_uids}}).to_list(100)
+        for u in users:
+            name = u.get("name") or f"{u.get('first_name', '')} {u.get('last_name', '')}".strip() or u.get("email")
+            if name:
+                user_names_map[str(u.get("_id"))] = name
+
+    recent_bookings = []
+    for item in recent_raw:
+        vid = str(item.get("vendor_id") or "")
+        uid = str(item.get("user_id") or item.get("customer_id") or "")
+        c_name = item.get("customer_name") or item.get("user_name") or user_names_map.get(uid) or "Customer"
+        v_name = item.get("vendor_name") or item.get("business_name") or vendor_names_map.get(vid)
+        if not v_name or v_name.lower() == "vendor":
+            v_name = "Service Provider"
+
+        b_type = str(item.get("provider_type") or item.get("booking_type") or item.get("category") or "General").replace("_", " ").title()
+
+        recent_bookings.append({
+            "id": str(item.get("_id") or ""),
+            "customer": str(c_name),
+            "vendor": str(v_name),
+            "type": b_type,
+            "amount": round(_number(item.get("total_amount")), 2),
+            "status": str(item.get("status") or "unknown").replace("_", " ").title(),
+            "date": _date_label(item.get("created_at")),
+        })
 
     return {
         "stats": [
@@ -309,7 +395,7 @@ async def get_platform_dashboard_overview(
                 "icon": "shopping_bag",
             },
             {
-                "label": "ACTIVE VENDORS",
+                "label": "ACTIVE SERVICE PROVIDERS",
                 "value": str(total_vendors),
                 "sub": "Service providers",
                 "trend": "+5%",
@@ -325,13 +411,16 @@ async def get_platform_dashboard_overview(
         ],
         "monthlyData": monthly_data,
         "weeklyData": weekly_data,
+        "customData": custom_data,
         "bookingByRange": {
             "weekly": booking_pie,
             "monthly": booking_pie,
+            "custom": booking_pie,
         },
         "bookingTotals": {
             "weekly": total_bookings,
             "monthly": total_bookings,
+            "custom": total_bookings,
         },
         "vendors": vendors,
         "details": {

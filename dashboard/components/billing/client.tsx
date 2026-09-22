@@ -331,12 +331,12 @@ export function BillingManagementView({
 
       <section className="overflow-hidden rounded-2xl border border-[#e6ecf7] bg-white">
         <div className="flex flex-col gap-3 border-b border-[#e6ecf7] px-4 py-3 md:flex-row md:items-center md:justify-between">
-          <h3 className="m-0 text-[15px] font-semibold text-[#1d2a43]">Recent Vendor Payments</h3>
+          <h3 className="m-0 text-[15px] font-semibold text-[#1d2a43]">Recent Service Provider Payments</h3>
           <div className="flex h-8 min-w-[260px] items-center gap-2 rounded-full border border-[#e6ecf7] bg-[#f7f9fd] px-3">
             <FiSearch size={12} className="text-[#8b96ad]" />
             <input
               type="text"
-              placeholder="Search vendor or date..."
+              placeholder="Search service provider or date..."
               value={query}
               onChange={(event) => {
                 setQuery(event.target.value);
@@ -351,7 +351,7 @@ export function BillingManagementView({
           <table className="w-full min-w-[980px] border-collapse text-[12px]">
             <thead>
               <tr>
-                {["VENDOR NAME", "TOTAL EARNINGS", "COMMISSION (15%)", "NET PAYOUT", "STATUS", "ACTIONS"].map((head) => (
+                {["SERVICE PROVIDER NAME", "TOTAL EARNINGS", "COMMISSION (15%)", "NET PAYOUT", "STATUS", "ACTIONS"].map((head) => (
                   <th key={head} className="border-b border-[#edf1fa] px-4 py-3 text-left text-[10px] tracking-[0.04em] text-[#7d8ba6]">
                     {head}
                   </th>
