@@ -218,9 +218,14 @@ export function GoogleLocationPickerModal({
         map.addListener("click", (event: GoogleMapMouseEvent) => {
           if (event.latLng) void updatePosition(event.latLng);
         });
-        marker.addListener("dragend", () => {
+        const onMarkerDrag = () => {
           if (marker?.position) void updatePosition(marker.position);
-        });
+        };
+        if (marker && "addEventListener" in marker && typeof (marker as unknown as HTMLElement).addEventListener === "function") {
+          (marker as unknown as HTMLElement).addEventListener("gmp-dragend", onMarkerDrag);
+        } else if (marker && typeof marker.addListener === "function") {
+          marker.addListener("dragend", onMarkerDrag);
+        }
       } catch (mapError) {
         if (!cancelled) {
           setError(
