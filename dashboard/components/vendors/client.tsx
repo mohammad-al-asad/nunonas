@@ -92,6 +92,32 @@ function statusLabel(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+function categoryBadgeClass(category: string) {
+  const norm = (category || "").toLowerCase();
+  if (norm.includes("restaurant") || norm.includes("dining") || norm.includes("food")) {
+    return "bg-[#eff6ff] text-[#1d4ed8] border border-[#dbeafe]";
+  }
+  if (norm.includes("hotel") || norm.includes("hospitality") || norm.includes("room") || norm.includes("stay")) {
+    return "bg-[#f0f9ff] text-[#0369a1] border border-[#bae6fd]";
+  }
+  if (norm.includes("spa") || norm.includes("wellness") || norm.includes("massage") || norm.includes("salon")) {
+    return "bg-[#faf5ff] text-[#7e22ce] border border-[#e9d5ff]";
+  }
+  if (norm.includes("event") || norm.includes("party") || norm.includes("venue")) {
+    return "bg-[#ecfdf5] text-[#047857] border border-[#a7f3d0]";
+  }
+  return "bg-[#fff7ed] text-[#c2410c] border border-[#ffedd5]";
+}
+
+function categoryDotClass(category: string) {
+  const norm = (category || "").toLowerCase();
+  if (norm.includes("restaurant") || norm.includes("dining") || norm.includes("food")) return "bg-[#2563eb]";
+  if (norm.includes("hotel") || norm.includes("hospitality") || norm.includes("stay")) return "bg-[#0284c7]";
+  if (norm.includes("spa") || norm.includes("wellness") || norm.includes("salon")) return "bg-[#9333ea]";
+  if (norm.includes("event")) return "bg-[#10b981]";
+  return "bg-[#ea580c]";
+}
+
 function stars(rating: number) {
   const rounded = Math.max(0, Math.min(5, Math.round(rating)));
   return Array.from({ length: 5 }, (_, index) => (
@@ -333,8 +359,10 @@ export function VendorsManagementView({
     action: "approve" | "block" | "unblock";
   } | null>(null);
   const [page, setPage] = useState(1);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<"ALL" | string>("ALL");
   const [statusFilter, setStatusFilter] = useState<"ALL" | VendorStatus>("ALL");
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [drawerWidth, setDrawerWidth] = useState(drawerDefaultWidth);
   const [isDraggingDrawer, setIsDraggingDrawer] = useState(false);
   const dragFrameRef = useRef<number | null>(null);
@@ -406,12 +434,49 @@ export function VendorsManagementView({
     }
   }, [statusParam]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (!target.closest("[data-vendor-category-filter]")) {
+        setCategoryDropdownOpen(false);
+      }
+      if (!target.closest("[data-vendor-status-filter]")) {
+        setStatusDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const availableCategories = useMemo(() => {
+    const set = new Set<string>();
+    vendors.forEach((v) => {
+      if (v.category) set.add(v.category);
+    });
+    ["Restaurant", "Hotel", "Spa", "Event"].forEach((cat) => set.add(cat));
+    return Array.from(set);
+  }, [vendors]);
+
+  const availableStatuses = useMemo(() => {
+    return ["APPROVED", "PENDING", "BLOCKED", "REJECTED"] as const;
+  }, []);
+
   const summaryCards = useMemo(() => syncSummaryCards(baseSummaryCards, vendors), [baseSummaryCards, vendors]);
 
   const filteredVendors = useMemo(() => {
-    if (statusFilter === "ALL") return vendors;
-    return vendors.filter((vendor) => vendor.status === statusFilter);
-  }, [statusFilter, vendors]);
+    return vendors.filter((vendor) => {
+      const matchesStatus =
+        statusFilter === "ALL" || vendor.status.toUpperCase() === statusFilter.toUpperCase();
+      const matchesCategory =
+        categoryFilter === "ALL" ||
+        vendor.category.toLowerCase() === categoryFilter.toLowerCase();
+      return matchesStatus && matchesCategory;
+    });
+  }, [categoryFilter, statusFilter, vendors]);
 
   const totalPages = Math.max(1, Math.ceil(filteredVendors.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -612,39 +677,169 @@ export function VendorsManagementView({
           })}
         </section>
 
-        <section className="overflow-hidden rounded-xl border border-[#e6ecf7] bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b border-[#eef2f7] px-5 py-4">
+        <section className="relative rounded-xl border border-[#e6ecf7] bg-white shadow-sm">
+          <div className="flex flex-col gap-3 rounded-t-xl border-b border-[#eef2f7] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="m-0 text-[15px] font-semibold text-[#1d2a43]">Service Provider Directory</h3>
-            <div className="relative flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setFiltersOpen((prev) => !prev)}
-                className="inline-flex h-8 items-center gap-2 rounded-lg border border-[#e6ecf7] bg-white px-3 text-[11px] text-[#3a4b70]"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                  <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                </svg>
-                Filter
-              </button>
-              {filtersOpen && (
-                <div className="absolute right-0 top-14 z-10 w-40 rounded-lg border border-[#e6ecf7] bg-white p-2 text-[11px] text-[#3a4b70] shadow-sm">
-                  {(["ALL", "PENDING", "APPROVED", "BLOCKED"] as const).map((status) => (
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Category Filter */}
+              <div className="relative" data-vendor-category-filter>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCategoryDropdownOpen((prev) => !prev);
+                    setStatusDropdownOpen(false);
+                  }}
+                  className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-[11px] font-medium transition-colors ${
+                    categoryFilter !== "ALL"
+                      ? "border-[#1f3d8f] bg-[#eef2ff] text-[#1f3d8f]"
+                      : "border-[#e6ecf7] bg-white text-[#3a4b70] hover:border-[#bfd0f7]"
+                  }`}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className={categoryFilter !== "ALL" ? "text-[#1f3d8f]" : "text-[#7184a4]"}>
+                    <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  </svg>
+                  <span>Category: {categoryFilter === "ALL" ? "All" : categoryFilter}</span>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" className="text-[#8b96ad]">
+                    <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+
+                {categoryDropdownOpen && (
+                  <div className="absolute right-0 top-10 z-50 w-48 overflow-hidden rounded-xl border border-[#e6ecf7] bg-white py-1 shadow-xl shadow-slate-300/60">
                     <button
-                      key={status}
                       type="button"
                       onClick={() => {
-                        setStatusFilter(status);
+                        setCategoryFilter("ALL");
                         setPage(1);
-                        setFiltersOpen(false);
+                        setCategoryDropdownOpen(false);
                       }}
-                      className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-left ${
-                        statusFilter === status ? "bg-[#f3f6fd] font-semibold text-[#1f3d8f]" : ""
+                      className={`flex w-full items-center justify-between px-3 py-2 text-left text-[11px] hover:bg-[#f8fafc] ${
+                        categoryFilter === "ALL" ? "bg-[#edf2fb] font-semibold text-[#1f3d8f]" : "text-[#334155]"
                       }`}
                     >
-                      {status === "ALL" ? "All service providers" : status}
+                      <span>All Categories</span>
+                      <span className="text-[10px] text-[#8b96ad]">{vendors.length}</span>
                     </button>
-                  ))}
-                </div>
+                    {availableCategories.map((cat) => {
+                      const count = vendors.filter((v) => v.category.toLowerCase() === cat.toLowerCase()).length;
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => {
+                            setCategoryFilter(cat);
+                            setPage(1);
+                            setCategoryDropdownOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between px-3 py-2 text-left text-[11px] hover:bg-[#f8fafc] ${
+                            categoryFilter.toLowerCase() === cat.toLowerCase()
+                              ? "bg-[#edf2fb] font-semibold text-[#1f3d8f]"
+                              : "text-[#334155]"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className={`h-2 w-2 rounded-full ${categoryDotClass(cat)}`} />
+                            <span>{cat}</span>
+                          </div>
+                          <span className="text-[10px] text-[#8b96ad]">{count}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Status Filter */}
+              <div className="relative" data-vendor-status-filter>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusDropdownOpen((prev) => !prev);
+                    setCategoryDropdownOpen(false);
+                  }}
+                  className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-[11px] font-medium transition-colors ${
+                    statusFilter !== "ALL"
+                      ? "border-[#1f3d8f] bg-[#eef2ff] text-[#1f3d8f]"
+                      : "border-[#e6ecf7] bg-white text-[#3a4b70] hover:border-[#bfd0f7]"
+                  }`}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className={statusFilter !== "ALL" ? "text-[#1f3d8f]" : "text-[#7184a4]"}>
+                    <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  </svg>
+                  <span>Status: {statusFilter === "ALL" ? "All" : statusFilter}</span>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" className="text-[#8b96ad]">
+                    <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+
+                {statusDropdownOpen && (
+                  <div className="absolute right-0 top-10 z-50 w-48 overflow-hidden rounded-xl border border-[#e6ecf7] bg-white py-1 shadow-xl shadow-slate-300/60">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStatusFilter("ALL");
+                        setPage(1);
+                        setStatusDropdownOpen(false);
+                      }}
+                      className={`flex w-full items-center justify-between px-3 py-2 text-left text-[11px] hover:bg-[#f8fafc] ${
+                        statusFilter === "ALL" ? "bg-[#edf2fb] font-semibold text-[#1f3d8f]" : "text-[#334155]"
+                      }`}
+                    >
+                      <span>All Statuses</span>
+                      <span className="text-[10px] text-[#8b96ad]">{vendors.length}</span>
+                    </button>
+                    {availableStatuses.map((status) => {
+                      const count = vendors.filter((v) => v.status === status).length;
+                      return (
+                        <button
+                          key={status}
+                          type="button"
+                          onClick={() => {
+                            setStatusFilter(status);
+                            setPage(1);
+                            setStatusDropdownOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between px-3 py-2 text-left text-[11px] hover:bg-[#f8fafc] ${
+                            statusFilter === status ? "bg-[#edf2fb] font-semibold text-[#1f3d8f]" : "text-[#334155]"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`h-2 w-2 rounded-full ${
+                                status === "APPROVED"
+                                  ? "bg-[#16a34a]"
+                                  : status === "PENDING"
+                                    ? "bg-[#f59e0b]"
+                                    : "bg-[#ef4444]"
+                              }`}
+                            />
+                            <span>{status}</span>
+                          </div>
+                          <span className="text-[10px] text-[#8b96ad]">{count}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Clear filters button if active */}
+              {(categoryFilter !== "ALL" || statusFilter !== "ALL") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCategoryFilter("ALL");
+                    setStatusFilter("ALL");
+                    setPage(1);
+                  }}
+                  className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-2.5 text-[11px] font-medium text-[#64748b] transition hover:border-[#cbd5e1] hover:text-[#0f172a]"
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                    <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  Reset
+                </button>
               )}
             </div>
           </div>
@@ -673,7 +868,29 @@ export function VendorsManagementView({
                 </tr>
               </thead>
               <tbody>
-                {pagedVendors.map((vendor, index) => (
+                {pagedVendors.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-12 text-center text-[13px] text-[#8b96ad]">
+                      No service providers found matching the selected filters.
+                      {(categoryFilter !== "ALL" || statusFilter !== "ALL") && (
+                        <div className="mt-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCategoryFilter("ALL");
+                              setStatusFilter("ALL");
+                              setPage(1);
+                            }}
+                            className="font-medium text-[#1f3d8f] hover:underline"
+                          >
+                            Reset filters
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ) : (
+                  pagedVendors.map((vendor, index) => (
                   <tr key={vendor.id} className={index % 2 === 1 ? "bg-[#fbfcff]" : ""}>
                     <td className="border-b border-[#edf1fa] px-4 py-4 text-[11px] font-semibold text-[#2d3f62]">{vendor.id}</td>
                     <td className="border-b border-[#edf1fa] px-4 py-4">
@@ -694,8 +911,8 @@ export function VendorsManagementView({
                     </td>
                     <td className="border-b border-[#edf1fa] px-4 py-4 text-[#4f5f82]">{vendor.owner}</td>
                     <td className="border-b border-[#edf1fa] px-4 py-4">
-                      <span className="rounded bg-[#f1f5f9] px-2 py-1 text-[9px] font-semibold text-[#64748b]">
-                        {vendor.category as VendorCategory}
+                      <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold ${categoryBadgeClass(vendor.category)}`}>
+                        {vendor.category}
                       </span>
                     </td>
                     <td className="border-b border-[#edf1fa] px-4 py-4 text-[#2f3f60]">{vendor.bookings.toLocaleString()}</td>
@@ -747,7 +964,7 @@ export function VendorsManagementView({
                       </div>
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>
