@@ -667,11 +667,16 @@ export default function RegisterPage() {
         if (position) updateLocation(position);
       });
 
-      // Handle marker drags
-      marker.addListener("dragend", () => {
+      // Handle marker drags (AdvancedMarkerElement uses gmp-dragend with addEventListener)
+      const onMarkerDragEnd = () => {
         const position = toGoogleLatLngLiteral(marker?.position);
         if (position) updateLocation(position);
-      });
+      };
+      if (marker && "addEventListener" in marker && typeof (marker as unknown as HTMLElement).addEventListener === "function") {
+        (marker as unknown as HTMLElement).addEventListener("gmp-dragend", onMarkerDragEnd);
+      } else if (marker && typeof marker.addListener === "function") {
+        marker.addListener("dragend", onMarkerDragEnd);
+      }
       })
       .catch(() => undefined);
 
@@ -968,11 +973,12 @@ export default function RegisterPage() {
 
       {/* Main Container matches light lavender/blueish white color from screenshot */}
       <div className="w-full min-h-screen bg-white font-sans">
-        {/* Top Header Row with Login button matching screenshot exactly */}
-        <div className="w-full flex items-center justify-end px-3 py-3">
+        {/* Top Header Row with Login button */}
+        <div className="w-full flex items-center justify-end px-6 py-4">
           <Link
             href="/auth/login"
-            className="bg-[#0b122f] hover:bg-[#1a2552] text-white px-7 py-2.5 rounded-full text-xs font-bold shadow-md transition-all active:scale-[0.98]"
+            style={{ color: "#ffffff" }}
+            className="bg-[#0b122f] hover:bg-[#1a2552] !text-white px-7 py-2.5 rounded-full text-xs font-bold shadow-md transition-all active:scale-[0.98] inline-flex items-center justify-center"
           >
             Login
           </Link>
