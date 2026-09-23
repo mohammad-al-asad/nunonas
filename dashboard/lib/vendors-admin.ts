@@ -1,12 +1,34 @@
 type AnyRecord = Record<string, unknown>;
 
 export type VendorStatus = "PENDING" | "APPROVED" | "REJECTED" | "BLOCKED";
-export type VendorCategory = "HOSPITALITY" | "DINING" | "RENTALS";
+export type VendorCategory =
+  | "Restaurant"
+  | "Hotel"
+  | "Spa"
+  | "Event"
+  | string;
 
 export type VendorVerificationDocument = {
   title: string;
   url: string;
   status: "Verified" | "Rejected" | "Pending";
+};
+
+export type VendorInsights = {
+  totalEarned: number;
+  billingEarnings?: string | null;
+  billingPayout?: string | null;
+  totalBookings: number;
+  completedBookings: number;
+  confirmedBookings: number;
+  canceledBookings: number;
+  cancellationRate: number;
+  unansweredBookings: number;
+  uniqueCustomers: number;
+  totalReviews: number;
+  averageRating: number;
+  unansweredReviews: number;
+  servicesCount: number;
 };
 
 export type DashboardVendor = {
@@ -20,6 +42,7 @@ export type DashboardVendor = {
   avatar: string;
   email: string;
   phone: string;
+  website?: string;
   createdAt: string;
   updatedAt: string;
   verification: {
@@ -31,6 +54,7 @@ export type DashboardVendor = {
     rejectionReason: string;
     docs: VendorVerificationDocument[];
   };
+  insights?: VendorInsights;
   sections: {
     profile: AnyRecord;
     business: AnyRecord;
@@ -72,9 +96,12 @@ function normalizeCategory(value: unknown): VendorCategory {
   const category = Array.isArray(value)
     ? value.map((item) => String(item || "")).find(Boolean)?.toLowerCase() ?? ""
     : String(value || "").toLowerCase();
-  if (category.includes("dining") || category.includes("restaurant") || category.includes("food")) return "DINING";
-  if (category.includes("hotel") || category.includes("hospitality")) return "HOSPITALITY";
-  return "RENTALS";
+  if (category.includes("restaurant") || category.includes("dining") || category.includes("food")) return "Restaurant";
+  if (category.includes("hotel") || category.includes("hospitality") || category.includes("room") || category.includes("stay")) return "Hotel";
+  if (category.includes("spa") || category.includes("wellness") || category.includes("massage") || category.includes("salon")) return "Spa";
+  if (category.includes("event") || category.includes("party") || category.includes("venue")) return "Event";
+  if (!category) return "Restaurant";
+  return category.charAt(0).toUpperCase() + category.slice(1);
 }
 
 function cleanSection(section: AnyRecord) {
@@ -162,6 +189,33 @@ export function mapVendorListItem(input: unknown): DashboardVendor {
     ) ||
     "Address unavailable";
 
+  const website =
+    asString(business.website) ||
+    asString(profile.website) ||
+    asString(record.website) ||
+    "";
+
+  const rawInsights = asRecord(record.insights);
+  const hasInsights = Object.keys(rawInsights).length > 0;
+  const insights: VendorInsights | undefined = hasInsights
+    ? {
+        totalEarned: asNumber(rawInsights.total_earned, 0),
+        billingEarnings: asString(rawInsights.billing_earnings) || null,
+        billingPayout: asString(rawInsights.billing_payout) || null,
+        totalBookings: asNumber(rawInsights.total_bookings, asNumber(record.total_bookings ?? record.bookings, 0)),
+        completedBookings: asNumber(rawInsights.completed_bookings, 0),
+        confirmedBookings: asNumber(rawInsights.confirmed_bookings, 0),
+        canceledBookings: asNumber(rawInsights.canceled_bookings, 0),
+        cancellationRate: asNumber(rawInsights.cancellation_rate, 0),
+        unansweredBookings: asNumber(rawInsights.unanswered_bookings, 0),
+        uniqueCustomers: asNumber(rawInsights.unique_customers, 0),
+        totalReviews: asNumber(rawInsights.total_reviews, asNumber(record.total_reviews, 0)),
+        averageRating: asNumber(rawInsights.average_rating, rating),
+        unansweredReviews: asNumber(rawInsights.unanswered_reviews, 0),
+        servicesCount: asNumber(rawInsights.services_count, 0),
+      }
+    : undefined;
+
   return {
     id: asString(record.id),
     businessName,
@@ -193,6 +247,7 @@ export function mapVendorListItem(input: unknown): DashboardVendor {
       asString(record.phone) ||
       asString(profile.phone) ||
       asString(profile.phone_number),
+    website,
     createdAt: asString(record.created_at),
     updatedAt: asString(record.updated_at),
     verification: {
@@ -214,6 +269,7 @@ export function mapVendorListItem(input: unknown): DashboardVendor {
         asString(record.kyc_rejection_reason),
       docs: mapDocs(verification, adminReview),
     },
+    insights,
     sections: {
       profile,
       business,
@@ -227,8 +283,10 @@ export function mapVendorDetailPayload(input: unknown): DashboardVendor {
   const payload = asRecord(input);
   const vendor = asRecord(payload.vendor);
   const sections = asRecord(payload.sections);
+  const insights = asRecord(payload.insights || vendor.insights);
   return mapVendorListItem({
     ...vendor,
+    insights,
     sections: {
       profile: asRecord(sections.profile),
       business: asRecord(sections.business),
