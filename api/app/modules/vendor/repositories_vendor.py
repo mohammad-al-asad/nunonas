@@ -14,6 +14,8 @@ class VendorRepository:
         self.verification_collection: Collection = db["vendor_verification_details"]
         self.admin_review_collection: Collection = db["vendor_admin_reviews"]
         self.bookings_collection: Collection = db["bookings"]
+        self.vendor_bookings_collection: Collection = db["vendor_bookings"]
+        self.billing_payments_collection: Collection = db["billing_payments"]
         self.reviews_collection: Collection = db["vendor_reviews"]
 
         # Indexes are installed once by ``scripts/ensure_vendor_indexes.py``.
@@ -275,18 +277,94 @@ class VendorRepository:
             "admin_review": admin_review,
         }
 
+    def get_vendor_insights(self, vendor_id: str) -> dict[str, Any]:
+        v_keys = [ObjectId(vendor_id), str(vendor_id)] if ObjectId.is_valid(vendor_id) else [str(vendor_id)]
+        bookings = list(self.vendor_bookings_collection.find({"vendor_id": {"$in": v_keys}}))
+        if not bookings:
+            bookings = list(self.bookings_collection.find({"vendor_id": {"$in": v_keys}}))
+
+        total_bookings = len(bookings)
+        completed = 0
+        canceled = 0
+        pending = 0
+        confirmed = 0
+        total_earned = 0.0
+        customers: set[str] = set()
+
+        for b in bookings:
+            st = str(b.get("status") or "").strip().lower()
+            if st in {"complete", "completed"}:
+                completed += 1
+                try:
+                    total_earned += float(b.get("total_amount") or 0.0)
+                except (ValueError, TypeError):
+                    pass
+            elif st in {"canceled", "cancelled"}:
+                canceled += 1
+            elif st in {"pending", "unconfirmed"}:
+                pending += 1
+            elif st in {"confirmed", "check_in", "upcoming"}:
+                confirmed += 1
+
+            cid = str(b.get("customer_id") or b.get("customer_email") or b.get("customer_phone") or "")
+            if cid:
+                customers.add(cid)
+
+        cancellation_rate = round((canceled / total_bookings * 100), 1) if total_bookings > 0 else 0.0
+
+        reviews = list(self.reviews_collection.find({"vendor_id": {"$in": v_keys}}))
+        unanswered_reviews = sum(1 for r in reviews if not r.get("vendor_reply") and not r.get("reply"))
+        avg_rating = 0.0
+        if reviews:
+            valid_ratings = [
+                float(r.get("rating") or r.get("star_rating") or 0.0)
+                for r in reviews
+                if r.get("rating") is not None or r.get("star_rating") is not None
+            ]
+            if valid_ratings:
+                avg_rating = round(sum(valid_ratings) / len(valid_ratings), 1)
+
+        billing = self.billing_payments_collection.find_one({"vendor_id": {"$in": v_keys}})
+        billing_payout = billing.get("netPayout") if billing else None
+        billing_earnings = billing.get("totalEarnings") if billing else None
+
+        services_count = 0
+        for col in ("restaurants", "hotels", "spas", "vendor_events", "vendor_rooms"):
+            if col in self.collection.database.list_collection_names():
+                services_count += self.collection.database[col].count_documents({"vendor_id": {"$in": v_keys}})
+
+        return {
+            "total_earned": round(total_earned, 2),
+            "billing_earnings": billing_earnings,
+            "billing_payout": billing_payout,
+            "total_bookings": total_bookings,
+            "completed_bookings": completed,
+            "confirmed_bookings": confirmed,
+            "canceled_bookings": canceled,
+            "cancellation_rate": cancellation_rate,
+            "unanswered_bookings": pending,
+            "unique_customers": len(customers),
+            "total_reviews": len(reviews),
+            "average_rating": avg_rating,
+            "unanswered_reviews": unanswered_reviews,
+            "services_count": services_count,
+        }
+
     def get_vendor_application(self, vendor_id: str) -> dict[str, Any] | None:
         vendor = self.get_by_id(vendor_id)
         if not vendor:
             return None
         booking_counts = self._build_booking_counts([vendor_id])
         review_metrics = self._build_review_metrics([vendor_id]).get(vendor_id, {})
+        insights = self.get_vendor_insights(vendor_id)
         vendor["total_bookings"] = booking_counts.get(vendor_id, 0)
         vendor["average_rating"] = review_metrics.get("average_rating", 0)
         vendor["total_reviews"] = review_metrics.get("total_reviews", 0)
+        vendor["insights"] = insights
         return {
             "vendor": vendor,
             "sections": self.get_vendor_sections(vendor_id),
+            "insights": insights,
         }
 
     @staticmethod
