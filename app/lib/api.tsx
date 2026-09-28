@@ -79,7 +79,6 @@ function resolveBaseUrl(baseUrl: string): string {
 }
 
 export const API_BASE_URL = resolveBaseUrl(process.env.EXPO_PUBLIC_API_BASE_URL || "");
-export const SOCKET_BASE_URL = API_BASE_URL.replace(/^http/, "ws");
 
 async function readJson(response: Response): Promise<ApiPayload> {
   try {

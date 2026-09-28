@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TextInput } from "react-native";
 import theme from "../../../../constants/theme";
 import PlanTypeCard from "./PlanTypeCard";
 
@@ -37,9 +37,17 @@ const PLAN_TYPES = [
     backgroundColor: "#fffbeb", // Light Yellow
     dotColor: "#eab308",
   },
+  {
+    id: "custom",
+    title: "Custom",
+    subtitle: "Describe your own vibe",
+    emoji: "✏️",
+    backgroundColor: "#f5f3ff", // Light Violet
+    dotColor: "#8b5cf6",
+  },
 ];
 
-const Step2 = ({ selectedId, onSelect }) => {
+const Step2 = ({ selectedId, onSelect, customValue, onCustomChange }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>What kind of plan do you want ?</Text>
@@ -47,6 +55,7 @@ const Step2 = ({ selectedId, onSelect }) => {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scrollContent}
       >
         {PLAN_TYPES.map((item) => (
@@ -61,6 +70,18 @@ const Step2 = ({ selectedId, onSelect }) => {
             onSelect={() => onSelect(item.id)}
           />
         ))}
+        {selectedId === "custom" && (
+          <TextInput
+            style={styles.customInput}
+            value={customValue}
+            onChangeText={onCustomChange}
+            placeholder="e.g. Quiet cafés and a sunset walk"
+            placeholderTextColor={theme.COLORS.textSecondary}
+            maxLength={120}
+            multiline
+            autoFocus
+          />
+        )}
       </ScrollView>
     </View>
   );
@@ -85,6 +106,17 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 40,
+  },
+  customInput: {
+    borderWidth: 1,
+    borderColor: "#8b5cf6",
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    minHeight: 80,
+    fontSize: 16,
+    color: theme.COLORS.textPrimary,
+    textAlignVertical: "top",
   },
 });
 

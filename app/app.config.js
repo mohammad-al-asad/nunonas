@@ -2,7 +2,8 @@ export default {
   expo: {
     name: "Activity Planner",
     slug: "activity-planner",
-    scheme: "nuno-app",
+    // The package-name scheme receives Google sign-in redirects (<package>:/oauthredirect).
+    scheme: ["nuno-app", "com.nuno.activityplanner"],
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
