@@ -468,31 +468,6 @@ export async function removeSaved<TResponse = unknown>(
   return apiDeleteAuth<TResponse>(`${C}/saved/${entityType}/${entityId}`);
 }
 
-export async function listAiSessions<TResponse = unknown>(): Promise<TResponse> {
-  return apiGetAuth<TResponse>(`${C}/ai-concierge/sessions`);
-}
-
-export async function createAiSession<TResponse = unknown>(): Promise<TResponse> {
-  return apiPostAuth<TResponse, JsonObject>(`${C}/ai-concierge/sessions`, {});
-}
-
-export async function listAiMessages<TResponse = unknown>(sessionId: string): Promise<TResponse> {
-  return apiGetAuth<TResponse>(`${C}/ai-concierge/sessions/${sessionId}/messages`);
-}
-
-export async function sendAiMessage<TResponse = unknown>(
-  sessionId: string,
-  message: string,
-): Promise<TResponse> {
-  return apiPostAuth<TResponse, { message: string; metadata: JsonObject }>(
-    `${C}/ai-concierge/sessions/${sessionId}/messages`,
-    {
-      message,
-      metadata: {},
-    },
-  );
-}
-
 export async function getCustomerProfile<TResponse = unknown>(): Promise<TResponse> {
   return apiGetAuth<TResponse>(`${C}/profile`);
 }

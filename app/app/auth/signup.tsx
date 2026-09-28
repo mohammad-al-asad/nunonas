@@ -58,7 +58,8 @@ export default function SignupScreen() {
     webClientId: GOOGLE_WEB_CLIENT_ID || "disabled-web-client-id",
     androidClientId: GOOGLE_ANDROID_CLIENT_ID || "disabled-android-client-id",
     iosClientId: GOOGLE_IOS_CLIENT_ID || "disabled-ios-client-id",
-    responseType: "id_token",
+    // Android/iOS client IDs only support the code flow; the provider exchanges it for an ID token.
+    responseType: Platform.OS === "web" ? "id_token" : undefined,
     scopes: [
       "openid",
       "profile",

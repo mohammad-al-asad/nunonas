@@ -20,6 +20,7 @@ export default function PlanScreen() {
   const [planData, setPlanData] = useState({
     companion: "",
     vibe: "",
+    customVibe: "",
     budget: "",
     area: "Anywhere",
     vouchersOnly: false,
@@ -53,7 +54,7 @@ export default function PlanScreen() {
       if (!sessionId) throw new Error("Could not create your planning session.");
       await Promise.all([
         setPlanCompanions(sessionId, planData.companion),
-        setPlanMood(sessionId, planData.vibe),
+        setPlanMood(sessionId, planData.vibe === "custom" ? planData.customVibe.trim() : planData.vibe),
         setPlanBudget(sessionId, planData.budget),
         setPlanPreferences(sessionId, { area: planData.area, vouchersOnly: planData.vouchersOnly }),
       ]);
@@ -118,6 +119,8 @@ export default function PlanScreen() {
           <Step2
             selectedId={planData.vibe}
             onSelect={(id) => setPlanData({ ...planData, vibe: id })}
+            customValue={planData.customVibe}
+            onCustomChange={(text) => setPlanData({ ...planData, customVibe: text })}
           />
         );
       case 3:
@@ -142,7 +145,7 @@ export default function PlanScreen() {
 
   const isNextDisabled = () => {
     if (currentStep === 1) return !planData.companion;
-    if (currentStep === 2) return !planData.vibe;
+    if (currentStep === 2) return !planData.vibe || (planData.vibe === "custom" && !planData.customVibe.trim());
     if (currentStep === 3) return !planData.budget;
     return false;
   };
