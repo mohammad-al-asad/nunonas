@@ -2,7 +2,7 @@ import hashlib
 import math
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -546,6 +546,14 @@ class CustomerRepository:
         return latitude, longitude
 
     @staticmethod
+    def _resolve_timezone(value: Any) -> ZoneInfo:
+        """Fall back to UTC for unknown or unavailable timezone keys."""
+        try:
+            return ZoneInfo(str(value or "UTC"))
+        except (ZoneInfoNotFoundError, ValueError):
+            return ZoneInfo("UTC")
+
+    @staticmethod
     def _event_is_not_expired(event: dict[str, Any]) -> bool:
         """Evaluate an event's end time in the event's own timezone."""
         event_date = str(
@@ -555,7 +563,7 @@ class CustomerRepository:
         if not event_date or not end_time:
             return False
         try:
-            timezone = ZoneInfo(str(event.get("timezone") or "UTC"))
+            timezone = CustomerRepository._resolve_timezone(event.get("timezone"))
             end_at = datetime.fromisoformat(f"{event_date}T{end_time}").replace(tzinfo=timezone)
         except (TypeError, ValueError):
             return False
@@ -568,7 +576,7 @@ class CustomerRepository:
         if not deadline:
             return True
         try:
-            timezone = ZoneInfo(str(event.get("timezone") or "UTC"))
+            timezone = CustomerRepository._resolve_timezone(event.get("timezone"))
             if "T" in deadline:
                 legacy_deadline = datetime.fromisoformat(
                     deadline.replace("Z", "+00:00")
@@ -605,7 +613,7 @@ class CustomerRepository:
         start_time = str(happy_hour.get("start_time") or "").strip()
         end_time = str(happy_hour.get("end_time") or "").strip()
         try:
-            timezone = ZoneInfo(str(happy_hour.get("timezone") or "UTC"))
+            timezone = CustomerRepository._resolve_timezone(happy_hour.get("timezone"))
             now = datetime.now(timezone)
             starts_on = datetime.fromisoformat(start_date).date()
             ends_on = datetime.fromisoformat(end_date).date()
