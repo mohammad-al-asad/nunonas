@@ -36,6 +36,23 @@ class CloudinaryUploader:
         """
         return await self._upload(file, resource_type="auto", folder_suffix=folder_suffix)
 
+    async def upload_document_bytes(
+        self,
+        data: bytes,
+        *,
+        filename: str,
+        content_type: str,
+        folder_suffix: str = "vendor-documents",
+    ) -> str:
+        """Upload generated file bytes (e.g. a signed contract PDF) and return its secure_url."""
+        return await self._upload_bytes(
+            data,
+            filename=filename,
+            content_type=content_type,
+            resource_type="auto",
+            folder_suffix=folder_suffix,
+        )
+
     # ------------------------------------------------------------------
     # Internal implementation
     # ------------------------------------------------------------------
@@ -46,6 +63,24 @@ class CloudinaryUploader:
         Returns the ``secure_url`` string on success, raises ``HTTPException``
         on configuration errors or Cloudinary API failures.
         """
+        file_bytes = await file.read()
+        return await self._upload_bytes(
+            file_bytes,
+            filename=file.filename or "upload",
+            content_type=file.content_type or "application/octet-stream",
+            resource_type=resource_type,
+            folder_suffix=folder_suffix,
+        )
+
+    async def _upload_bytes(
+        self,
+        file_bytes: bytes,
+        *,
+        filename: str,
+        content_type: str,
+        resource_type: ResourceType,
+        folder_suffix: str,
+    ) -> str:
         cloud_name = self.settings.cloudinary_cloud_name
         api_key = self.settings.cloudinary_api_key
         api_secret = self.settings.cloudinary_api_secret
@@ -56,20 +91,19 @@ class CloudinaryUploader:
                 detail="Cloudinary is not configured on the backend.",
             )
 
-        file_bytes = await file.read()
         if not file_bytes:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty.")
 
         timestamp = int(time.time())
         folder = f"{self.settings.cloudinary_folder}/{folder_suffix}"
-        public_id = f"{timestamp}-{Path(file.filename or 'upload').stem}"
+        public_id = f"{timestamp}-{Path(filename).stem}"
 
         # SHA-1 signature required by Cloudinary signed uploads
         signature_base = f"folder={folder}&public_id={public_id}&timestamp={timestamp}{api_secret}"
         signature = hashlib.sha1(signature_base.encode("utf-8")).hexdigest()
 
         multipart_files = {
-            "file": (file.filename or "upload", file_bytes, file.content_type or "application/octet-stream")
+            "file": (filename, file_bytes, content_type)
         }
         form_data = {
             "api_key": api_key,

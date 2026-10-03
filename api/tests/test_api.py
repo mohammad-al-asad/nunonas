@@ -4,6 +4,7 @@ import pytest
 
 from app.core.session_tokens import session_is_active
 from app.core.security import hash_password
+from conftest import VENDOR_CONTRACT_FIELDS
 
 
 def test_session_is_active_accepts_naive_mongo_datetime():
@@ -195,7 +196,8 @@ async def test_vendor_signup_allows_existing_user_phone(client, test_db):
             "business_description": "A demo service provider account for testing.",
             "trade_license_number": "TL-12345",
             "trade_license_document_url": "https://files.example.com/license.pdf",
-            "owner_manager_id_document_url": "https://files.example.com/id.pdf",
+            "commercial_registration_document_url": "https://files.example.com/cr.pdf",
+            **VENDOR_CONTRACT_FIELDS,
             "terms_accepted": True,
             "password": "VendorPass123!",
             "confirm_password": "VendorPass123!",
@@ -247,7 +249,8 @@ async def test_vendor_signup_allows_existing_vendor_phone(client, test_db):
             "business_description": "A second vendor using the same phone number.",
             "trade_license_number": "TL-77777",
             "trade_license_document_url": "https://files.example.com/license-2.pdf",
-            "owner_manager_id_document_url": "https://files.example.com/id-2.pdf",
+            "commercial_registration_document_url": "https://files.example.com/cr.pdf",
+            **VENDOR_CONTRACT_FIELDS,
             "terms_accepted": True,
             "password": "VendorPass123!",
             "confirm_password": "VendorPass123!",
@@ -692,7 +695,8 @@ async def test_vendor_register_and_login_flow(client, test_db):
             "business_description": "A demo service provider account for testing.",
             "trade_license_number": "TL-12345",
             "trade_license_document_url": "https://files.example.com/license.pdf",
-            "owner_manager_id_document_url": "https://files.example.com/id.pdf",
+            "commercial_registration_document_url": "https://files.example.com/cr.pdf",
+            **VENDOR_CONTRACT_FIELDS,
             "terms_accepted": True,
             "password": "VendorPass123!",
             "confirm_password": "VendorPass123!",
@@ -912,7 +916,8 @@ async def test_vendor_with_event_module_can_manage_events(client, test_db):
             "business_description": "Vendor account for event management testing.",
             "trade_license_number": "TL-67890",
             "trade_license_document_url": "https://files.example.com/license.pdf",
-            "owner_manager_id_document_url": "https://files.example.com/id.pdf",
+            "commercial_registration_document_url": "https://files.example.com/cr.pdf",
+            **VENDOR_CONTRACT_FIELDS,
             "terms_accepted": True,
             "password": "VendorPass123!",
             "confirm_password": "VendorPass123!",
@@ -1128,7 +1133,8 @@ async def test_vendor_profile_settings_returns_category_based_location(client, t
             "business_description": "Vendor account for hotel testing.",
             "trade_license_number": "TL-67891",
             "trade_license_document_url": "https://files.example.com/license-hotel.pdf",
-            "owner_manager_id_document_url": "https://files.example.com/id-hotel.pdf",
+            "commercial_registration_document_url": "https://files.example.com/cr-hotel.pdf",
+            **VENDOR_CONTRACT_FIELDS,
             "terms_accepted": True,
             "password": "VendorPass123!",
             "confirm_password": "VendorPass123!",

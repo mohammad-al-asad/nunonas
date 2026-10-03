@@ -4,6 +4,7 @@ from app.modules.vendor.deps_auth import get_current_vendor, get_vendor_auth_ser
 from app.modules.vendor.schemas_auth import (
     VendorAuthResponse,
     VendorCodeRequestResponse,
+    VendorContractTemplateResponse,
     VendorDocumentUploadResponse,
     VendorForgotPasswordRequest,
     VendorKycStatusResponse,
@@ -41,11 +42,18 @@ def verify_register_code(
 
 
 @router.post("/register", response_model=VendorAuthResponse, status_code=status.HTTP_201_CREATED)
-def register_vendor(
+async def register_vendor(
     payload: VendorRegisterRequest,
     auth_service: VendorAuthService = Depends(get_vendor_auth_service),
 ) -> VendorAuthResponse:
-    return auth_service.register(payload)
+    return await auth_service.register_with_contract(payload)
+
+
+@router.get("/contract", response_model=VendorContractTemplateResponse)
+def get_vendor_contract_template(
+    auth_service: VendorAuthService = Depends(get_vendor_auth_service),
+) -> VendorContractTemplateResponse:
+    return auth_service.get_contract_template()
 
 
 @router.get("/registration-form-config", response_model=VendorRegistrationFormConfigResponse)
