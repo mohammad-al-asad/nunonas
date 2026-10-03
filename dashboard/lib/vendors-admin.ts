@@ -139,6 +139,17 @@ function mapDocs(
     docs.push({ title: "Trade License", url: tradeLicenseUrl, status: documentStatus });
   }
 
+  const commercialRegistrationUrl = asString(verification.commercial_registration_document_url);
+  if (commercialRegistrationUrl) {
+    docs.push({ title: "Commercial Registration", url: commercialRegistrationUrl, status: documentStatus });
+  }
+
+  const contractUrl = asString(verification.contract_pdf_url);
+  if (contractUrl) {
+    docs.push({ title: "Signed Service Provider Agreement", url: contractUrl, status: documentStatus });
+  }
+
+  // Older registrations uploaded an owner/manager ID instead of a commercial registration.
   const ownerIdUrl = asString(verification.owner_manager_id_document_url);
   if (ownerIdUrl) {
     docs.push({ title: "Owner / Manager ID", url: ownerIdUrl, status: documentStatus });
