@@ -47,7 +47,7 @@ export default {
       mapboxAccessToken: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || "",
       router: {},
       eas: {
-        projectId: "315819ed-4fd0-470a-a393-a3703e796337",
+        projectId: "d3eed72a-3c1d-4ba3-9cd2-4e1b240bb297",
       },
     },
   },
