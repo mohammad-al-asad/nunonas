@@ -1,9 +1,11 @@
+import secrets
 from datetime import UTC, datetime
 from typing import Any
 
 from bson.errors import InvalidId
 from fastapi import HTTPException, UploadFile, status
 from pymongo.errors import DuplicateKeyError
+from starlette.concurrency import run_in_threadpool
 
 from app.core.account_lookup import find_existing_email_sync
 from app.domain.vendor_categories import normalize_account_categories
@@ -13,12 +15,20 @@ from app.core.mongo_errors import duplicate_contact_conflict_detail
 from app.core.session_tokens import SESSION_COLLECTION, build_session_document, session_is_active
 from app.core.security import create_access_token, decode_token, hash_password, verify_password
 from app.domain.event_categories import EVENT_CATEGORY_OPTIONS
+from app.modules.vendor.contract import (
+    CONTRACT_VERSION,
+    contract_template,
+    decode_signature_png,
+    render_contract_pdf,
+    sha256_hex,
+)
 from app.modules.vendor.repositories_password_reset import VendorPasswordResetRepository
 from app.modules.vendor.repositories_signup import VendorSignupVerificationRepository
 from app.modules.vendor.repositories_vendor import VendorRepository
 from app.modules.vendor.schemas_auth import (
     VendorAuthResponse,
     VendorCodeRequestResponse,
+    VendorContractTemplateResponse,
     VendorDocumentUploadResponse,
     VendorForgotPasswordRequest,
     VendorKycStatusResponse,
@@ -183,7 +193,52 @@ class VendorAuthService:
         )
         return VendorVerifyCodeResponse(message="Verification successful.", signup_token=signup_token)
 
-    def register(self, payload: VendorRegisterRequest) -> VendorAuthResponse:
+    def get_contract_template(self) -> VendorContractTemplateResponse:
+        return VendorContractTemplateResponse(**contract_template())
+
+    async def register_with_contract(self, payload: VendorRegisterRequest) -> VendorAuthResponse:
+        # Validate before generating/uploading the contract so rejected sign-ups leave no files behind.
+        await run_in_threadpool(self._validate_registration, payload)
+        contract = await self._create_signed_contract(payload)
+        return await run_in_threadpool(self.register, payload, contract)
+
+    async def _create_signed_contract(self, payload: VendorRegisterRequest) -> dict[str, Any]:
+        if payload.contract_version != CONTRACT_VERSION:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="The Service Provider Agreement was updated. Please review and sign it again.",
+            )
+        signature_png = decode_signature_png(payload.contract_signature)
+        signed_at = datetime.now(UTC)
+        categories = normalize_account_categories(payload.categories or [payload.category])
+        pdf = render_contract_pdf(
+            details={
+                "Business name": payload.business_name,
+                "Owner / Manager": payload.owner_full_name,
+                "Email": payload.email_or_phone,
+                "Phone": payload.phone,
+                "Address": payload.address,
+                "Categories": ", ".join(categories),
+                "Trade License No.": payload.trade_license_number,
+            },
+            signature_png=signature_png,
+            signed_at=signed_at,
+        )
+        pdf_url = await self.cloudinary_uploader.upload_document_bytes(
+            pdf,
+            filename=f"service-provider-agreement-{secrets.token_hex(6)}.pdf",
+            content_type="application/pdf",
+            folder_suffix="vendor-contracts",
+        )
+        return {
+            "contract_pdf_url": pdf_url,
+            "contract_version": CONTRACT_VERSION,
+            "contract_signed_at": signed_at,
+            "contract_signer_name": payload.owner_full_name,
+            "contract_sha256": sha256_hex(pdf),
+        }
+
+    def _validate_registration(self, payload: VendorRegisterRequest) -> tuple[str, str | None]:
         email, phone_from_contact = parse_email_or_phone(payload.email_or_phone)
         if not email:
             raise HTTPException(
@@ -208,7 +263,10 @@ class VendorAuthService:
                 detail="This email is already in use by another account.",
             )
 
-        phone = explicit_phone or phone_from_contact
+        return email, explicit_phone or phone_from_contact
+
+    def register(self, payload: VendorRegisterRequest, contract: dict[str, Any]) -> VendorAuthResponse:
+        email, phone = self._validate_registration(payload)
 
         categories = normalize_account_categories(
             payload.categories or [payload.category]
@@ -271,7 +329,8 @@ class VendorAuthService:
                 "categories": categories,
                 "trade_license_number": payload.trade_license_number,
                 "trade_license_document_url": payload.trade_license_document_url,
-                "owner_manager_id_document_url": payload.owner_manager_id_document_url,
+                "commercial_registration_document_url": payload.commercial_registration_document_url,
+                **contract,
             },
         )
 

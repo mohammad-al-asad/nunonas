@@ -36,7 +36,10 @@ class VendorRegisterRequest(BaseModel):
     business_description: str = Field(min_length=10, max_length=1000)
     trade_license_number: str = Field(min_length=4, max_length=80)
     trade_license_document_url: str = Field(min_length=8, max_length=1000)
-    owner_manager_id_document_url: str = Field(min_length=8, max_length=1000)
+    commercial_registration_document_url: str = Field(min_length=8, max_length=1000)
+    # Finger/mouse signature for the Service Provider Agreement, as a PNG data URL.
+    contract_signature: str = Field(min_length=30, max_length=450_000)
+    contract_version: str = Field(min_length=1, max_length=40)
     terms_accepted: bool = False
     password: str = Field(min_length=8, max_length=128)
     confirm_password: str = Field(min_length=8, max_length=128)
@@ -138,6 +141,22 @@ class VendorRegistrationFormConfigResponse(BaseModel):
     categories: list[dict[str, str]]
     event_type_options: list[str]
     equipment_options: list[str]
+
+
+class VendorContractSection(BaseModel):
+    number: str
+    heading: str
+    clauses: list[str]
+
+
+class VendorContractTemplateResponse(BaseModel):
+    version: str
+    title: str
+    platform_name: str
+    platform_address: str
+    platform_party: str
+    provider_party: str
+    sections: list[VendorContractSection]
 
 
 class VendorKycSubmitRequest(BaseModel):
