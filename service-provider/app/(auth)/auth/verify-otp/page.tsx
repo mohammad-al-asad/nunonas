@@ -18,7 +18,9 @@ type PendingVendorRegistration = {
   business_description: string;
   trade_license_number: string;
   trade_license_document_url: string;
-  owner_manager_id_document_url: string;
+  commercial_registration_document_url: string;
+  contract_signature: string;
+  contract_version: string;
   terms_accepted: boolean;
   password: string;
   confirm_password: string;

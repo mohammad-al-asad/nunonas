@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { vendorGetPublicLegalDoc } from "@/lib/vendor-api";
 import AuthFeedbackModal from "@/components/auth/auth-feedback-modal";
+import SignaturePad from "@/components/auth/signature-pad";
 import {
   loadGoogleMaps,
   toGoogleLatLngLiteral,
@@ -67,6 +68,16 @@ type VendorRegistrationFormConfig = {
   categories: RegistrationCategoryOption[];
 };
 
+type VendorContract = {
+  version: string;
+  title: string;
+  platform_name: string;
+  platform_address: string;
+  platform_party: string;
+  provider_party: string;
+  sections: { number: string; heading: string; clauses: string[] }[];
+};
+
 type MapCoords = {
   lat: number;
   lng: number;
@@ -75,9 +86,9 @@ type MapCoords = {
 type RegistrationDraft = {
   formData?: Partial<RegisterFormData>;
   tradeLicenseDocumentName?: string;
-  ownerIdDocumentName?: string;
+  commercialRegistrationDocumentName?: string;
   tradeLicenseDocumentUrl?: string;
-  ownerIdDocumentUrl?: string;
+  commercialRegistrationDocumentUrl?: string;
   tempCoords?: MapCoords;
   confirmedCoords?: MapCoords;
   tempAddress?: string;
@@ -395,11 +406,14 @@ export default function RegisterPage() {
   const [showAccountHelp, setShowAccountHelp] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tradeLicenseDocumentName, setTradeLicenseDocumentName] = useState("");
-  const [ownerIdDocumentName, setOwnerIdDocumentName] = useState("");
+  const [commercialRegistrationDocumentName, setCommercialRegistrationDocumentName] = useState("");
   const [tradeLicenseDocumentUrl, setTradeLicenseDocumentUrl] = useState("");
-  const [ownerIdDocumentUrl, setOwnerIdDocumentUrl] = useState("");
+  const [commercialRegistrationDocumentUrl, setCommercialRegistrationDocumentUrl] = useState("");
   const [isUploadingTradeLicense, setIsUploadingTradeLicense] = useState(false);
-  const [isUploadingOwnerId, setIsUploadingOwnerId] = useState(false);
+  const [isUploadingCommercialRegistration, setIsUploadingCommercialRegistration] = useState(false);
+  const [contract, setContract] = useState<VendorContract | null>(null);
+  const [contractLoadFailed, setContractLoadFailed] = useState(false);
+  const [contractSignature, setContractSignature] = useState("");
 
   // Interactive Map Selector modal states
   const [showMapModal, setShowMapModal] = useState(false);
@@ -467,9 +481,9 @@ export default function RegisterPage() {
           setFormData((prev) => ({ ...prev, ...parsed.formData }));
         }
         setTradeLicenseDocumentName(parsed.tradeLicenseDocumentName ?? "");
-        setOwnerIdDocumentName(parsed.ownerIdDocumentName ?? "");
+        setCommercialRegistrationDocumentName(parsed.commercialRegistrationDocumentName ?? "");
         setTradeLicenseDocumentUrl(parsed.tradeLicenseDocumentUrl ?? "");
-        setOwnerIdDocumentUrl(parsed.ownerIdDocumentUrl ?? "");
+        setCommercialRegistrationDocumentUrl(parsed.commercialRegistrationDocumentUrl ?? "");
         if (parsed.tempCoords) {
           setTempCoords(parsed.tempCoords);
         }
@@ -529,8 +543,22 @@ export default function RegisterPage() {
       }
     }
 
+    async function loadContract() {
+      try {
+        const template = await getJson<VendorContract>("/vendor/auth/contract");
+        if (mounted) {
+          setContract(template);
+        }
+      } catch {
+        if (mounted) {
+          setContractLoadFailed(true);
+        }
+      }
+    }
+
     void loadRegistrationConfig();
     void loadLegalLabels();
+    void loadContract();
     return () => {
       mounted = false;
     };
@@ -546,9 +574,9 @@ export default function RegisterPage() {
       JSON.stringify({
         formData,
         tradeLicenseDocumentName,
-        ownerIdDocumentName,
+        commercialRegistrationDocumentName,
         tradeLicenseDocumentUrl,
-        ownerIdDocumentUrl,
+        commercialRegistrationDocumentUrl,
         tempCoords,
         confirmedCoords,
         tempAddress,
@@ -558,9 +586,9 @@ export default function RegisterPage() {
   }, [
     formData,
     tradeLicenseDocumentName,
-    ownerIdDocumentName,
+    commercialRegistrationDocumentName,
     tradeLicenseDocumentUrl,
-    ownerIdDocumentUrl,
+    commercialRegistrationDocumentUrl,
     tempCoords,
     confirmedCoords,
     tempAddress,
@@ -717,7 +745,7 @@ export default function RegisterPage() {
   };
 
   const handleFileChange =
-    (field: "tradeLicenseDocument" | "ownerIdDocument") =>
+    (field: "tradeLicenseDocument" | "commercialRegistrationDocument") =>
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
 
@@ -732,9 +760,9 @@ export default function RegisterPage() {
         setTradeLicenseDocumentUrl("");
         setIsUploadingTradeLicense(true);
       } else {
-        setOwnerIdDocumentName(file.name);
-        setOwnerIdDocumentUrl("");
-        setIsUploadingOwnerId(true);
+        setCommercialRegistrationDocumentName(file.name);
+        setCommercialRegistrationDocumentUrl("");
+        setIsUploadingCommercialRegistration(true);
       }
 
       try {
@@ -745,12 +773,12 @@ export default function RegisterPage() {
           return;
         }
 
-        setOwnerIdDocumentUrl(uploadedUrl);
+        setCommercialRegistrationDocumentUrl(uploadedUrl);
       } catch (error) {
         if (field === "tradeLicenseDocument") {
           setTradeLicenseDocumentName("");
         } else {
-          setOwnerIdDocumentName("");
+          setCommercialRegistrationDocumentName("");
         }
 
         setSubmitMessage(
@@ -760,7 +788,7 @@ export default function RegisterPage() {
         if (field === "tradeLicenseDocument") {
           setIsUploadingTradeLicense(false);
         } else {
-          setIsUploadingOwnerId(false);
+          setIsUploadingCommercialRegistration(false);
         }
       }
     };
@@ -785,13 +813,23 @@ export default function RegisterPage() {
       return;
     }
 
-    if (isUploadingTradeLicense || isUploadingOwnerId) {
+    if (isUploadingTradeLicense || isUploadingCommercialRegistration) {
       setSubmitMessage("Please wait for the document uploads to finish.");
       return;
     }
 
-    if (!tradeLicenseDocumentUrl || !ownerIdDocumentUrl) {
-      setSubmitMessage("Upload both verification documents before continuing.");
+    if (!tradeLicenseDocumentUrl || !commercialRegistrationDocumentUrl) {
+      setSubmitMessage("Upload your Commercial Registration and Trade License before continuing.");
+      return;
+    }
+
+    if (!contract) {
+      setSubmitMessage("The Service Provider Agreement could not be loaded. Refresh the page and try again.");
+      return;
+    }
+
+    if (!contractSignature) {
+      setSubmitMessage("Please sign the Service Provider Agreement before continuing.");
       return;
     }
 
@@ -820,7 +858,9 @@ export default function RegisterPage() {
           business_description: formData.description.trim(),
           trade_license_number: formData.tradeLicenseNumber.trim(),
           trade_license_document_url: tradeLicenseDocumentUrl,
-          owner_manager_id_document_url: ownerIdDocumentUrl,
+          commercial_registration_document_url: commercialRegistrationDocumentUrl,
+          contract_signature: contractSignature,
+          contract_version: contract.version,
           terms_accepted: formData.agreeToTerms,
           password: formData.password,
           confirm_password: formData.confirmPassword,
@@ -853,6 +893,12 @@ export default function RegisterPage() {
       setIsSubmitting(false);
     }
   };
+
+  const contractDate = new Date().toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 
   const handleConfirmMapLocation = () => {
     setFormData((prev) => ({
@@ -1150,16 +1196,16 @@ export default function RegisterPage() {
                       <label className="border border-dashed border-[#cbd5e1] rounded-3xl p-6 flex flex-col items-center justify-center gap-2 bg-white hover:bg-slate-50/50 transition cursor-pointer select-none">
                         <Upload className="h-5 w-5 text-slate-400" />
                         <span className="text-[10px] font-black text-slate-500 text-center uppercase tracking-wider">
-                          {isUploadingOwnerId
+                          {isUploadingCommercialRegistration
                             ? "Uploading..."
-                            : ownerIdDocumentUrl
-                              ? ownerIdDocumentName || "Uploaded"
-                              : "ID Verification Upload"}
+                            : commercialRegistrationDocumentUrl
+                              ? commercialRegistrationDocumentName || "Uploaded"
+                              : "Commercial Registration Upload"}
                         </span>
                         <input
                           type="file"
                           accept=".pdf,.jpg,.jpeg,.png"
-                          onChange={handleFileChange("ownerIdDocument")}
+                          onChange={handleFileChange("commercialRegistrationDocument")}
                           className="sr-only"
                         />
                       </label>
@@ -1239,6 +1285,79 @@ export default function RegisterPage() {
 
                   </div>
 
+              </div>
+
+              {/* Service Provider Agreement with finger/mouse signature */}
+              <div className="space-y-5 pt-6">
+                {contract ? (
+                  <>
+                    <article className="rounded-3xl border border-[#e2e8f0] bg-white px-6 py-8 md:px-12 md:py-10 text-[13px] leading-relaxed text-slate-800">
+                      <h3 className="text-center text-xl md:text-2xl font-black uppercase tracking-wide text-slate-900">
+                        {contract.title}
+                      </h3>
+                      <div className="mt-3 border-b-2 border-slate-900" />
+                      <p className="mt-6">
+                        This {contract.title} (&quot;Agreement&quot;) is entered into effect as of {contractDate},
+                      </p>
+                      <dl className="mt-6 space-y-6">
+                        {[
+                          {
+                            label: "BETWEEN:",
+                            name: contract.platform_name,
+                            description: contract.platform_party,
+                            address: contract.platform_address,
+                          },
+                          {
+                            label: "AND:",
+                            name: formData.businessName.trim() || "[Business Name]",
+                            description: contract.provider_party,
+                            address: formData.address.trim() || "[Business Address]",
+                          },
+                        ].map((party) => (
+                          <div key={party.label} className="grid grid-cols-[76px_1fr] md:grid-cols-[120px_1fr] gap-x-4">
+                            <dt className="font-bold">{party.label}</dt>
+                            <dd className="space-y-3">
+                              <p>
+                                <span className="font-bold uppercase">{party.name}</span> {party.description}
+                              </p>
+                              <p className="font-bold">{party.address}</p>
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                      <ol className="mt-8 space-y-6">
+                        {contract.sections.map((section) => (
+                          <li key={section.number} className="space-y-3">
+                            <div className="grid grid-cols-[40px_1fr] md:grid-cols-[56px_1fr] gap-x-2 font-bold uppercase">
+                              <span>{section.number}.</span>
+                              <span>{section.heading}</span>
+                            </div>
+                            {section.clauses.map((clause, index) => (
+                              <div key={index} className="grid grid-cols-[40px_1fr] md:grid-cols-[56px_1fr] gap-x-2">
+                                <span>
+                                  {section.number}.{index + 1}
+                                </span>
+                                <p className="text-justify">{clause}</p>
+                              </div>
+                            ))}
+                          </li>
+                        ))}
+                      </ol>
+                    </article>
+                    <p className="text-xs font-bold text-slate-400 leading-relaxed">
+                      By signing below, {formData.ownerFullName.trim() || "the owner / manager"} agrees to this
+                      agreement on behalf of {formData.businessName.trim() || "the business"}. A signed PDF copy is
+                      saved with your registration.
+                    </p>
+                    <SignaturePad value={contractSignature} onChange={setContractSignature} />
+                  </>
+                ) : (
+                  <p className="text-xs font-bold text-slate-400">
+                    {contractLoadFailed
+                      ? "The agreement could not be loaded. Refresh the page to try again."
+                      : "Loading agreement..."}
+                  </p>
+                )}
               </div>
 
               {/* Terms of Service & Submission Button */}
