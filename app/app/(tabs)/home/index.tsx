@@ -192,6 +192,7 @@ export default function HomeScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -245,10 +246,13 @@ const styles = StyleSheet.create({
   },
   locationContainer: {
     flex: 1,
+    // Keep a gap before the notification button; long addresses truncate instead of overlapping it.
+    marginRight: 12,
   },
   locationSelector: {
     flexDirection: "row",
     alignItems: "center",
+    maxWidth: "100%",
     backgroundColor: theme.COLORS.surface,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -259,6 +263,7 @@ const styles = StyleSheet.create({
     borderColor: theme.COLORS.border,
   },
   locationText: {
+    flexShrink: 1,
     fontSize: 14,
     fontWeight: "600",
     color: theme.COLORS.textPrimary,
@@ -283,6 +288,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.COLORS.error,
     borderWidth: 1.5,
     borderColor: theme.COLORS.white,
+  },
+  scrollContent: {
+    paddingBottom: 40,
   },
   welcomeSection: {
     paddingHorizontal: 20,

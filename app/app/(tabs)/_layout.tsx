@@ -144,6 +144,9 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: "Profile",
+          // Leaving the tab resets it, so tapping Profile always opens the profile page
+          // instead of a screen left open from elsewhere (e.g. booking details).
+          popToTopOnBlur: true,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "person" : "person-outline"}

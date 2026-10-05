@@ -14,7 +14,7 @@ import {
   TextInput,
 } from "react-native";
 import { useRouter } from "expo-router";
-import NativeMapboxMap from "./ui/NativeMapboxMap";
+import NativeGoogleMap from "./ui/NativeGoogleMap";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import theme from "../constants/theme";
@@ -493,7 +493,8 @@ export default function MapScreen() {
     <View style={styles.container}>
       <View style={StyleSheet.absoluteFillObject}>
         {markerCoords ? (
-                    <NativeMapboxMap
+                    <NativeGoogleMap
+            ref={mapRef}
             center={markerCoords}
             zoomLevel={selectedEvent ? SELECTED_EVENT_ZOOM : NEARBY_MAP_ZOOM}
             showUserLocation
@@ -520,7 +521,7 @@ export default function MapScreen() {
             {locationLoading ? (
               <>
                 <ActivityIndicator size="large" color={theme.COLORS.primary} />
-                <Text style={styles.locationLoadingTitle}>Finding your current locationâ€¦</Text>
+                <Text style={styles.locationLoadingTitle}>Finding your current location…</Text>
                 <Text style={styles.locationLoadingText}>
                   The map will open only after your real position is available.
                 </Text>
@@ -667,7 +668,7 @@ export default function MapScreen() {
                     <Text style={styles.eventListTitle} numberOfLines={1}>{event.title}</Text>
                     <Text style={styles.eventListOffer} numberOfLines={1}>{event.tag || event.time}</Text>
                     <Text style={styles.eventListMeta} numberOfLines={1}>
-                      {event.distance} Â· {event.venue}
+                      {event.distance} · {event.venue}
                     </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={20} color="#94a3b8" />

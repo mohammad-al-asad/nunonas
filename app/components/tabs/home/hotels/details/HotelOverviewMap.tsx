@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import type { GeoCoordinates } from "../../../../../lib/event-map-types";
-import NativeMapboxMap from "../../../../ui/NativeMapboxMap";
+import NativeGoogleMap from "../../../../ui/NativeGoogleMap";
 
 type Props = { center: GeoCoordinates | null };
 
@@ -9,7 +9,7 @@ export default function HotelOverviewMap({ center }: Props) {
   if (!center) return null;
   return (
     <View style={styles.container}>
-      <NativeMapboxMap
+      <NativeGoogleMap
         center={center}
         height={180}
         zoomLevel={14}

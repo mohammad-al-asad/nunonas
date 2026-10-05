@@ -42,9 +42,15 @@ export default {
             "Allow Activity Planner to use your location during signup to personalize nearby recommendations.",
         },
       ],
+      [
+        "react-native-maps",
+        {
+          androidGoogleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+          iosGoogleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+        },
+      ],
     ],
     extra: {
-      mapboxAccessToken: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || "",
       router: {},
       eas: {
         projectId: "d3eed72a-3c1d-4ba3-9cd2-4e1b240bb297",

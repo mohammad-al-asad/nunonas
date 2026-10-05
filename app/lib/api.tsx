@@ -88,6 +88,17 @@ async function readJson(response: Response): Promise<ApiPayload> {
   }
 }
 
+/** Error for a non-2xx API response; keeps the HTTP status so callers can react to it. */
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 export function extractApiMessage(payload: ApiPayload, fallback: string): string {
   if (payload && !Array.isArray(payload) && typeof payload.detail === "string") {
     return payload.detail;
@@ -140,7 +151,7 @@ export async function apiRequest<TResponse>(
 
   const payload = await readJson(response);
   if (!response.ok) {
-    throw new Error(extractApiMessage(payload, `Request failed (${response.status}).`));
+    throw new ApiError(extractApiMessage(payload, `Request failed (${response.status}).`), response.status);
   }
 
   if (payload && !Array.isArray(payload) && "data" in payload) {

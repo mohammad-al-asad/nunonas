@@ -240,7 +240,8 @@ export default function SaveScreen() {
           />
         ))}
 
-        {(!Array.isArray(filteredItems) || filteredItems.length === 0) && (
+        {/* Only conclude "nothing saved" once the first load has finished. */}
+        {!loading && (!Array.isArray(filteredItems) || filteredItems.length === 0) && (
           <View style={styles.emptyState}>
             <Ionicons
               name="heart-dislike-outline"

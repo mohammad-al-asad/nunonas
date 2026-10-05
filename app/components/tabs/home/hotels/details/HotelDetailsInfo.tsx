@@ -17,34 +17,35 @@ export default function HotelDetailsInfo({ hotel }: HotelDetailsInfoProps) {
         {hotel.profileImageUrl ? (
           <Image source={{ uri: hotel.profileImageUrl }} style={styles.profileImage} />
         ) : null}
-        <View style={{ flex: 1, paddingRight: 10 }}>
-          <Text style={styles.title}>{hotel.title}</Text>
-          <View style={styles.locationRow}>
-            <View style={styles.ratingBox}>
-              <Ionicons name="star" size={14} color="#facc15" />
-              <Text style={styles.ratingText}>{hotel.ratingText}</Text>
-              <Text style={styles.reviewsText}>({hotel.reviewsText})</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.locationBox}>
-              <Ionicons
-                name="location-outline"
-                size={14}
-                color={theme.COLORS.textSecondary}
-              />
-              <Text style={styles.locationText} numberOfLines={1} ellipsizeMode="tail">
-                {hotel.locationText}
-              </Text>
-            </View>
-            {typeof hotel.distanceKm === "number" ? (
-              <Text style={styles.distanceText}>{formatDistanceKm(hotel.distanceKm) ?? "Nearby"}</Text>
-            ) : null}
-          </View>
-        </View>
+        <Text style={styles.title} numberOfLines={2}>{hotel.title}</Text>
+        {/* Fixed-width price block: never shrinks, so "/night" stays under the price. */}
         <View style={styles.priceColumn}>
-          <Text style={styles.price}>${hotel.priceText}</Text>
-          <Text style={styles.perNight}>/night</Text>
+          <Text style={styles.price} numberOfLines={1}>${hotel.priceText}</Text>
+          <Text style={styles.perNight}>per night</Text>
         </View>
+      </View>
+
+      {/* Full-width meta row so the address gets the remaining space and truncates cleanly. */}
+      <View style={styles.locationRow}>
+        <View style={styles.ratingBox}>
+          <Ionicons name="star" size={14} color="#facc15" />
+          <Text style={styles.ratingText}>{hotel.ratingText}</Text>
+          <Text style={styles.reviewsText}>({hotel.reviewsText})</Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.locationBox}>
+          <Ionicons
+            name="location-outline"
+            size={14}
+            color={theme.COLORS.textSecondary}
+          />
+          <Text style={styles.locationText} numberOfLines={1} ellipsizeMode="tail">
+            {hotel.locationText}
+          </Text>
+        </View>
+        {typeof hotel.distanceKm === "number" ? (
+          <Text style={styles.distanceText}>{formatDistanceKm(hotel.distanceKm) ?? "Nearby"}</Text>
+        ) : null}
       </View>
 
       <View style={styles.statusRow}>
@@ -69,26 +70,27 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
+    gap: 12,
   },
   profileImage: {
     width: 52,
     height: 52,
-    marginRight: 12,
     borderRadius: 18,
     borderWidth: 2,
     borderColor: theme.COLORS.border,
   },
   title: {
-    fontSize: 24,
+    flex: 1,
+    fontSize: 22,
+    lineHeight: 27,
     fontWeight: "800",
     color: theme.COLORS.textPrimary,
-    marginBottom: 8,
   },
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
+    marginTop: 10,
   },
   ratingBox: {
     flexDirection: "row",
@@ -111,11 +113,13 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
   },
   locationBox: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
   },
   locationText: {
+    flexShrink: 1,
     fontSize: 14,
     color: theme.COLORS.textSecondary,
   },
@@ -125,15 +129,17 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   priceColumn: {
+    flexShrink: 0,
     alignItems: "flex-end",
   },
   price: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "800",
     color: "#1e3a8a",
   },
   perNight: {
-    fontSize: 14,
+    marginTop: 1,
+    fontSize: 12,
     color: theme.COLORS.textSecondary,
   },
   statusRow: {

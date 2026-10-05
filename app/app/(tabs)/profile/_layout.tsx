@@ -1,6 +1,12 @@
 // @ts-nocheck
 import { Stack } from "expo-router";
 
+// When another tab deep-links into a profile screen (e.g. booking details from Home),
+// keep the profile page underneath so Back stays inside this tab.
+export const unstable_settings = {
+  initialRouteName: "index",
+};
+
 export default function ProfileLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>

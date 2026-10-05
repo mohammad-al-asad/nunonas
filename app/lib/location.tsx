@@ -24,6 +24,17 @@ export async function getCurrentCoords(
     return null;
   }
 
+  // A fresh high-accuracy GPS fix can take several seconds (longer indoors).
+  // Reuse a recent, precise fix when the device already has one.
+  const lastKnown = await Location.getLastKnownPositionAsync({ maxAge: 2 * 60_000, requiredAccuracy: 100 });
+  if (lastKnown) {
+    return {
+      latitude: lastKnown.coords.latitude,
+      longitude: lastKnown.coords.longitude,
+      accuracy: lastKnown.coords.accuracy ?? null,
+    };
+  }
+
   const position = await Location.getCurrentPositionAsync({
     // Nearby distances need the device's actual position, not a balanced
     // network estimate that can be hundreds of metres stale.

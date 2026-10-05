@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React from "react";
+import React, { useRef } from "react";
 import { View, Text, StyleSheet, ScrollView, TextInput } from "react-native";
 import theme from "../../../../constants/theme";
 import PlanTypeCard from "./PlanTypeCard";
@@ -48,12 +48,17 @@ const PLAN_TYPES = [
 ];
 
 const Step2 = ({ selectedId, onSelect, customValue, onCustomChange }) => {
+  const scrollRef = useRef(null);
+  // Wait for the keyboard to finish opening, then bring the input into view.
+  const revealInput = () => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250);
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>What kind of plan do you want ?</Text>
       <Text style={styles.subtitle}>Select the vibe for your trip</Text>
 
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scrollContent}
@@ -80,6 +85,8 @@ const Step2 = ({ selectedId, onSelect, customValue, onCustomChange }) => {
             maxLength={120}
             multiline
             autoFocus
+            onFocus={revealInput}
+            onContentSizeChange={revealInput}
           />
         )}
       </ScrollView>

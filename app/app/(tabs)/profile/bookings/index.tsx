@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  ActivityIndicator,
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import theme from "../../../../constants/theme";
 import BookingCard from "../../../../components/tabs/profile/bookings/BookingCard";
+import { BookingListSkeleton } from "../../../../components/skeleton";
 import { listMyBookings } from "../../../../lib/customer-api";
 
 export default function BookingsScreen() {
@@ -118,9 +118,7 @@ export default function BookingsScreen() {
 
       {/* Bookings List */}
       {loading ? (
-        <View style={styles.emptyContainer}>
-          <ActivityIndicator size="large" color={theme.COLORS.primary} />
-        </View>
+        <BookingListSkeleton />
       ) : (
         <FlatList
           data={bookings}

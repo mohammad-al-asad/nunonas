@@ -1,4 +1,4 @@
-import { API_BASE_URL, extractApiMessage } from "./api";
+import { API_BASE_URL, ApiError, extractApiMessage } from "./api";
 import { getSession, refreshSession, restoreSession } from "./auth-session";
 
 type AuthPayload = Record<string, unknown>;
@@ -58,10 +58,11 @@ async function authRequest<TResponse>(
     if (refreshedSession.accessToken) {
       return authRequest<TResponse>(path, options, false);
     }
+    throw new ApiError("Your session has expired. Please log in again.", 401);
   }
 
   if (!response.ok) {
-    throw new Error(extractApiMessage(payload, `Request failed (${response.status}).`));
+    throw new ApiError(extractApiMessage(payload, `Request failed (${response.status}).`), response.status);
   }
 
   return ("data" in payload ? payload.data : payload) as TResponse;
@@ -150,10 +151,11 @@ export async function apiPostAuthForm<TResponse>(
     if (refreshedSession.accessToken) {
       return apiPostAuthForm<TResponse>(path, formData, options, false);
     }
+    throw new ApiError("Your session has expired. Please log in again.", 401);
   }
 
   if (!response.ok) {
-    throw new Error(extractApiMessage(payload, `Request failed (${response.status}).`));
+    throw new ApiError(extractApiMessage(payload, `Request failed (${response.status}).`), response.status);
   }
 
   return ("data" in payload ? payload.data : payload) as TResponse;

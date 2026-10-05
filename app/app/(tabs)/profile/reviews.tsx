@@ -1,7 +1,6 @@
 // @ts-nocheck
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
   Image,
   RefreshControl,
@@ -15,6 +14,7 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import theme from "../../../constants/theme";
 import { listMyReviews } from "../../../lib/customer-api";
+import { ReviewListSkeleton } from "../../../components/skeleton";
 
 const formatDate = (value) => {
   if (!value) return "";
@@ -113,9 +113,7 @@ export default function MyReviewsScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={theme.COLORS.primary} />
-        </View>
+        <ReviewListSkeleton />
       ) : (
         <FlatList
           data={reviews}

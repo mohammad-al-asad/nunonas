@@ -1,12 +1,11 @@
 ﻿// @ts-nocheck
 import React from "react";
-import { StyleSheet, View, Text, Dimensions } from "react-native";
+import { StyleSheet, View, Text } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import theme from "../../../../../constants/theme";
+import { useGridColumns } from "../../../../../lib/use-grid-columns";
 import { forwardGeocode } from "../../../../../lib/google-maps";
 import HotelOverviewMap from "./HotelOverviewMap";
-
-const { width } = Dimensions.get("window");
 
 const amenityIcon = (name) => {
   const value = String(name).toLowerCase();
@@ -15,10 +14,17 @@ const amenityIcon = (name) => {
   if (value.includes("pool")) return ["pool", "MaterialCommunityIcons"];
   if (value.includes("gym") || value.includes("fitness")) return ["weight-lifter", "MaterialCommunityIcons"];
   if (value.includes("parking")) return ["parking", "MaterialCommunityIcons"];
-  return ["information-outline", "Ionicons"];
+  if (value.includes("shuttle") || value.includes("airport")) return ["airplane-outline", "Ionicons"];
+  if (value.includes("air condition") || /\bac\b/.test(value)) return ["snow-outline", "Ionicons"];
+  if (value.includes("garden")) return ["flower-outline", "Ionicons"];
+  if (value.includes("restaurant")) return ["restaurant-outline", "Ionicons"];
+  if (value.includes("spa") || value.includes("sauna")) return ["spa-outline", "MaterialCommunityIcons"];
+  if (value.includes("tv")) return ["tv-outline", "Ionicons"];
+  return ["checkmark-circle-outline", "Ionicons"];
 };
 
 const HotelOverviewContent = ({ hotel }) => {
+  const grid = useGridColumns();
   const address = hotel?.address || hotel?.location || hotel?.locationText || "";
   const [mapCenter, setMapCenter] = React.useState(
     hotel?.latitude != null && hotel?.longitude != null
@@ -57,7 +63,7 @@ const HotelOverviewContent = ({ hotel }) => {
         <View style={styles.amenitiesGrid}>
           {(hotel?.amenities ?? []).length ? hotel.amenities.map((name, index) => {
             const [icon, library] = amenityIcon(name);
-            return <View key={`${name}-${index}`} style={styles.amenityBox}>
+            return <View key={`${name}-${index}`} style={[styles.amenityBox, { width: grid.itemWidth }]}>
               <View style={styles.iconCircle}>
                 {library === "Ionicons" ? (
                   <Ionicons
@@ -73,9 +79,13 @@ const HotelOverviewContent = ({ hotel }) => {
                   />
                 )}
               </View>
-              <Text style={styles.amenityName}>{name}</Text>
-            </View>
+              <Text style={styles.amenityName} numberOfLines={2}>{name}</Text>
+            </View>;
           }) : <Text style={styles.emptyText}>No amenities provided.</Text>}
+          {/* Invisible fillers keep a short last row aligned to the columns. */}
+          {Array.from({ length: grid.fillerCount((hotel?.amenities ?? []).length) }, (_, index) => (
+            <View key={`filler-${index}`} style={[styles.amenityBox, { width: grid.itemWidth }]} />
+          ))}
         </View>
       </View>
 
@@ -136,7 +146,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   amenityBox: {
-    width: (width - 40) / 3,
     alignItems: "center",
     marginBottom: 20,
   },

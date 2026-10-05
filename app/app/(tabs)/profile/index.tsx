@@ -86,6 +86,13 @@ export default function ProfileScreen() {
     router.replace("/auth/login");
   };
 
+  const confirmLogout = () => {
+    Alert.alert("Log out?", "You'll need to log in again to see your bookings and plans.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Log out", style: "destructive", onPress: handleLogout },
+    ]);
+  };
+
   const updatePreference = async (key, value) => {
     const previous = key === "nearby_events" ? nearbyEvents : bookingReminders;
     if (key === "nearby_events") setNearbyEvents(value);
@@ -179,10 +186,12 @@ export default function ProfileScreen() {
           {/* Logout */}
           <TouchableOpacity
             style={styles.logoutBtn}
-            activeOpacity={0.7}
-            onPress={handleLogout}
+            activeOpacity={0.8}
+            onPress={confirmLogout}
+            accessibilityRole="button"
           >
-            <Text style={styles.logoutText}>Logout</Text>
+            <Ionicons name="log-out-outline" size={20} color={theme.COLORS.error} />
+            <Text style={styles.logoutText}>Log out</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -226,13 +235,20 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   logoutBtn: {
-    marginTop: 40,
+    marginTop: 28,
+    flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 15,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#fecaca",
+    backgroundColor: "#fef2f2",
   },
   logoutText: {
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "800",
     color: theme.COLORS.error,
   },
 });
