@@ -19,7 +19,7 @@ const nextConfig = {
       },
       {
         protocol: "https",
-        hostname: "res.cloudinary.com",
+        hostname: "meetz-bucket.s3.eu-north-1.amazonaws.com",
         pathname: "/**"
       }
     ]

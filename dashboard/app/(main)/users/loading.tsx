@@ -18,6 +18,23 @@ function UsersPageSkeleton() {
           ))}
         </section>
 
+        <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {Array.from({ length: 2 }, (_, index) => (
+            <article
+              key={`users-chart-skeleton-${index}`}
+              className="rounded-xl border border-[#dbe2ef] bg-white p-4"
+            >
+              <div className="h-4 w-28 animate-pulse rounded-full bg-[#edf2fb]" />
+              <div className="mt-2 h-3 w-48 animate-pulse rounded-full bg-[#f3f6fd]" />
+              <div className="mt-4 flex h-[200px] items-end gap-6 px-6">
+                {[45, 70, 35, 85, 55, 65].slice(0, index === 0 ? 6 : 4).map((height, bar) => (
+                  <div key={bar} className="w-6 animate-pulse rounded-t bg-[#e9eef8]" style={{ height: `${height}%` }} />
+                ))}
+              </div>
+            </article>
+          ))}
+        </section>
+
         <section className="overflow-hidden rounded-xl border border-[#dbe2ef] bg-white">
           <div className="flex flex-col gap-2 border-b border-[#e6ecf7] px-4 py-3 md:flex-row md:items-center md:justify-between">
             <div className="flex h-9 w-full max-w-[420px] items-center rounded-lg border border-[#edf1fa] bg-[#f7f9fd] px-3">

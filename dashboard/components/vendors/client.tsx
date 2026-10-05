@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { BsPatchCheckFill } from "react-icons/bs";
 import { FaUsers } from "react-icons/fa";
 import { IoAlertCircle, IoShieldCheckmark, IoTimeOutline } from "react-icons/io5";
+import { RevenueContributionChart, type RevenueBreakdown } from "@/components/vendors/revenue-chart";
 import type {
   DashboardVendor,
   VendorCategory,
@@ -341,8 +342,10 @@ function DocumentsGrid({ docs }: { docs: VendorVerificationDocument[] }) {
 
 export function VendorsManagementView({
   data,
+  revenue,
 }: {
   data: { summaryCards: VendorSummaryCard[]; vendors: DashboardVendor[] };
+  revenue: RevenueBreakdown;
 }) {
   const searchParams = useSearchParams();
   const statusParam = searchParams.get("status");
@@ -676,6 +679,8 @@ export function VendorsManagementView({
             );
           })}
         </section>
+
+        <RevenueContributionChart revenue={revenue} vendors={vendors} categoryFilter={categoryFilter} />
 
         <section className="relative rounded-xl border border-[#e6ecf7] bg-white shadow-sm">
           <div className="flex flex-col gap-3 rounded-t-xl border-b border-[#eef2f7] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">

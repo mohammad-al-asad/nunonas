@@ -17,6 +17,21 @@ function VendorsPageSkeleton() {
         ))}
       </section>
 
+      <section className="rounded-xl border border-[#e6ecf7] bg-white p-5 shadow-sm">
+        <div className="h-4 w-44 animate-pulse rounded-full bg-[#e9eef8]" />
+        <div className="mt-2 h-3 w-64 animate-pulse rounded-full bg-[#f1f5f9]" />
+        <div className="mt-4 space-y-4">
+          {[88, 64, 40, 28].map((width) => (
+            <div key={`vendors-chart-skeleton-${width}`} className="flex items-center gap-3">
+              <div className="h-3 w-24 animate-pulse rounded-full bg-[#edf2fb]" />
+              <div className="flex-1">
+                <div className="h-6 animate-pulse rounded bg-[#edf2fb]" style={{ width: `${width}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section className="overflow-hidden rounded-xl border border-[#e6ecf7] bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-[#eef2f7] px-5 py-4">
           <div className="h-4 w-32 rounded-full bg-[#e9eef8]" />
