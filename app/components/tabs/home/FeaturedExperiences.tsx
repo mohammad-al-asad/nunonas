@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useMemo } from "react";
-import { View, Text, StyleSheet, Image, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import theme from "../../../constants/theme";
@@ -10,6 +10,7 @@ import { formatDistanceKm } from "../../../lib/distance";
 import { calculateDistanceKm } from "../../../lib/distance";
 import { useHomeFeedQuery, useTrendingQuery, dedupeFeedItems } from "../../../lib/queries/homeQueries";
 import { useAppSelector } from "../../../store/hooks";
+import { FeaturedExperiencesSkeleton } from "../../skeleton";
 
 function normalizeItems(payload) {
   const items = payload?.featured_experiences;
@@ -75,23 +76,21 @@ const FeaturedExperiences = () => {
     });
   }, [data, trendingQuery.data, coords]);
 
-  if (isLoading || (trendingQuery.isLoading && !normalizeItems(data).length)) {
-    return <ActivityIndicator style={styles.loading} color={theme.COLORS.primary} />;
-  }
+  const loading = isLoading || (trendingQuery.isLoading && !normalizeItems(data).length);
 
-  if (isError && !items.length) {
+  if (!loading && isError && !items.length) {
     return <TouchableOpacity style={styles.status} onPress={() => refetch()}>
       <Text style={styles.statusText}>Featured experiences are unavailable. Tap to retry.</Text>
     </TouchableOpacity>;
   }
 
-  if (!items.length) return null;
+  if (!loading && !items.length) return null;
 
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Featured Experiences</Text>
       <Text style={styles.sectionSubtitle}>Curated from the best nearby places</Text>
-      <View style={styles.list}>
+      {loading ? <FeaturedExperiencesSkeleton /> : <View style={styles.list}>
         {items.map((item, index) => {
           const id = item.id ?? item._id;
           const title = item.name ?? item.title ?? item.business_name;
@@ -124,13 +123,12 @@ const FeaturedExperiences = () => {
             </TouchableOpacity>
           );
         })}
-      </View>
+      </View>}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  loading: { marginTop: 30 },
   container: { paddingHorizontal: 20, marginTop: 30, paddingBottom: 40 },
   sectionTitle: { fontSize: 20, fontWeight: "800", color: theme.COLORS.textPrimary, marginBottom: 3 },
   sectionSubtitle: { fontSize: 13, color: theme.COLORS.textSecondary, marginBottom: 16 },

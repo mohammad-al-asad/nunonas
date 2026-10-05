@@ -1,22 +1,38 @@
 // @ts-nocheck
 import React from "react";
-import { View, Text, StyleSheet, Dimensions } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import theme from "../../../../../constants/theme";
+import { useGridColumns } from "../../../../../lib/use-grid-columns";
 import type { NormalizedSpa } from "../../../../../lib/provider-types";
 
-const { width } = Dimensions.get("window");
+const AMENITY_COLOR = "#3b82f6";
 
-const AMENITIES = [
-  { id: 1, name: "Free WiFi", icon: "wifi", color: "#3b82f6" },
-  { id: 2, name: "Parking", icon: "square", color: "#3b82f6" },
-  { id: 3, name: "Locker", icon: "lock-closed", color: "#3b82f6" },
-  { id: 4, name: "Shower", icon: "water", color: "#3b82f6" },
-  { id: 5, name: "Accessible", icon: "body", color: "#3b82f6" },
-  { id: 6, name: "Sauna", icon: "flame", color: "#3b82f6" },
+// Icon picked by keyword in the amenity name; anything unknown gets a generic check.
+const AMENITY_ICONS = [
+  ["wifi", "wifi"],
+  ["parking", "car"],
+  ["locker", "lock-closed"],
+  ["changing", "shirt"],
+  ["shower", "water"],
+  ["steam", "cloudy"],
+  ["sauna", "flame"],
+  ["pool", "water"],
+  ["lounge", "cafe"],
+  ["relax", "leaf"],
+  ["access", "accessibility"],
+  ["wheelchair", "accessibility"],
+  ["air", "snow"],
+  ["towel", "layers"],
 ];
 
+function amenityIcon(name: string) {
+  const lower = String(name).toLowerCase();
+  return AMENITY_ICONS.find(([keyword]) => lower.includes(keyword))?.[1] ?? "checkmark-circle";
+}
+
 const SpaOverviewContent = ({ spa }: { spa: NormalizedSpa }) => {
+  const grid = useGridColumns();
   return (
     <View style={styles.container}>
       {/* About Section */}
@@ -48,16 +64,18 @@ const SpaOverviewContent = ({ spa }: { spa: NormalizedSpa }) => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Amenities</Text>
         <View style={styles.amenityGrid}>
-          {spa.amenities.map((name, index) => {
-            const item = AMENITIES[index] ?? AMENITIES[0];
-            return (
-            <View key={item.id} style={styles.amenityItem}>
+          {spa.amenities.map((name, index) => (
+            <View key={`${name}-${index}`} style={[styles.amenityItem, { width: grid.itemWidth }]}>
               <View style={styles.amenityIconBox}>
-                <Ionicons name={item.icon} size={24} color={item.color} />
+                <Ionicons name={amenityIcon(name)} size={24} color={AMENITY_COLOR} />
               </View>
-              <Text style={styles.amenityName}>{name}</Text>
+              <Text style={styles.amenityName} numberOfLines={2}>{name}</Text>
             </View>
-          )})}
+          ))}
+          {/* Invisible fillers keep a short last row aligned to the columns. */}
+          {Array.from({ length: grid.fillerCount(spa.amenities.length) }, (_, index) => (
+            <View key={`filler-${index}`} style={[styles.amenityItem, { width: grid.itemWidth }, styles.amenityFiller]} />
+          ))}
         </View>
       </View>
     </View>
@@ -122,15 +140,19 @@ const styles = StyleSheet.create({
   amenityGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 15,
+    justifyContent: "space-between",
+    rowGap: 12,
   },
   amenityItem: {
-    width: (width - 70) / 3,
     backgroundColor: theme.COLORS.surface,
-    padding: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
     borderRadius: 16,
     alignItems: "center",
-    gap: 8,
+    gap: 6,
+  },
+  amenityFiller: {
+    backgroundColor: "transparent",
   },
   amenityIconBox: {
     width: 48,

@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import NativeMapboxMap from "../../ui/NativeMapboxMap";
+import NativeGoogleMap from "../../ui/NativeGoogleMap";
 import theme from "../../../constants/theme";
 import {
   buildDirectionsUrl,
@@ -82,10 +82,10 @@ function OfferMarker({ offer, onPress, active }) {
   );
 }
 
-function NearbyMap({ gpsCoords, markerOffers, selectedOffer, setSelectedOffer, style, onPullToRefresh }) {
+function NearbyMap({ gpsCoords, markerOffers, selectedOffer, setSelectedOffer, style, onPullToRefresh, loadingPlaces = false }) {
   return (
     <View style={style}>
-      <NativeMapboxMap
+      <NativeGoogleMap
         center={gpsCoords}
         zoomLevel={13}
         onPullToRefresh={onPullToRefresh}
@@ -97,6 +97,12 @@ function NearbyMap({ gpsCoords, markerOffers, selectedOffer, setSelectedOffer, s
           children: <OfferMarker offer={offer} active={selectedOffer?.id === offer.id} />,
         }))}
       />
+      {loadingPlaces && (
+        <View style={styles.placesLoadingBadge} pointerEvents="none">
+          <ActivityIndicator size="small" color={theme.COLORS.primary} />
+          <Text style={styles.placesLoadingText}>Loading nearby places…</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -109,8 +115,8 @@ const ExploreNearbyBanner = ({ refreshToken = 0, onPullToRefresh }) => {
   const [gpsCoords, setGpsCoords] = useState(null);
   const [address, setAddress] = useState("Location unavailable");
   const [loading, setLoading] = useState(true);
-  const [offersLoading, setOffersLoading] = useState(true);
   const [offers, setOffers] = useState([]);
+  const [offersLoading, setOffersLoading] = useState(true);
   const [selectedOffer, setSelectedOffer] = useState(null);
   const [routeInfo, setRouteInfo] = useState(null);
 
@@ -134,10 +140,12 @@ const ExploreNearbyBanner = ({ refreshToken = 0, onPullToRefresh }) => {
           location_enabled: true,
         });
 
-        const addr = await reverseGeocode(coords.latitude, coords.longitude);
-        if (addr) {
-          setAddress(addr);
-        }
+        // The address label is cosmetic; don't hold up the nearby places for it.
+        reverseGeocode(coords.latitude, coords.longitude)
+          .then((addr) => {
+            if (addr) setAddress(addr);
+          })
+          .catch(() => {});
       } catch (e) {
         if (!isExpectedLocationError(e)) {
           console.warn("Error fetching coords for map card: ", e);
@@ -237,7 +245,7 @@ const ExploreNearbyBanner = ({ refreshToken = 0, onPullToRefresh }) => {
       <View style={styles.container}>
         <View style={styles.mapCard}>
           <View style={styles.mapPreviewContainer}>
-            {loading || offersLoading ? (
+            {!gpsCoords && loading ? (
               <View style={styles.mapPlaceholder}>
                 <ActivityIndicator size="small" color={theme.COLORS.primary} />
               </View>
@@ -247,7 +255,7 @@ const ExploreNearbyBanner = ({ refreshToken = 0, onPullToRefresh }) => {
                 <Text style={styles.locationUnavailableText}>Enable location to view nearby events.</Text>
               </View>
             ) : (
-              <NearbyMap gpsCoords={gpsCoords} markerOffers={markerOffers} selectedOffer={selectedOffer} setSelectedOffer={setSelectedOffer} onPullToRefresh={onPullToRefresh} style={styles.staticMap} />
+              <NearbyMap gpsCoords={gpsCoords} markerOffers={markerOffers} selectedOffer={selectedOffer} setSelectedOffer={setSelectedOffer} onPullToRefresh={onPullToRefresh} loadingPlaces={offersLoading} style={styles.staticMap} />
             )}
 
             <TouchableOpacity
@@ -272,7 +280,7 @@ const ExploreNearbyBanner = ({ refreshToken = 0, onPullToRefresh }) => {
   return (
     <View style={styles.container}>
       <View style={styles.bannerCard}>
-        {loading || offersLoading ? (
+        {!gpsCoords && loading ? (
           <View style={styles.mapPlaceholder}>
             <ActivityIndicator size="small" color={theme.COLORS.primary} />
           </View>
@@ -282,7 +290,7 @@ const ExploreNearbyBanner = ({ refreshToken = 0, onPullToRefresh }) => {
             <Text style={styles.locationUnavailableText}>Enable location to view nearby events.</Text>
           </View>
         ) : (
-          <NearbyMap gpsCoords={gpsCoords} markerOffers={markerOffers} selectedOffer={selectedOffer} setSelectedOffer={setSelectedOffer} style={StyleSheet.absoluteFillObject} />
+          <NearbyMap gpsCoords={gpsCoords} markerOffers={markerOffers} selectedOffer={selectedOffer} setSelectedOffer={setSelectedOffer} loadingPlaces={offersLoading} style={StyleSheet.absoluteFillObject} />
         )}
 
         <TouchableOpacity
@@ -590,6 +598,24 @@ const styles = StyleSheet.create({
   staticMap: {
     height: "100%",
     width: "100%",
+  },
+  placesLoadingBadge: {
+    position: "absolute",
+    top: 12,
+    left: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.95)",
+    ...theme.SHADOWS.card,
+  },
+  placesLoadingText: {
+    color: theme.COLORS.textSecondary,
+    fontSize: 12,
+    fontWeight: "700",
   },
   mapPlaceholder: {
     alignItems: "center",

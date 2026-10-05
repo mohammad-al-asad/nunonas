@@ -1,6 +1,8 @@
 // @ts-nocheck
 import { Stack } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Provider } from "react-redux";
 import { focusManager, QueryClientProvider } from "@tanstack/react-query";
 import { AppState } from "react-native";
@@ -18,18 +20,22 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <Provider store={store}>
-      <QueryClientProvider client={queryClient}>
-        <SafeAreaProvider>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-            }}
-          />
-          <ToastHost />
-        </SafeAreaProvider>
-      </QueryClientProvider>
-    </Provider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Provider store={store}>
+        <QueryClientProvider client={queryClient}>
+          <SafeAreaProvider>
+            <BottomSheetModalProvider>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                }}
+              />
+              <ToastHost />
+            </BottomSheetModalProvider>
+          </SafeAreaProvider>
+        </QueryClientProvider>
+      </Provider>
+    </GestureHandlerRootView>
   );
 }
 

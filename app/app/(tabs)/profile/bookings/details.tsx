@@ -18,6 +18,7 @@ import theme from "../../../../constants/theme";
 import ReviewModal from "../../../../components/ui/ReviewModal";
 import { cancelBooking, createBookingReview, getBooking } from "../../../../lib/customer-api";
 import { showToast } from "../../../../lib/toast";
+import { BookingDetailsSkeleton } from "../../../../components/skeleton";
 
 const InfoRow = ({ label, value, valueStyle }) => (
   <View style={styles.infoRow}>
@@ -66,15 +67,23 @@ export default function BookingDetailsScreen() {
   const router = useRouter();
   const routeParams = useLocalSearchParams();
   const [liveBooking, setLiveBooking] = React.useState(null);
+  // "loading" until the booking arrives; screens opened without an id render from route params.
+  const [loadState, setLoadState] = React.useState(routeParams.id ? "loading" : "ready");
+  const [reloadKey, setReloadKey] = React.useState(0);
   React.useEffect(() => {
     const bookingId = routeParams.id;
     if (!bookingId) return;
     let active = true;
+    setLoadState("loading");
     getBooking(String(bookingId)).then((booking) => {
-      if (active) setLiveBooking(booking);
-    }).catch(() => undefined);
+      if (!active) return;
+      setLiveBooking(booking);
+      setLoadState("ready");
+    }).catch(() => {
+      if (active) setLoadState("error");
+    });
     return () => { active = false; };
-  }, [routeParams.id]);
+  }, [routeParams.id, reloadKey]);
   const params = {
     ...routeParams,
     ...(liveBooking || {}),
@@ -386,6 +395,35 @@ export default function BookingDetailsScreen() {
     </View>
   );
 
+  if (loadState !== "ready") {
+    return (
+      <SafeAreaView style={styles.mainContainer} edges={["top"]}>
+        <StatusBar barStyle="dark-content" />
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={theme.COLORS.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Booking Details</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        {loadState === "loading" ? (
+          <ScrollView showsVerticalScrollIndicator={false} scrollEnabled={false}>
+            <BookingDetailsSkeleton />
+          </ScrollView>
+        ) : (
+          <View style={styles.loadError}>
+            <Ionicons name="cloud-offline-outline" size={36} color={theme.COLORS.textSecondary} />
+            <Text style={styles.loadErrorTitle}>Couldn't load this booking</Text>
+            <Text style={styles.loadErrorText}>Check your connection and try again.</Text>
+            <TouchableOpacity style={styles.loadErrorButton} onPress={() => setReloadKey((value) => value + 1)}>
+              <Text style={styles.loadErrorButtonText}>Try again</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.mainContainer} edges={isHotel ? [] : ["top"]}>
       <StatusBar barStyle="dark-content" />
@@ -445,6 +483,37 @@ export default function BookingDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
+  loadError: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+    paddingBottom: 60,
+  },
+  loadErrorTitle: {
+    marginTop: 12,
+    fontSize: 17,
+    fontWeight: "800",
+    color: theme.COLORS.textPrimary,
+  },
+  loadErrorText: {
+    marginTop: 6,
+    fontSize: 14,
+    color: theme.COLORS.textSecondary,
+    textAlign: "center",
+  },
+  loadErrorButton: {
+    marginTop: 18,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: theme.COLORS.primary,
+  },
+  loadErrorButtonText: {
+    color: theme.COLORS.white,
+    fontSize: 14,
+    fontWeight: "800",
+  },
   mainContainer: {
     flex: 1,
     backgroundColor: theme.COLORS.white,
@@ -603,10 +672,14 @@ const styles = StyleSheet.create({
     color: theme.COLORS.textPrimary,
     marginBottom: 15,
   },
+  // No vertical margin here: spacing comes only from cardDivider (12 above + 12 below),
+  // so every row sits the same distance from the lines around it.
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 12,
+    alignItems: "center",
+    gap: 16,
+    minHeight: 22,
   },
   infoLabel: {
     fontSize: 15,
@@ -614,9 +687,11 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   infoValue: {
+    flexShrink: 1,
     fontSize: 15,
     color: theme.COLORS.textPrimary,
     fontWeight: "700",
+    textAlign: "right",
   },
   divider: {
     height: 1,
@@ -666,16 +741,13 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
   notesRow: {
-    marginTop: 5,
+    gap: 6,
   },
   notesValue: {
     fontSize: 15,
     color: theme.COLORS.textPrimary,
     fontWeight: "600",
-    marginTop: 8,
     lineHeight: 22,
-    textAlign: "right",
-    flex: 1,
   },
   // Actions
   actionsContainer: {

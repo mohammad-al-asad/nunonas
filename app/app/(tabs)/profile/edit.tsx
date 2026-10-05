@@ -12,16 +12,33 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Calendar } from "react-native-calendars";
+import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import theme from "../../../constants/theme";
 import { getMe, updatePersonalDetails, uploadProfileImage } from "../../../lib/customer-api";
 import ProfileAvatarPlaceholder from "../../../components/tabs/profile/ProfileAvatarPlaceholder";
 import { showToast } from "../../../lib/toast";
+
+// Picker opens here when no date of birth is saved yet.
+const DEFAULT_DOB = new Date(2000, 0, 1);
+const MIN_DOB = new Date(1900, 0, 1);
+
+/** "YYYY-MM-DD" → local Date (avoids the UTC shift of `new Date("YYYY-MM-DD")`). */
+function parseDob(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value ?? ""));
+  return match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : null;
+}
+
+/** Local Date → "YYYY-MM-DD", the format stored as date_of_birth. */
+function formatDob(date) {
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
 
 function InputField({
   label,
@@ -200,9 +217,27 @@ const EditProfileScreen = () => {
     }
   };
 
-  const onDateSelect = (day) => {
-    setFormData({ ...formData, dob: day.dateString });
-    setShowCalendar(false);
+  const dobDate = parseDob(formData.dob) ?? DEFAULT_DOB;
+
+  const setDob = (date) => {
+    setFormData((current) => ({ ...current, dob: formatDob(date) }));
+  };
+
+  // Android: the system date dialog. iOS: the native inline calendar in our sheet.
+  const openDobPicker = () => {
+    if (Platform.OS === "android") {
+      DateTimePickerAndroid.open({
+        value: dobDate,
+        mode: "date",
+        maximumDate: new Date(),
+        minimumDate: MIN_DOB,
+        onChange: (event, date) => {
+          if (event.type === "set" && date) setDob(date);
+        },
+      });
+      return;
+    }
+    setShowCalendar(true);
   };
 
   if (loading) {
@@ -276,9 +311,10 @@ const EditProfileScreen = () => {
             }
           />
 
-          <View style={styles.genderArea}>
-            <Text style={styles.genderLabel}>Gender</Text>
-            <TouchableOpacity style={styles.genderDropdown} onPress={() => setShowGenderOptions(true)} activeOpacity={0.8}>
+          {/* Same container, label and box styles as InputField so the form spacing stays even. */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Gender</Text>
+            <TouchableOpacity style={[styles.inputWrapper, styles.genderDropdown]} onPress={() => setShowGenderOptions(true)} activeOpacity={0.8}>
               <Text style={[styles.genderDropdownText, !formData.gender && styles.genderPlaceholder]}>
                 {GENDER_OPTIONS.find(([value]) => value === formData.gender)?.[1] || "Select gender"}
               </Text>
@@ -291,7 +327,7 @@ const EditProfileScreen = () => {
             value={formData.dob}
             onChangeText={(text) => setFormData({ ...formData, dob: text })}
             icon="calendar-outline"
-            onPress={() => setShowCalendar(true)}
+            onPress={openDobPicker}
             editable={false}
           />
         </View>
@@ -346,25 +382,22 @@ const EditProfileScreen = () => {
                     />
                   </TouchableOpacity>
                 </View>
-                <Calendar
-                  onDayPress={onDateSelect}
-                  markedDates={{
-                    [formData.dob]: {
-                      selected: true,
-                      disableTouchEvent: true,
-                      selectedColor: theme.COLORS.primary,
-                    },
-                  }}
-                  theme={{
-                    todayTextColor: theme.COLORS.primary,
-                    todayFontWeight: "bold",
-                    arrowColor: theme.COLORS.primary,
-                    textMonthFontWeight: "800",
-                    textDayHeaderFontWeight: "600",
-                    selectedDayBackgroundColor: theme.COLORS.primary,
-                    selectedDayTextColor: theme.COLORS.white,
+                {/* iOS only — Android uses the system dialog opened in openDobPicker. */}
+                <DateTimePicker
+                  value={dobDate}
+                  mode="date"
+                  display="inline"
+                  maximumDate={new Date()}
+                  minimumDate={MIN_DOB}
+                  accentColor={theme.COLORS.primary}
+                  themeVariant="light"
+                  onChange={(_event, date) => {
+                    if (date) setDob(date);
                   }}
                 />
+                <TouchableOpacity style={styles.calendarDone} onPress={() => setShowCalendar(false)}>
+                  <Text style={styles.calendarDoneText}>Done</Text>
+                </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>
           </View>
@@ -435,28 +468,13 @@ const styles = StyleSheet.create({
     position: "relative",
     marginBottom: 15,
   },
-  genderArea: {
-    marginTop: 18,
-  },
-  genderLabel: {
-    marginBottom: 10,
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.COLORS.textPrimary,
-  },
   genderDropdown: {
-    minHeight: 52,
-    flexDirection: "row",
-    alignItems: "center",
+    height: 50,
     justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: theme.COLORS.border,
-    borderRadius: 14,
-    paddingHorizontal: 16,
   },
   genderDropdownText: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 16,
+    fontWeight: "500",
     color: theme.COLORS.textPrimary,
   },
   genderPlaceholder: {
@@ -652,6 +670,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "800",
     color: theme.COLORS.textPrimary,
+  },
+  calendarDone: {
+    marginTop: 12,
+    alignItems: "center",
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: theme.COLORS.primary,
+  },
+  calendarDoneText: {
+    color: theme.COLORS.white,
+    fontSize: 16,
+    fontWeight: "800",
   },
 });
 

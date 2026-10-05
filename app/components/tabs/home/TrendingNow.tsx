@@ -7,7 +7,6 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
-  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -17,6 +16,7 @@ import SaveButton from "../../ui/SaveButton";
 import { calculateDistanceKm, formatDistanceKm } from "../../../lib/distance";
 import { useTrendingQuery, dedupeFeedItems } from "../../../lib/queries/homeQueries";
 import { useAppSelector } from "../../../store/hooks";
+import { TrendingNowSkeleton } from "../../skeleton";
 
 function getLocationLabel(item) {
   const rawLocation =
@@ -129,14 +129,6 @@ const TrendingNow = () => {
     return distanceKm == null ? item : { ...item, distance_km: distanceKm };
   }), [data, coords]);
 
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator color={theme.COLORS.primary} />
-      </View>
-    );
-  }
-
   if (isError) {
     return <TouchableOpacity style={styles.errorState} onPress={() => refetch()}>
       <Text style={styles.emptyText}>Trending is unavailable. Tap to retry.</Text>
@@ -152,7 +144,9 @@ const TrendingNow = () => {
         </TouchableOpacity>
       </View>
 
-      {items.length ? (
+      {isLoading ? (
+        <TrendingNowSkeleton />
+      ) : items.length ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -229,12 +223,6 @@ const TrendingNow = () => {
 };
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    height: 60,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 30,
-  },
   container: {
     marginTop: 30,
   },

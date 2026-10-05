@@ -1,23 +1,40 @@
-import { View, Text, StyleSheet, Dimensions } from "react-native";
-const { width } = Dimensions.get("window");
+import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import theme from "../../../../../constants/theme";
+import { useGridColumns } from "../../../../../lib/use-grid-columns";
 import type { NormalizedRestaurant } from "../../../../../lib/provider-types";
 
-const AMENITIES = [
-  { id: 1, name: "Free WiFi", icon: "wifi", color: "#3b82f6" },
-  { id: 2, name: "Parking", icon: "square", color: "#3b82f6" }, // Simplified icon name
-  { id: 3, name: "Outdoor", icon: "leaf", color: "#3b82f6" },
-  { id: 4, name: "Cards", icon: "card", color: "#3b82f6" },
-  { id: 5, name: "Accessible", icon: "body", color: "#3b82f6" },
-  { id: 6, name: "Bar", icon: "wine", color: "#3b82f6" },
+const AMENITY_COLOR = "#3b82f6";
+
+// Icon picked by keyword in the amenity name; anything unknown gets a generic check.
+const AMENITY_ICONS = [
+  ["wifi", "wifi"],
+  ["parking", "car"],
+  ["outdoor", "leaf"],
+  ["rooftop", "partly-sunny"],
+  ["card", "card"],
+  ["access", "accessibility"],
+  ["wheelchair", "accessibility"],
+  ["bar", "wine"],
+  ["air", "snow"],
+  ["family", "people"],
+  ["kid", "happy"],
+  ["view", "eye"],
+  ["music", "musical-notes"],
+  ["delivery", "bicycle"],
 ];
+
+function amenityIcon(name: string) {
+  const lower = String(name).toLowerCase();
+  return AMENITY_ICONS.find(([keyword]) => lower.includes(keyword))?.[1] ?? "checkmark-circle";
+}
 
 type OverviewContentProps = {
   restaurant: NormalizedRestaurant;
 };
 
 export default function OverviewContent({ restaurant }: OverviewContentProps) {
+  const grid = useGridColumns();
   return (
     <View style={styles.container}>
       {/* About Section */}
@@ -49,16 +66,18 @@ export default function OverviewContent({ restaurant }: OverviewContentProps) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Amenities</Text>
         <View style={styles.amenityGrid}>
-          {restaurant.amenities.map((name, index) => {
-            const item = AMENITIES[index] ?? AMENITIES[0];
-            return (
-            <View key={`${item.id}-${index}-${String(name)}`} style={styles.amenityItem}>
+          {restaurant.amenities.map((name, index) => (
+            <View key={`${name}-${index}`} style={[styles.amenityItem, { width: grid.itemWidth }]}>
               <View style={styles.amenityIconBox}>
-                <Ionicons name={item.icon} size={24} color={item.color} />
+                <Ionicons name={amenityIcon(name)} size={24} color={AMENITY_COLOR} />
               </View>
-              <Text style={styles.amenityName}>{name}</Text>
+              <Text style={styles.amenityName} numberOfLines={2}>{name}</Text>
             </View>
-          )})}
+          ))}
+          {/* Invisible fillers keep a short last row aligned to the columns. */}
+          {Array.from({ length: grid.fillerCount(restaurant.amenities.length) }, (_, index) => (
+            <View key={`filler-${index}`} style={[styles.amenityItem, { width: grid.itemWidth }, styles.amenityFiller]} />
+          ))}
         </View>
       </View>
     </View>
@@ -123,15 +142,19 @@ const styles = StyleSheet.create({
   amenityGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 15,
+    justifyContent: "space-between",
+    rowGap: 12,
   },
   amenityItem: {
-    width: (width - 70) / 3, // 3 column grid with padding
     backgroundColor: theme.COLORS.surface,
-    padding: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
     borderRadius: 16,
     alignItems: "center",
-    gap: 8,
+    gap: 6,
+  },
+  amenityFiller: {
+    backgroundColor: "transparent",
   },
   amenityIconBox: {
     width: 48,

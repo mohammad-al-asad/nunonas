@@ -13,7 +13,7 @@ import {
   buildPlaceUrl,
 } from "../../../../../lib/google-maps";
 import type { GeoCoordinates } from "../../../../../lib/event-map-types";
-import NativeMapboxMap from "../../../../ui/NativeMapboxMap";
+import NativeGoogleMap from "../../../../ui/NativeGoogleMap";
 
 type EventLocationMapProps = {
   venueName?: string;
@@ -55,7 +55,7 @@ export default function EventLocationMap({
 
       <View style={styles.mapContainer}>
         {coordinates ? (
-          <NativeMapboxMap
+          <NativeGoogleMap
             center={coordinates}
             height={180}
             zoomLevel={15}
