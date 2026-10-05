@@ -29,6 +29,8 @@ class OpenAILLMClient:
                 {"role": "system", "content": [{"type": "input_text", "text": system_prompt}]},
                 {"role": "user", "content": [{"type": "input_text", "text": prompt}]},
             ],
+            # Ask for a bare JSON object; without this the model wraps its answer in ```json fences.
+            "text": {"format": {"type": "json_object"}},
         }
 
         async with httpx.AsyncClient(timeout=self.settings.openai_timeout_seconds) as client:
@@ -36,8 +38,7 @@ class OpenAILLMClient:
             response.raise_for_status()
             body = response.json()
 
-        text = _extract_text(body)
-        return json.loads(text)
+        return _parse_json(_extract_text(body))
 
 
 class StubLLMClient:
@@ -58,6 +59,15 @@ class StubLLMClient:
             "booking_suggestions": [],
             "generated_at": "2026-03-06T00:00:00Z",
         }
+
+
+def _parse_json(text: str) -> dict:
+    """Parse model output, tolerating a Markdown ```json fence around the object."""
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else ""
+        cleaned = cleaned.rsplit("```", 1)[0].strip()
+    return json.loads(cleaned)
 
 
 def _extract_text(body: dict) -> str:

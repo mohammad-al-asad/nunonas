@@ -1681,6 +1681,8 @@ class CustomerRepository:
                     "rating": row.get("rating") or row.get("avg_rating"),
                     "reviews_count": row.get("reviews_count"),
                     "offer_text": row.get("offer_text"),
+                    "image_url": row.get("banner_image_url") or row.get("cover_image_url") or row.get("profile_image_url"),
+                    "detail_route": row.get("detail_route"),
                     "event_date": row.get("event_date"),
                     "start_time": row.get("start_time"),
                     "end_time": row.get("end_time"),

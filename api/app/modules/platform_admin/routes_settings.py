@@ -5,13 +5,13 @@ from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile, s
 from pydantic import BaseModel, Field
 from pymongo.database import Database
 
-from app.api.deps import get_cloudinary_uploader
+from app.api.deps import get_s3_uploader
 from app.core.account_lookup import find_existing_email_sync
 from app.core.security import hash_password, verify_password
 from app.modules.platform_admin.deps_auth import get_current_platform_admin
 from app.modules.platform_admin.deps import get_platform_admin_db
 from app.modules.vendor.repositories_portal import VendorPortalRepository
-from app.providers.cloudinary_uploader import CloudinaryUploader
+from app.providers.s3_uploader import S3Uploader
 
 router = APIRouter(
     prefix="/platform-admin/settings",
@@ -252,7 +252,7 @@ async def upload_admin_profile_avatar(
     file: UploadFile = File(..., description="Profile avatar image to upload"),
     db: Database = Depends(get_platform_admin_db),
     current_admin: dict = Depends(get_current_platform_admin),
-    uploader: CloudinaryUploader = Depends(get_cloudinary_uploader),
+    uploader: S3Uploader = Depends(get_s3_uploader),
 ) -> dict:
     secure_url = await uploader.upload_image(
         file,

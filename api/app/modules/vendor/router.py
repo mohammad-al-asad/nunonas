@@ -154,7 +154,7 @@ def get_vendor_recent_reviews(
 
 
 # ---------------------------------------------------------------------------
-# Uploads — Cloudinary image upload with optional MongoDB persistence
+# Uploads — S3 image upload with optional MongoDB persistence
 # ---------------------------------------------------------------------------
 
 
@@ -170,7 +170,7 @@ async def upload_vendor_image(
     auth_service: VendorAuthService = Depends(get_vendor_auth_service),
     portal_repo=Depends(get_vendor_portal_repository),
 ) -> VendorDocumentUploadResponse:
-    """Upload an image file to Cloudinary.
+    """Upload an image file to S3.
 
     Optionally saves the returned URL to MongoDB based on *context*:
     - ``profile_avatar`` → ``vendor_portal_settings.profile.avatar_url``
@@ -284,7 +284,7 @@ def generate_vendor_booking_receipt(
 
 
 # ---------------------------------------------------------------------------
-# Menu / Services — file upload endpoints (Cloudinary + MongoDB persistence)
+# Menu / Services — file upload endpoints (S3 + MongoDB persistence)
 # ---------------------------------------------------------------------------
 
 
@@ -310,7 +310,7 @@ def register_vendor_asset(
     current_vendor: dict = Depends(get_current_vendor),
     portal_service: VendorPortalService = Depends(get_vendor_portal_service),
 ) -> dict:
-    """Register an already-uploaded Cloudinary URL as a menu/gallery asset."""
+    """Register an already-uploaded file URL as a menu/gallery asset."""
     if payload.asset_type not in {"menu", "gallery"}:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -357,7 +357,7 @@ async def upload_vendor_menu_asset(
     portal_service: VendorPortalService = Depends(get_vendor_portal_service),
     auth_service: VendorAuthService = Depends(get_vendor_auth_service),
 ) -> dict:
-    """Upload a menu asset file to Cloudinary and save the URL in MongoDB."""
+    """Upload a menu asset file to S3 and save the URL in MongoDB."""
     vendor_id = _vendor_id(current_vendor)
     result = await auth_service.upload_registration_document(
         file,
@@ -383,7 +383,7 @@ async def upload_vendor_gallery_asset(
     portal_service: VendorPortalService = Depends(get_vendor_portal_service),
     auth_service: VendorAuthService = Depends(get_vendor_auth_service),
 ) -> dict:
-    """Upload a gallery image to Cloudinary and save the URL in MongoDB."""
+    """Upload a gallery image to S3 and save the URL in MongoDB."""
     vendor_id = _vendor_id(current_vendor)
     result = await auth_service.upload_registration_document(
         file,
@@ -1187,7 +1187,7 @@ def add_vendor_service_amenity(
 
 
 # ---------------------------------------------------------------------------
-# Settings — image upload endpoints (Cloudinary → MongoDB)
+# Settings — image upload endpoints (S3 → MongoDB)
 # ---------------------------------------------------------------------------
 
 
@@ -1198,7 +1198,7 @@ async def upload_vendor_logo(
     auth_service: VendorAuthService = Depends(get_vendor_auth_service),
     portal_repo=Depends(get_vendor_portal_repository),
 ) -> dict:
-    """Upload a logo image to Cloudinary and save the URL to vendor general settings."""
+    """Upload a logo image to S3 and save the URL to vendor general settings."""
     vendor_id = _vendor_id(current_vendor)
     result = await auth_service.upload_registration_document(
         file,
@@ -1215,7 +1215,7 @@ async def upload_vendor_cover_image(
     auth_service: VendorAuthService = Depends(get_vendor_auth_service),
     portal_repo=Depends(get_vendor_portal_repository),
 ) -> dict:
-    """Upload a cover image to Cloudinary and save the URL to vendor general settings."""
+    """Upload a cover image to S3 and save the URL to vendor general settings."""
     vendor_id = _vendor_id(current_vendor)
     result = await auth_service.upload_registration_document(
         file,
@@ -1232,7 +1232,7 @@ async def upload_vendor_profile_avatar(
     auth_service: VendorAuthService = Depends(get_vendor_auth_service),
     portal_repo=Depends(get_vendor_portal_repository),
 ) -> dict:
-    """Upload a profile avatar image to Cloudinary and save the URL to vendor profile settings."""
+    """Upload a profile avatar image to S3 and save the URL to vendor profile settings."""
     vendor_id = _vendor_id(current_vendor)
     result = await auth_service.upload_registration_document(
         file,

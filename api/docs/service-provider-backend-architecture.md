@@ -9,7 +9,7 @@ Browser UI
   -> Next.js API proxy (same-origin auth boundary)
     -> FastAPI /api/v1/vendor endpoints
       -> vendor service/repository layer
-        -> MongoDB + Cloudinary
+        -> MongoDB + S3
 ```
 
 Platform-owned data and vendor-owned data must remain separate:
@@ -69,7 +69,7 @@ router (HTTP validation/auth)
 - Put `vendor_id` in every provider-owned query and compound index.
 - Keep index creation in deployment migrations, never repository constructors or request handlers.
 - Move booking-side effects—notifications, loyalty points, availability, receipts—behind an application service and transaction/outbox boundary.
-- Use an outbox worker for email, push notifications, analytics aggregation, and Cloudinary cleanup so the API request is not blocked by third-party latency.
+- Use an outbox worker for email, push notifications, analytics aggregation, and S3 file cleanup so the API request is not blocked by third-party latency.
 - Store asset metadata only after upload succeeds; clean orphaned uploads asynchronously.
 - Generate durable PDF receipts in object storage for production. The current printable HTML response is the safe synchronous fallback.
 
