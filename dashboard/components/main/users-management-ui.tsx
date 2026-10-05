@@ -16,6 +16,7 @@ import {
 } from "react-icons/fi";
 import type { ContactType, UserProfile, UserStatus } from "@/components/main/users-management-types";
 import type { useUsersManagement } from "@/components/main/users-management-logic";
+import { UsersCharts } from "@/components/users/users-charts";
 
 type UsersManagementUIProps = ReturnType<typeof useUsersManagement>;
 
@@ -131,6 +132,7 @@ function SectionIcon({ type }: { type: ContactType }) {
 }
 
 export function UsersManagementUI({
+  users,
   pagedUsers,
   filteredUsers,
   summaryCards,
@@ -234,6 +236,8 @@ export function UsersManagementUI({
             </article>
           ))}
         </section>
+
+        <UsersCharts users={users} />
 
         <section className="overflow-hidden rounded-xl border border-[#dbe2ef] bg-white">
           <div className="flex flex-col gap-2 border-b border-[#e6ecf7] px-4 py-3 md:flex-row md:items-center md:justify-between">

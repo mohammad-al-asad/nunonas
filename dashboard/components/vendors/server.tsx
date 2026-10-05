@@ -1,4 +1,5 @@
 import { VendorsManagementView } from "@/components/vendors/client";
+import type { RevenueBreakdown } from "@/components/vendors/revenue-chart";
 import { fetchApiData } from "@/lib/server-api";
 import type { DashboardVendor } from "@/lib/vendors-admin";
 
@@ -12,7 +13,16 @@ const fallbackData: DataPayload = {
   vendors: []
 };
 
+const fallbackRevenue: RevenueBreakdown = {
+  totalRevenue: 0,
+  byType: [],
+  byVendor: []
+};
+
 export async function VendorsManagementViewServer() {
-  const data = await fetchApiData<DataPayload>("/api/vendors", fallbackData);
-  return <VendorsManagementView data={data} />;
+  const [data, revenue] = await Promise.all([
+    fetchApiData<DataPayload>("/api/vendors", fallbackData),
+    fetchApiData<RevenueBreakdown>("/api/vendors/revenue", fallbackRevenue)
+  ]);
+  return <VendorsManagementView data={data} revenue={revenue} />;
 }
