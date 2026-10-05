@@ -8,19 +8,28 @@ Usage (from the api/ folder):
     .venv/Scripts/python.exe -m scripts.seed_dummy_providers --remove  # remove only
 
 All dummy vendors can log in to the service-provider portal with DUMMY_PASSWORD.
+
+Images are copied from Unsplash into the configured S3 bucket (same bucket,
+prefix and cache headers as real vendor uploads) and the seeded documents point
+at the S3 copies. Keys are fixed per photo, so re-seeding reuses existing files.
 """
 
 import sys
 from datetime import UTC, datetime, timedelta
 
+import httpx
+from botocore.exceptions import ClientError
 from pymongo import MongoClient
 
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.core.security import hash_password
+from app.providers.s3_uploader import CACHE_CONTROL, _s3_client
 
 SEED_TAG = "dummy-providers-v1"
 DUMMY_PASSWORD = "Test@1234"
 TIMEZONE = "Asia/Dhaka"
+UNSPLASH_PREFIX = "https://images.unsplash.com/"
+SEED_IMAGE_FOLDER = "seed/dummy-providers"
 
 VENDOR_COLLECTIONS = (
     "vendors",
@@ -262,6 +271,48 @@ PROVIDERS = [
 ]
 
 
+def upload_seed_image(settings: Settings, url: str, http: httpx.Client) -> str:
+    """Copy one Unsplash image into S3 (skipping it if already there) and return its public URL."""
+    if not settings.s3_bucket_name or not settings.aws_region:
+        raise RuntimeError("S3 is not configured (S3_BUCKET_NAME / AWS_REGION in api/.env).")
+    photo_id = url.removeprefix(UNSPLASH_PREFIX).split("?", 1)[0]
+    key = "/".join(part for part in (settings.s3_prefix.strip("/"), SEED_IMAGE_FOLDER, f"{photo_id}.jpg") if part)
+    client = _s3_client(settings.aws_region, settings.aws_access_key_id, settings.aws_secret_access_key)
+    try:
+        client.head_object(Bucket=settings.s3_bucket_name, Key=key)
+    except ClientError as exc:
+        # Without s3:ListBucket, S3 answers 403 instead of 404 for a missing key.
+        # Keys are fixed per photo, so uploading again just overwrites the same object.
+        if exc.response.get("Error", {}).get("Code") not in {"403", "404", "NoSuchKey", "NotFound"}:
+            raise
+        response = http.get(url, follow_redirects=True, timeout=60)
+        response.raise_for_status()
+        client.put_object(Bucket=settings.s3_bucket_name, Key=key, Body=response.content, ContentType="image/jpeg", CacheControl=CACHE_CONTROL)
+        print(f"  uploaded {key}")
+    base_url = (settings.s3_public_base_url or f"https://{settings.s3_bucket_name}.s3.{settings.aws_region}.amazonaws.com").rstrip("/")
+    return f"{base_url}/{key}"
+
+
+def providers_with_s3_images(settings: Settings) -> list[dict]:
+    """Return PROVIDERS with every Unsplash URL replaced by its S3 copy."""
+    uploaded: dict[str, str] = {}
+    with httpx.Client() as http:
+        def swap(value):
+            if isinstance(value, str) and value.startswith(UNSPLASH_PREFIX):
+                if value not in uploaded:
+                    uploaded[value] = upload_seed_image(settings, value, http)
+                return uploaded[value]
+            if isinstance(value, dict):
+                return {key: swap(item) for key, item in value.items()}
+            if isinstance(value, (list, tuple)):
+                return type(value)(swap(item) for item in value)
+            return value
+
+        providers = [swap(provider) for provider in PROVIDERS]
+    print(f"{len(uploaded)} provider images available in S3.")
+    return providers
+
+
 def seed_vendor(db, provider: dict, now: datetime) -> None:
     tag = {"seed_tag": SEED_TAG}
     category = provider["category"]
@@ -347,7 +398,7 @@ def main() -> None:
         return
 
     now = datetime.now(UTC)
-    for provider in PROVIDERS:
+    for provider in providers_with_s3_images(settings):
         seed_vendor(db, provider, now)
         print(f"Seeded {provider['category']:<10} {provider['business_name']} ({provider['service']['city']}) — login {provider['email']}")
     print(f"Done. Portal password for all dummy vendors: {DUMMY_PASSWORD}")

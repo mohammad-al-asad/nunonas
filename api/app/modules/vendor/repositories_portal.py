@@ -2088,7 +2088,7 @@ class VendorPortalRepository:
     # ------------------------------------------------------------------
 
     def update_logo_url(self, vendor_id: str, url: str) -> dict[str, Any]:
-        """Persist a Cloudinary secure_url as the vendor's logo."""
+        """Persist an uploaded file URL as the vendor's logo."""
         self.settings.update_one(
             {"vendor_id": ObjectId(vendor_id)},
             {"$set": {"general.logo_url": url, "updated_at": datetime.now(UTC)}},
@@ -2097,7 +2097,7 @@ class VendorPortalRepository:
         return self.get_settings_general(vendor_id)
 
     def update_cover_image_url(self, vendor_id: str, url: str) -> dict[str, Any]:
-        """Persist a Cloudinary secure_url as the vendor's cover image."""
+        """Persist an uploaded file URL as the vendor's cover image."""
         self.settings.update_one(
             {"vendor_id": ObjectId(vendor_id)},
             {"$set": {"general.cover_image_url": url, "updated_at": datetime.now(UTC)}},
@@ -2106,7 +2106,7 @@ class VendorPortalRepository:
         return self.get_settings_general(vendor_id)
 
     def update_avatar_url(self, vendor_id: str, url: str) -> dict[str, Any]:
-        """Persist a Cloudinary secure_url as the vendor's profile avatar."""
+        """Persist an uploaded file URL as the vendor's profile avatar."""
         self.settings.update_one(
             {"vendor_id": ObjectId(vendor_id)},
             {"$set": {"profile.avatar_url": url, "updated_at": datetime.now(UTC)}},

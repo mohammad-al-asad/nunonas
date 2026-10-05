@@ -45,8 +45,8 @@ from app.modules.vendor.schemas_auth import (
     VendorVerifyResetCodeRequest,
     VendorVerifySignupCodeRequest,
 )
-from app.providers.cloudinary_uploader import CloudinaryUploader
 from app.providers.email_sender import EmailSender
+from app.providers.s3_uploader import S3Uploader
 
 
 def _existing_vendor_conflict_detail(vendor: dict[str, Any]) -> str:
@@ -73,7 +73,7 @@ class VendorAuthService:
         signup_repo: VendorSignupVerificationRepository,
         password_reset_repo: VendorPasswordResetRepository,
         email_sender: EmailSender,
-        cloudinary_uploader: CloudinaryUploader,
+        s3_uploader: S3Uploader,
         settings: Settings | None = None,
     ):
         self.vendor_repo = vendor_repo
@@ -81,7 +81,7 @@ class VendorAuthService:
         self.password_reset_repo = password_reset_repo
         self.email_sender = email_sender
         self.settings = settings or get_settings()
-        self.cloudinary_uploader = cloudinary_uploader
+        self.s3_uploader = s3_uploader
         self.session_collection = self.vendor_repo.collection.database[SESSION_COLLECTION]
         self.registration_config_collection = self.vendor_repo.collection.database["vendor_registration_configs"]
 
@@ -224,7 +224,7 @@ class VendorAuthService:
             signature_png=signature_png,
             signed_at=signed_at,
         )
-        pdf_url = await self.cloudinary_uploader.upload_document_bytes(
+        pdf_url = await self.s3_uploader.upload_document_bytes(
             pdf,
             filename=f"service-provider-agreement-{secrets.token_hex(6)}.pdf",
             content_type="application/pdf",
@@ -343,7 +343,7 @@ class VendorAuthService:
         *,
         folder_suffix: str = "vendor-documents",
     ) -> VendorDocumentUploadResponse:
-        secure_url = await self.cloudinary_uploader.upload_vendor_document(
+        secure_url = await self.s3_uploader.upload_vendor_document(
             file,
             folder_suffix=folder_suffix,
         )

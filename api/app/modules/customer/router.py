@@ -123,10 +123,10 @@ async def reveal_plan(session_id: str, current_user: dict = Depends(get_current_
     values = (session or {}).get("values", {})
     user_context, candidates = customer_service.repo.get_personalized_plan_context(current_user["id"])
     user_context["plan_preferences"] = values
-    plan = await ai_service.create_plan_from_context(user_context, candidates)
-    updated_session = customer_service.repo.update_plan_session(current_user["id"], session_id, "generated_plan", plan.model_dump(mode="json"))
-    recommendations = [item for group in candidates.values() for item in group]
-    return {"session": updated_session, "plan": plan.model_dump(mode="json"), "recommendations": recommendations}
+    plans = [plan.model_dump(mode="json") for plan in await ai_service.create_plan_options_from_context(user_context, candidates)]
+    updated_session = customer_service.repo.update_plan_session(current_user["id"], session_id, "generated_plans", plans)
+    # "plan" is kept for older app builds that only read a single plan.
+    return {"session": updated_session, "plans": plans, "plan": plans[0]}
 
 
 @router.get("/categories", tags=["Customer - Discover"])

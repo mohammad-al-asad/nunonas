@@ -241,7 +241,7 @@ def test_asset_registration_rejects_unsafe_url_schemes():
         AssetUploadRequest(asset_url="javascript:alert(1)", asset_type="gallery")
 
     payload = AssetUploadRequest(
-        asset_url="https://res.cloudinary.com/example/image/upload/file.jpg",
+        asset_url="https://meetz-bucket.s3.eu-north-1.amazonaws.com/activity-planner/file.jpg",
         asset_type="gallery",
         service_type="spa",
     )

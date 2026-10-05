@@ -90,10 +90,12 @@ class Settings(BaseSettings):
 
     loyalty_points_on_confirm: int = 50
 
-    cloudinary_cloud_name: str | None = None
-    cloudinary_api_key: str | None = None
-    cloudinary_api_secret: str | None = None
-    cloudinary_folder: str = "nunu-service-provider"
+    aws_region: str | None = None
+    aws_access_key_id: str | None = None
+    aws_secret_access_key: str | None = None
+    s3_bucket_name: str | None = None
+    s3_prefix: str = "activity-planner"
+    s3_public_base_url: str | None = None
 
     openai_api_key: str | None = None
     openai_model: str = "gpt-4.1-mini"

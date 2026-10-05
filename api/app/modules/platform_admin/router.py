@@ -456,6 +456,47 @@ async def get_platform_vendor_performance(db: AsyncIOMotorDatabase = Depends(get
     return {"vendors": overview["vendors"], "vendorDetails": overview["details"]["vendors"]}
 
 
+_REVENUE_TYPE_LABELS = {"restaurant": "Restaurants", "hotel": "Hotels", "spa": "Spas", "event": "Events"}
+
+
+@router.get("/dashboard/revenue-by-provider", tags=["Platform Admin - Dashboard"])
+async def get_platform_revenue_by_provider(db: AsyncIOMotorDatabase = Depends(get_db)) -> dict:
+    """Revenue contribution per provider type and per provider (cancelled/rejected bookings excluded)."""
+    rows = await db["bookings"].aggregate([
+        {"$match": {"status": {"$nin": ["canceled", "cancelled", "rejected"]}}},
+        {"$group": {
+            "_id": {"vendor_id": "$vendor_id", "provider_type": {"$toLower": {"$ifNull": ["$provider_type", "other"]}}},
+            "revenue": {"$sum": {"$convert": {"input": "$total_amount", "to": "double", "onError": 0, "onNull": 0}}},
+            "bookings": {"$sum": 1},
+        }},
+    ]).to_list(None)
+
+    by_type: dict[str, dict] = {}
+    by_vendor: dict[str, dict] = {}
+    for row in rows:
+        provider_type = str(row["_id"].get("provider_type") or "other")
+        provider_type = "hotel" if provider_type == "hotel_room" else provider_type
+        if provider_type not in _REVENUE_TYPE_LABELS:
+            provider_type = "other"
+        revenue, bookings = _number(row.get("revenue")), int(row.get("bookings") or 0)
+
+        type_entry = by_type.setdefault(provider_type, {"type": provider_type, "label": _REVENUE_TYPE_LABELS.get(provider_type, "Other"), "revenue": 0.0, "bookings": 0})
+        type_entry["revenue"] += revenue
+        type_entry["bookings"] += bookings
+
+        vendor_id = str(row["_id"].get("vendor_id") or "")
+        if vendor_id:
+            vendor_entry = by_vendor.setdefault(vendor_id, {"vendorId": vendor_id, "revenue": 0.0, "bookings": 0})
+            vendor_entry["revenue"] += revenue
+            vendor_entry["bookings"] += bookings
+
+    return {
+        "totalRevenue": round(sum(entry["revenue"] for entry in by_type.values()), 2),
+        "byType": sorted(by_type.values(), key=lambda entry: entry["revenue"], reverse=True),
+        "byVendor": sorted(by_vendor.values(), key=lambda entry: entry["revenue"], reverse=True),
+    }
+
+
 @router.get("/users/{user_id}/bookings", tags=["Platform Admin - Users"], response_model=PlannedEndpointResponse)
 def list_platform_user_bookings(user_id: str) -> PlannedEndpointResponse:
     _ = user_id

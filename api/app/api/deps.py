@@ -5,8 +5,8 @@ from app.ai.client import OpenAILLMClient, StubLLMClient
 from app.core.config import Settings, get_settings
 from app.core.security import decode_token
 from app.db.mongo import get_database
-from app.providers.cloudinary_uploader import CloudinaryUploader
 from app.providers.email_sender import EmailSender, SMTPEmailSender
+from app.providers.s3_uploader import S3Uploader
 from app.repositories.booking_repository import BookingRepository
 from app.repositories.favorite_repository import FavoriteRepository
 from app.repositories.listing_repository import ListingRepository
@@ -45,8 +45,8 @@ def get_email_sender(settings: Settings = Depends(get_settings)) -> EmailSender:
     return SMTPEmailSender(settings)
 
 
-def get_cloudinary_uploader(settings: Settings = Depends(get_settings)) -> CloudinaryUploader:
-    return CloudinaryUploader(settings)
+def get_s3_uploader(settings: Settings = Depends(get_settings)) -> S3Uploader:
+    return S3Uploader(settings)
 
 
 def get_platform_admin_repo(db=Depends(get_database)) -> PlatformAdminRepository:

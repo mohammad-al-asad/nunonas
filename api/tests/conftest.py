@@ -16,7 +16,7 @@ from app.modules.customer.deps import get_db as get_customer_db
 from app.modules.platform_admin.deps_auth import get_platform_admin_db
 from app.modules.vendor.contract import CONTRACT_VERSION
 from app.modules.vendor.deps_auth import get_vendor_db
-from app.providers.cloudinary_uploader import CloudinaryUploader
+from app.providers.s3_uploader import S3Uploader
 from app.repositories.listing_repository import ListingRepository
 from app.services.ai_service import AIPlannerService
 
@@ -35,14 +35,14 @@ VENDOR_CONTRACT_FIELDS = {
 
 @pytest.fixture
 def uploaded_documents(monkeypatch):
-    """Capture generated uploads (e.g. signed contract PDFs) instead of calling Cloudinary."""
+    """Capture generated uploads (e.g. signed contract PDFs) instead of calling S3."""
     uploads: list[dict] = []
 
     async def fake_upload_document_bytes(self, data, *, filename, content_type, folder_suffix="vendor-documents"):
         uploads.append({"data": data, "filename": filename, "content_type": content_type, "folder_suffix": folder_suffix})
         return f"https://files.example.com/{folder_suffix}/{filename}"
 
-    monkeypatch.setattr(CloudinaryUploader, "upload_document_bytes", fake_upload_document_bytes)
+    monkeypatch.setattr(S3Uploader, "upload_document_bytes", fake_upload_document_bytes)
     return uploads
 
 

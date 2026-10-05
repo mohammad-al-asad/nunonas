@@ -8,17 +8,17 @@ from datetime import UTC, datetime
 
 from app.api.deps import (
     get_booking_service,
-    get_cloudinary_uploader,
     get_db,
     get_current_user_id,
     get_loyalty_service,
+    get_s3_uploader,
     get_user_repo,
 )
 from app.core.account_lookup import find_existing_email_async, find_existing_phone_async
 from app.core.responses import envelope
 from app.core.serializers import to_jsonable
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from app.providers.cloudinary_uploader import CloudinaryUploader
+from app.providers.s3_uploader import S3Uploader
 from app.repositories.user_repository import UserRepository
 from app.schemas.user import ImageUploadResponse, PersonalDetailsResponse, PersonalDetailsUpdate
 from app.services.booking_service import BookingService
@@ -181,10 +181,10 @@ async def upload_profile_image(
     file: UploadFile = File(..., description="Image file to set as profile picture"),
     user_id: str = Depends(get_current_user_id),
     user_repo: UserRepository = Depends(get_user_repo),
-    uploader: CloudinaryUploader = Depends(get_cloudinary_uploader),
+    uploader: S3Uploader = Depends(get_s3_uploader),
 ) -> ImageUploadResponse:
-    """Upload an image to Cloudinary and save the secure URL to the user's profile."""
-    # 1. Upload to Cloudinary
+    """Upload an image to S3 and save its public URL to the user's profile."""
+    # 1. Upload to S3
     secure_url = await uploader.upload_image(
         file,
         folder_suffix=f"user-{user_id}/profile",
