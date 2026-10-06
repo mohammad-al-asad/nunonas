@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { ChangeEvent, ReactNode, useEffect, useRef, useState } from "react";
 import {
+  FiBriefcase,
   FiCheck,
-  FiCreditCard,
   FiExternalLink,
   FiGlobe,
   FiUploadCloud
@@ -16,6 +16,7 @@ type SettingsData = {
   general: {
     platformName: string;
     supportEmail: string;
+    businessInfo?: BusinessInfo;
     brandIdentity: {
       logoData?: string;
       note: string;
@@ -40,8 +41,11 @@ type SettingsData = {
   };
 };
 
+type BusinessInfo = { name: string; address: string; email: string; phone: string };
+
 type SettingsPatch = {
-  general?: Partial<SettingsData["general"]> & {
+  general?: Partial<Omit<SettingsData["general"], "businessInfo">> & {
+    businessInfo?: BusinessInfo;
     brandIdentity?: Partial<SettingsData["general"]["brandIdentity"]>;
   };
   commission?: Partial<SettingsData["commission"]>;
@@ -70,8 +74,12 @@ function FieldLabel({ children }: { children: ReactNode }) {
 export function SettingsView({ data }: { data: SettingsData }) {
   const [platformName, setPlatformName] = useState(data.general.platformName);
   const [brandLogoData, setBrandLogoData] = useState(data.general.brandIdentity.logoData ?? "");
-  const [globalRate, setGlobalRate] = useState(data.commission.globalRate);
-  const [categoryRate, setCategoryRate] = useState(data.commission.categoryRate);
+  const [businessInfo, setBusinessInfo] = useState<BusinessInfo>(() => ({
+    name: data.general.businessInfo?.name || "Activity Planner",
+    address: data.general.businessInfo?.address || "",
+    email: data.general.businessInfo?.email || data.general.supportEmail || "",
+    phone: data.general.businessInfo?.phone || ""
+  }));
   const [adminName, setAdminName] = useState(data.admin.name);
   const [adminEmail, setAdminEmail] = useState(data.admin.email);
   const [adminAvatar, setAdminAvatar] = useState(data.admin.avatar ?? "");
@@ -96,10 +104,7 @@ export function SettingsView({ data }: { data: SettingsData }) {
     email: data.admin.email,
     avatar: data.admin.avatar ?? ""
   });
-  const commissionSnapshot = useRef({
-    globalRate: data.commission.globalRate,
-    categoryRate: data.commission.categoryRate
-  });
+  const businessSnapshot = useRef(JSON.stringify(businessInfo));
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -174,30 +179,21 @@ export function SettingsView({ data }: { data: SettingsData }) {
     }
   };
 
-  const commitCommissionSettings = async () => {
-    if (
-      globalRate === commissionSnapshot.current.globalRate &&
-      categoryRate === commissionSnapshot.current.categoryRate
-    ) {
+  const commitBusinessInfo = async () => {
+    const trimmed = Object.fromEntries(
+      Object.entries(businessInfo).map(([key, value]) => [key, value.trim()])
+    ) as BusinessInfo;
+    if (!trimmed.name) {
+      setSaveStatus("Business name is required");
+      setTimeout(() => setSaveStatus(null), 2200);
       return;
     }
+    if (JSON.stringify(trimmed) === businessSnapshot.current) return;
 
-    const ok = await persistSettings(
-      {
-        commission: {
-          globalRate,
-          categoryRate,
-          categoryLabel: data.commission.categoryLabel
-        }
-      },
-      "Commission settings updated"
-    );
-
+    const ok = await persistSettings({ general: { businessInfo: trimmed } }, "Business details updated");
     if (ok) {
-      commissionSnapshot.current = {
-        globalRate,
-        categoryRate
-      };
+      businessSnapshot.current = JSON.stringify(trimmed);
+      setBusinessInfo(trimmed);
     }
   };
 
@@ -462,47 +458,42 @@ export function SettingsView({ data }: { data: SettingsData }) {
           </section>
 
           <section className={panelClass}>
-            <SectionBadge icon={<FiCreditCard size={13} />}>Commission &amp; Revenue</SectionBadge>
+            <SectionBadge icon={<FiBriefcase size={13} />}>Business Details</SectionBadge>
+            <p className="m-0 mt-1 text-[11px] text-[#97a1b4]">
+              Shown as the sender on commission invoices. Commission rates are set per category on the{" "}
+              <Link href="/billing" className="font-semibold text-[#24408d]">
+                Billing
+              </Link>{" "}
+              page.
+            </p>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div>
-                <FieldLabel>Global Service Commission (%)</FieldLabel>
-                <div className="relative">
+              {(
+                [
+                  { key: "name", label: "Business Name", type: "text", placeholder: "Activity Planner" },
+                  { key: "email", label: "Billing Email", type: "email", placeholder: "billing@example.com" },
+                  { key: "phone", label: "Phone", type: "tel", placeholder: "+880 1XXX-XXXXXX" },
+                  { key: "address", label: "Address", type: "text", placeholder: "Street, city, country" }
+                ] as const
+              ).map((field) => (
+                <div key={field.key}>
+                  <FieldLabel>{field.label}</FieldLabel>
                   <input
-                    type="number"
-                    value={globalRate}
-                    onChange={(event) => setGlobalRate(event.target.value)}
-                    className={`${inputClass} pr-10`}
+                    type={field.type}
+                    value={businessInfo[field.key]}
+                    placeholder={field.placeholder}
+                    onChange={(event) => setBusinessInfo((prev) => ({ ...prev, [field.key]: event.target.value }))}
+                    className={inputClass}
                   />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-[#9aa5ba]">
-                    %
-                  </span>
                 </div>
-                <p className="m-0 mt-2 text-[11px] text-[#97a1b4]">
-                  Default rate applied to all categories unless specified.
-                </p>
-              </div>
-              <div>
-                <FieldLabel>Category-Specific Rate ({data.commission.categoryLabel})</FieldLabel>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={categoryRate}
-                    onChange={(event) => setCategoryRate(event.target.value)}
-                    className={`${inputClass} pr-10`}
-                  />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-[#9aa5ba]">
-                    %
-                  </span>
-                </div>
-              </div>
+              ))}
             </div>
             <div className="mt-4 flex justify-end">
               <button
                 type="button"
-                onClick={commitCommissionSettings}
+                onClick={commitBusinessInfo}
                 className="h-10 rounded-[10px] bg-[#24408d] px-4 text-[12px] font-semibold text-white shadow-[0_12px_28px_rgba(36,64,141,0.18)]"
               >
-                Save Commission Settings
+                Save Business Details
               </button>
             </div>
           </section>

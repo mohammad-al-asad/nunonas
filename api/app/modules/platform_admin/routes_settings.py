@@ -44,6 +44,13 @@ def _default_settings(admin: dict) -> dict:
         "general": {
             "platformName": "Nuno",
             "supportEmail": admin_email,
+            # Shown as the sender on commission invoices sent to service providers.
+            "businessInfo": {
+                "name": "Activity Planner",
+                "address": "",
+                "email": admin_email,
+                "phone": "",
+            },
             "brandIdentity": {
                 "logoData": "",
                 "note": "Upload a logo for the admin panel and emails. Suggested size: 512x512px (PNG, SVG).",

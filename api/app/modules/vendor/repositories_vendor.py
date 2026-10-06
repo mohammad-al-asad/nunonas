@@ -5,6 +5,8 @@ from bson import ObjectId
 from pymongo.collection import Collection
 from pymongo.database import Database
 
+from app.modules.platform_admin import billing
+
 
 class VendorRepository:
     def __init__(self, db: Database):
@@ -15,7 +17,6 @@ class VendorRepository:
         self.admin_review_collection: Collection = db["vendor_admin_reviews"]
         self.bookings_collection: Collection = db["bookings"]
         self.vendor_bookings_collection: Collection = db["vendor_bookings"]
-        self.billing_payments_collection: Collection = db["billing_payments"]
         self.reviews_collection: Collection = db["vendor_reviews"]
 
         # Indexes are installed once by ``scripts/ensure_vendor_indexes.py``.
@@ -324,9 +325,11 @@ class VendorRepository:
             if valid_ratings:
                 avg_rating = round(sum(valid_ratings) / len(valid_ratings), 1)
 
-        billing = self.billing_payments_collection.find_one({"vendor_id": {"$in": v_keys}})
-        billing_payout = billing.get("netPayout") if billing else None
-        billing_earnings = billing.get("totalEarnings") if billing else None
+        commission_due = (
+            billing.outstanding_for_vendor(self.collection.database, ObjectId(vendor_id))
+            if ObjectId.is_valid(vendor_id)
+            else 0.0
+        )
 
         services_count = 0
         for col in ("restaurants", "hotels", "spas", "vendor_events", "vendor_rooms"):
@@ -335,8 +338,7 @@ class VendorRepository:
 
         return {
             "total_earned": round(total_earned, 2),
-            "billing_earnings": billing_earnings,
-            "billing_payout": billing_payout,
+            "commission_due": commission_due,
             "total_bookings": total_bookings,
             "completed_bookings": completed,
             "confirmed_bookings": confirmed,

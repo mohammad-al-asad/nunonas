@@ -7,6 +7,7 @@ type SettingsData = {
   general: {
     platformName: string;
     supportEmail: string;
+    businessInfo?: { name: string; address: string; email: string; phone: string };
     brandIdentity: {
       note: string;
       cta: string;
