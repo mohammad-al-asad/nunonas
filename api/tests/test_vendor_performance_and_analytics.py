@@ -221,23 +221,30 @@ def test_vendor_legal_edits_do_not_modify_platform_legal_content():
     assert updated["content"] == "Vendor terms"
 
 
-def test_vendor_commission_is_read_from_platform_settings():
+def test_vendor_commission_is_read_from_category_rates():
     database = mongomock.MongoClient().nuno
     vendor_id = ObjectId()
     repository = VendorPortalRepository(database)
-    database.platform_admin_settings.insert_one(
+    database.vendors.insert_one({"_id": vendor_id, "category": "Spa"})
+    database.commission_rate_history.insert_one(
         {
-            "_id": "platform_admin_settings",
-            "commission": {"globalRate": "12.50", "categoryRate": "18.00", "categoryLabel": "Luxury"},
+            "effective_from": datetime(2026, 1, 1, tzinfo=UTC),
+            "categories": {
+                "restaurant": {"model": "percentage", "value": 10},
+                "hotel": {"model": "percentage", "value": 15},
+                "spa": {"model": "per_lead", "value": 40},
+                "event": {"model": "percentage", "value": 8},
+            },
         }
     )
-    database.vendor_business_details.insert_one({"vendor_id": vendor_id, "categories": ["Luxury"]})
 
     commission = repository.get_settings_commission(str(vendor_id))
 
-    assert commission["commission_percent"] == 18.0
-    assert commission["category_applies"] is True
-    assert commission["source"] == "platform_admin_settings"
+    assert commission["category"] == "Spa"
+    assert commission["model"] == "per_lead"
+    assert commission["per_lead_fee"] == 40
+    assert commission["commission_percent"] is None
+    assert commission["source"] == "platform_admin_billing"
 
 
 def test_generated_receipt_is_downloadable_and_escapes_customer_data():

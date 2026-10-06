@@ -8,6 +8,7 @@ from pymongo import ASCENDING, GEOSPHERE, TEXT
 
 from app.core.config import Settings
 from app.core.security import hash_password
+from app.domain import support_tickets
 
 
 class MongoManager:
@@ -62,6 +63,9 @@ async def ensure_indexes(db: AsyncIOMotorDatabase) -> None:
     await db.bookings.create_index([("status", ASCENDING), ("scheduled_at", ASCENDING)])
 
     await db.offers.create_index([("listing_id", ASCENDING), ("promo_code", ASCENDING)])
+
+    # One collection for app-user and service-provider tickets (see app.domain.support_tickets).
+    await db[support_tickets.COLLECTION].create_indexes(support_tickets.INDEXES)
 
     # Public service listings are separated so each app feed can only query
     # its own published entity type.

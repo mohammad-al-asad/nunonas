@@ -1,50 +1,48 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import { FiAlertCircle, FiCheck, FiChevronLeft, FiChevronRight, FiEye, FiFilter, FiInbox, FiSearch, FiSliders } from "react-icons/fi";
 import {
-  FiAlertCircle,
-  FiCheck,
-  FiChevronLeft,
-  FiChevronRight,
-  FiEye,
-  FiFilter,
-  FiInbox,
-  FiPaperclip,
-  FiSearch,
-  FiSliders,
-  FiSmile
-} from "react-icons/fi";
-import { io, type Socket } from "socket.io-client";
+  type RequesterType,
+  type SupportTicket,
+  type TicketPriority as Priority,
+  type TicketStatus,
+  mapSupportTicket
+} from "@/lib/support";
 
-type TicketStatus = "In Progress" | "Open" | "Resolved";
-type TicketType = "Account" | "Technical" | "Billing" | "Compliance";
-type Priority = "High" | "Medium" | "Low";
+// New messages from users/providers are picked up by polling (there is no push channel).
+const REFRESH_INTERVAL_MS = 20_000;
 
-type ConversationMessage = {
-  sender: "agent" | "user";
-  text: string;
-  time: string;
-  name?: string;
-};
+function initials(name: string) {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "?";
+}
 
-type SupportTicket = {
-  id: string;
-  userName: string;
-  userRole: "User" | "Vendor";
-  avatar: string;
-  type: TicketType;
-  subject: string;
-  status: TicketStatus;
-  priority: Priority;
-  openedAt: string;
-  issueDetails: string;
-  conversation: ConversationMessage[];
-};
+function Avatar({ ticket, size }: { ticket: SupportTicket; size: number }) {
+  if (ticket.avatar) {
+    return <Image src={ticket.avatar} alt={ticket.userName} width={size} height={size} className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} />;
+  }
+  return (
+    <span
+      className={`grid shrink-0 place-items-center rounded-full font-semibold ${ticket.requesterType === "vendor" ? "bg-[#fef3c7] text-[#b45309]" : "bg-[#e6efff] text-[#1f3d8f]"}`}
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.38) }}
+      aria-hidden
+    >
+      {initials(ticket.userName)}
+    </span>
+  );
+}
 
-function safeImageSrc(value: string, fallbackSeed: string) {
-  const normalized = typeof value === "string" ? value.trim() : "";
-  return normalized || `https://i.pravatar.cc/120?u=${encodeURIComponent(fallbackSeed)}`;
+function RoleBadge({ ticket }: { ticket: SupportTicket }) {
+  return (
+    <span
+      className={`inline-flex rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
+        ticket.requesterType === "vendor" ? "bg-[#fef3c7] text-[#b45309]" : "bg-[#e6efff] text-[#1f3d8f]"
+      }`}
+    >
+      {ticket.userRole}
+    </span>
+  );
 }
 
 function ticketStatusClass(status: TicketStatus) {
@@ -71,22 +69,20 @@ function formatDateTime(value: string) {
 
 const pageSize = 5;
 
-export function SupportDashboardView({
-  data
-}: {
-  data: { summaryCards: Array<{ label: string; value: string; note: string; tone: string }>; tickets: SupportTicket[] };
-}) {
+export function SupportDashboardView({ data }: { data: { tickets: SupportTicket[] } }) {
   const [tickets, setTickets] = useState<SupportTicket[]>(data.tickets);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | TicketStatus>("ALL");
   const [priorityFilter, setPriorityFilter] = useState<"ALL" | Priority>("ALL");
+  const [requesterFilter, setRequesterFilter] = useState<"ALL" | RequesterType>("ALL");
   const [page, setPage] = useState(1);
   const [statusOpen, setStatusOpen] = useState(false);
   const [priorityOpen, setPriorityOpen] = useState(false);
   const [reply, setReply] = useState("");
-  const socketRef = useRef<Socket | null>(null);
-  const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL ?? "http://localhost:3001";
+  const [busy, setBusy] = useState<"reply" | "status" | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const messagesRef = useRef<HTMLDivElement | null>(null);
 
   const selectedTicket = useMemo(
     () => tickets.find((ticket) => ticket.id === selectedTicketId) ?? null,
@@ -103,9 +99,21 @@ export function SupportDashboardView({
         ticket.subject.toLowerCase().includes(normalizedQuery);
       const matchesStatus = statusFilter === "ALL" || ticket.status === statusFilter;
       const matchesPriority = priorityFilter === "ALL" || ticket.priority === priorityFilter;
-      return matchesQuery && matchesStatus && matchesPriority;
+      const matchesRequester = requesterFilter === "ALL" || ticket.requesterType === requesterFilter;
+      return matchesQuery && matchesStatus && matchesPriority && matchesRequester;
     });
-  }, [tickets, query, statusFilter, priorityFilter]);
+  }, [tickets, query, statusFilter, priorityFilter, requesterFilter]);
+
+  // Summary cards come from the same list, so they change as soon as a ticket does.
+  const summaryCards = useMemo(() => {
+    const count = (status: TicketStatus) => tickets.filter((ticket) => ticket.status === status).length;
+    return [
+      { label: "TOTAL TICKETS", value: tickets.length, icon: <FiInbox size={16} /> },
+      { label: "IN PROGRESS", value: count("In Progress"), icon: <FiSliders size={16} /> },
+      { label: "RESOLVED", value: count("Resolved"), icon: <FiCheck size={16} /> },
+      { label: "OPEN", value: count("Open"), icon: <FiAlertCircle size={16} /> }
+    ];
+  }, [tickets]);
 
   const totalPages = Math.max(1, Math.ceil(filteredTickets.length / pageSize));
   const pagedTickets = useMemo(() => {
@@ -134,115 +142,88 @@ export function SupportDashboardView({
     return items;
   }, [page, totalPages]);
 
-  const formatTime = (date: Date) => {
-    const hours = date.getHours();
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    const suffix = hours >= 12 ? "PM" : "AM";
-    const normalized = hours % 12 || 12;
-    return `${normalized}:${minutes} ${suffix}`;
+  const replaceTicket = (updated: SupportTicket) => {
+    setTickets((prev) => prev.map((ticket) => (ticket.id === updated.id ? updated : ticket)));
+  };
+
+  const sendTicketUpdate = async (kind: "reply" | "status", init: RequestInit, path: string) => {
+    if (!selectedTicketId) return false;
+    setBusy(kind);
+    setActionError(null);
+    try {
+      const response = await fetch(`/api/support/${encodeURIComponent(selectedTicketId)}/${path}`, {
+        ...init,
+        headers: { "Content-Type": "application/json" }
+      });
+      const payload = (await response.json().catch(() => ({}))) as { detail?: string };
+      if (!response.ok) throw new Error(payload.detail || "The update didn't go through. Please try again.");
+      replaceTicket(mapSupportTicket(payload));
+      return true;
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "The update didn't go through. Please try again.");
+      return false;
+    } finally {
+      setBusy(null);
+    }
   };
 
   const handleSendReply = () => {
-    void (async () => {
-      if (!selectedTicketId || !reply.trim()) return;
-      const response = await fetch(`/api/support/${encodeURIComponent(selectedTicketId)}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: reply.trim(), name: "Support Agent" })
-      });
-      const payload = (await response.json().catch(() => ({}))) as {
-        id?: string;
-        conversation?: ConversationMessage[];
-        status?: TicketStatus;
-      };
-      if (!response.ok) return;
-
-      setTickets((prev) =>
-        prev.map((ticket) =>
-          ticket.id === selectedTicketId
-            ? {
-                ...ticket,
-                conversation: Array.isArray(payload.conversation) ? payload.conversation : ticket.conversation,
-                status: payload.status ?? "In Progress"
-              }
-            : ticket
-        )
-      );
-      setReply("");
-    })();
+    const message = reply.trim();
+    if (!message || busy) return;
+    void sendTicketUpdate("reply", { method: "POST", body: JSON.stringify({ message, name: "Support Agent" }) }, "messages").then((ok) => {
+      if (ok) setReply("");
+    });
   };
 
   const handleStatusUpdate = (nextStatus: TicketStatus) => {
-    void (async () => {
-      if (!selectedTicketId) return;
-      const response = await fetch(`/api/support/${encodeURIComponent(selectedTicketId)}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: nextStatus })
-      });
-      const payload = (await response.json().catch(() => ({}))) as {
-        id?: string;
-        conversation?: ConversationMessage[];
-        status?: TicketStatus;
-      };
-      if (!response.ok) return;
-
-      setTickets((prev) =>
-        prev.map((ticket) =>
-          ticket.id === selectedTicketId
-            ? {
-                ...ticket,
-                conversation: Array.isArray(payload.conversation) ? payload.conversation : ticket.conversation,
-                status: payload.status ?? nextStatus
-              }
-            : ticket
-        )
-      );
-    })();
+    if (busy || selectedTicket?.status === nextStatus) return;
+    void sendTicketUpdate("status", { method: "PATCH", body: JSON.stringify({ status: nextStatus }) }, "status");
   };
 
+  const refreshTickets = useCallback(async () => {
+    try {
+      const response = await fetch("/api/support", { cache: "no-store" });
+      if (!response.ok) return;
+      const payload = (await response.json()) as { tickets?: SupportTicket[] };
+      if (Array.isArray(payload.tickets)) setTickets(payload.tickets);
+    } catch {
+      // Keep showing the current list; the next refresh will try again.
+    }
+  }, []);
+
   useEffect(() => {
-    const socket = io(socketUrl, { transports: ["websocket"] });
-    socketRef.current = socket;
-
-    socket.on("support:message", (payload: { ticketId?: string; sender?: "agent" | "user"; name?: string; message?: string; time?: string }) => {
-      if (!payload?.ticketId || !payload?.message) return;
-      const nextMessage: ConversationMessage = {
-        sender: payload.sender ?? "user",
-        text: payload.message,
-        time: payload.time ?? formatTime(new Date()),
-        name: payload.name
-      };
-      setTickets((prev) =>
-        prev.map((ticket) =>
-          ticket.id === payload.ticketId
-            ? { ...ticket, conversation: [...ticket.conversation, nextMessage] }
-            : ticket
-        )
-      );
-    });
-
-    return () => {
-      socket.off("support:message");
-      socket.disconnect();
+    const refreshIfVisible = () => {
+      if (document.visibilityState === "visible") void refreshTickets();
     };
-  }, [socketUrl]);
+    const timer = window.setInterval(refreshIfVisible, REFRESH_INTERVAL_MS);
+    document.addEventListener("visibilitychange", refreshIfVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+    };
+  }, [refreshTickets]);
+
+  useEffect(() => {
+    setActionError(null);
+  }, [selectedTicketId]);
+
+  // Keep the newest message in view when a ticket opens or a message arrives.
+  const messageCount = selectedTicket?.conversation.length ?? 0;
+  useEffect(() => {
+    const list = messagesRef.current;
+    if (list) list.scrollTop = list.scrollHeight;
+  }, [selectedTicketId, messageCount]);
 
   return (
     <section className="relative space-y-4">
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-        {data.summaryCards.map((card, i) => (
+        {summaryCards.map((card, i) => (
           <article key={card.label} className="rounded-2xl border border-[#e6ecf7] bg-white p-4 shadow-sm">
             <div className="mb-2 flex items-center gap-2">
-              <div className={`grid h-9 w-9 place-items-center rounded-full ${summaryIcon(i)}`}>
-                {i === 0 && <FiInbox size={16} />}
-                {i === 1 && <FiSliders size={16} />}
-                {i === 2 && <FiCheck size={16} />}
-                {i === 3 && <FiAlertCircle size={16} />}
-              </div>
+              <div className={`grid h-9 w-9 place-items-center rounded-full ${summaryIcon(i)}`}>{card.icon}</div>
               <div>
                 <p className="m-0 text-[10px] text-[#7d8ba6]">{card.label}</p>
-                <h3 className="m-0 text-[20px] font-semibold text-[#1d2a43]">{card.value}</h3>
+                <h3 className="m-0 text-[20px] font-semibold text-[#1d2a43]">{card.value.toLocaleString()}</h3>
               </div>
             </div>
           </article>
@@ -264,7 +245,28 @@ export function SupportDashboardView({
               className="w-full border-0 bg-transparent text-[11px] text-[#2b3a59] outline-none placeholder:text-[#9aa6c0]"
             />
           </div>
-          <div className="relative flex items-center gap-2">
+          <div className="relative flex flex-wrap items-center gap-2">
+            <div className="inline-flex h-9 items-center rounded-full border border-[#e6ecf7] bg-[#f7f9fd] p-0.5 text-[11px]" role="radiogroup" aria-label="Who opened the ticket">
+              {([
+                ["ALL", "Everyone"],
+                ["user", "Users"],
+                ["vendor", "Providers"]
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={requesterFilter === value}
+                  onClick={() => {
+                    setRequesterFilter(value);
+                    setPage(1);
+                  }}
+                  className={`h-full rounded-full px-3 ${requesterFilter === value ? "bg-white font-semibold text-[#1f3d8f] shadow-sm" : "text-[#64748b]"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <button
               type="button"
               onClick={() => {
@@ -273,7 +275,7 @@ export function SupportDashboardView({
               }}
               className="inline-flex h-9 items-center gap-2 rounded-full border border-[#e6ecf7] bg-white px-3 text-[11px] text-[#3a4b70]"
             >
-              All Statuses
+              {statusFilter === "ALL" ? "All Statuses" : statusFilter}
               <FiFilter size={12} />
             </button>
             <button
@@ -284,7 +286,7 @@ export function SupportDashboardView({
               }}
               className="inline-flex h-9 items-center gap-2 rounded-full border border-[#e6ecf7] bg-white px-3 text-[11px] text-[#3a4b70]"
             >
-              All Priority
+              {priorityFilter === "ALL" ? "All Priority" : priorityFilter}
               <FiFilter size={12} />
             </button>
 
@@ -344,15 +346,22 @@ export function SupportDashboardView({
               </tr>
             </thead>
             <tbody>
+              {pagedTickets.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center text-[12px] text-[#94a3b8]">
+                    {tickets.length === 0 ? "No support tickets yet." : "No tickets match these filters."}
+                  </td>
+                </tr>
+              )}
               {pagedTickets.map((ticket, index) => (
                 <tr key={ticket.id} className={index % 2 === 1 ? "bg-[#fbfcff]" : ""}>
                   <td className="border-b border-[#edf1fa] px-4 py-3 text-[12px] font-semibold text-[#3b1e8a]">{ticket.id}</td>
                   <td className="border-b border-[#edf1fa] px-4 py-3">
                     <div className="flex items-center gap-2.5">
-                      <Image src={safeImageSrc(ticket.avatar, ticket.id || ticket.userName)} alt={ticket.userName} width={28} height={28} className="h-7 w-7 rounded-full" />
+                      <Avatar ticket={ticket} size={28} />
                       <div>
                         <div className="text-[12px] font-semibold text-[#1f2d46]">{ticket.userName}</div>
-                        <div className="text-[10px] text-[#8b96ad]">{ticket.userRole}</div>
+                        <RoleBadge ticket={ticket} />
                       </div>
                     </div>
                   </td>
@@ -439,7 +448,7 @@ export function SupportDashboardView({
 
       {selectedTicket && (
         <div className="fixed inset-0 z-30 grid place-items-center p-4 md:p-6">
-          <aside className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[28px] border border-[#e6ecf7] bg-[#fcfdff] shadow-[0_24px_80px_rgba(15,23,42,0.24)]">
+          <aside className="flex h-[min(92vh,860px)] w-full max-w-5xl flex-col overflow-hidden rounded-[28px] border border-[#e6ecf7] bg-[#fcfdff] shadow-[0_24px_80px_rgba(15,23,42,0.24)]">
             <header className="border-b border-[#e6ecf7] bg-white px-5 py-4 md:px-7 md:py-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -470,20 +479,17 @@ export function SupportDashboardView({
               </div>
             </header>
 
-            <div className="grid min-h-0 flex-1 gap-0 lg:grid-cols-[320px_minmax(0,1fr)]">
-              <div className="border-b border-[#e6ecf7] bg-white px-5 py-5 lg:border-b-0 lg:border-r lg:px-6">
+            <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] gap-0 lg:grid-cols-[320px_minmax(0,1fr)] lg:grid-rows-1">
+              <div className="max-h-[30vh] overflow-y-auto border-b border-[#e6ecf7] bg-white px-5 py-5 lg:max-h-none lg:border-b-0 lg:border-r lg:px-6">
                 <div className="rounded-3xl border border-[#e6ecf7] bg-[#f8fbff] p-4">
                   <div className="flex items-center gap-3">
-                    <Image
-                      src={safeImageSrc(selectedTicket.avatar, selectedTicket.id || selectedTicket.userName)}
-                      alt={selectedTicket.userName}
-                      width={52}
-                      height={52}
-                      className="h-[52px] w-[52px] rounded-full"
-                    />
-                    <div>
+                    <Avatar ticket={selectedTicket} size={52} />
+                    <div className="min-w-0">
                       <p className="m-0 text-[15px] font-semibold text-[#1d2a43]">{selectedTicket.userName}</p>
-                      <p className="m-0 mt-1 text-[11px] text-[#70809d]">{selectedTicket.userRole}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        <RoleBadge ticket={selectedTicket} />
+                        {selectedTicket.userEmail && <span className="truncate text-[11px] text-[#70809d]">{selectedTicket.userEmail}</span>}
+                      </div>
                     </div>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-3 text-[11px]">
@@ -515,19 +521,17 @@ export function SupportDashboardView({
               </div>
 
               <div className="flex min-h-0 flex-col bg-[#fbfcff]">
-                <section className="border-b border-[#e6ecf7] px-5 py-4 md:px-6">
+                <section className="border-b border-[#e6ecf7] px-5 py-3 md:px-6">
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <h4 className="m-0 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8b96ad]">Conversation</h4>
-                      <p className="m-0 mt-1 text-[12px] text-[#70809d]">Review the full thread and respond from the same panel.</p>
-                    </div>
+                    <h4 className="m-0 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8b96ad]">Conversation</h4>
                     <div className="flex flex-wrap items-center gap-2">
                       {(["Open", "In Progress", "Resolved"] as const).map((statusOption) => (
                         <button
                           key={statusOption}
                           type="button"
                           onClick={() => handleStatusUpdate(statusOption)}
-                          className={`rounded-full px-3.5 py-2 text-[11px] font-semibold ${
+                          disabled={busy !== null}
+                          className={`rounded-full px-3.5 py-2 text-[11px] font-semibold disabled:opacity-60 ${
                             selectedTicket.status === statusOption
                               ? "bg-[#1f3d8f] text-white"
                               : "border border-[#dbe2ef] bg-white text-[#64748b]"
@@ -540,12 +544,9 @@ export function SupportDashboardView({
                   </div>
                 </section>
 
-                <div className="min-h-0 flex-1 px-5 py-5 md:px-6">
+                <div className="min-h-0 flex-1 px-5 pt-4 md:px-6">
                   <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[24px] border border-[#e6ecf7] bg-white">
-                    <div className="border-b border-[#eef2fb] px-4 py-3">
-                      <p className="m-0 text-[11px] font-semibold text-[#5f6f8c]">Messages</p>
-                    </div>
-                    <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+                    <div ref={messagesRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
                       <div className="space-y-4">
                         {selectedTicket.conversation.map((message, i) => (
                           <div key={`${message.time}-${i}`} className={message.sender === "agent" ? "ml-auto max-w-[78%]" : "max-w-[78%]"}>
@@ -567,41 +568,40 @@ export function SupportDashboardView({
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="border-t border-[#e6ecf7] bg-white px-5 py-4 md:px-6 md:py-5">
-              <div className="relative">
-                <textarea
-                  placeholder="Type your reply here..."
-                  value={reply}
-                  onChange={(event) => setReply(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" && !event.shiftKey) {
-                      event.preventDefault();
-                      handleSendReply();
-                    }
-                  }}
-                  className="min-h-[104px] w-full rounded-3xl border border-[#dbe2ef] bg-[#fbfcff] px-4 py-3 text-[13px] leading-6 text-[#475569] outline-none"
-                />
-                <div className="absolute bottom-3 right-3 flex items-center gap-2 text-[#9aa6c0]">
-                  <button type="button" className="grid h-8 w-8 place-items-center rounded-full border border-[#e6ecf7] bg-white">
-                    <FiPaperclip size={12} />
-                  </button>
-                  <button type="button" className="grid h-8 w-8 place-items-center rounded-full border border-[#e6ecf7] bg-white">
-                    <FiSmile size={12} />
-                  </button>
+                <div className="px-5 pb-4 pt-3 md:px-6">
+                  {actionError && (
+                    <p className="m-0 mb-2 flex items-center gap-2 rounded-2xl border border-[#fecaca] bg-[#fff5f5] px-3 py-2 text-[12px] text-[#b91c1c]" role="alert">
+                      <FiAlertCircle size={13} />
+                      {actionError}
+                    </p>
+                  )}
+                  <div className="flex items-end gap-2 rounded-3xl border border-[#dbe2ef] bg-white p-2 focus-within:border-[#3b1e8a]">
+                    <textarea
+                      placeholder="Type your reply here..."
+                      aria-label="Reply"
+                      rows={2}
+                      value={reply}
+                      onChange={(event) => setReply(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" && !event.shiftKey) {
+                          event.preventDefault();
+                          handleSendReply();
+                        }
+                      }}
+                      className="max-h-[140px] min-h-[52px] flex-1 resize-y border-0 bg-transparent px-2 py-1.5 text-[13px] leading-6 text-[#475569] outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSendReply}
+                      disabled={busy !== null || !reply.trim()}
+                      className="h-10 shrink-0 rounded-full bg-[#3b1e8a] px-5 text-[12px] font-semibold text-white disabled:opacity-60"
+                    >
+                      {busy === "reply" ? "Sending..." : "Send Reply"}
+                    </button>
+                  </div>
+                  <p className="m-0 mt-1.5 pl-3 text-[10px] text-[#8b96ad]">Enter to send · Shift + Enter for a new line</p>
                 </div>
-              </div>
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="m-0 text-[11px] text-[#8b96ad]">Press Enter to send quickly, or use Shift + Enter for a new line.</p>
-                <button
-                  type="button"
-                  onClick={handleSendReply}
-                  className="h-11 rounded-full bg-[#3b1e8a] px-6 text-[13px] font-semibold text-white sm:min-w-[220px]"
-                >
-                  Update Ticket & Send Reply
-                </button>
               </div>
             </div>
           </aside>
