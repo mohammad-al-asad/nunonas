@@ -27,6 +27,7 @@ from pymongo import MongoClient
 
 from app.core.config import get_settings
 from app.core.security import hash_password
+from scripts import seed_demo_extras
 from scripts.seed_dummy_providers import PROVIDERS, SEED_TAG as PROVIDER_SEED_TAG, VENDOR_COLLECTIONS, providers_with_s3_images, seed_vendor
 
 SEED_TAG = "demo-activity-v1"
@@ -237,7 +238,8 @@ def main() -> None:
     client = MongoClient(settings.mongodb_uri)
     db = client[settings.mongodb_db_name]
 
-    print(f"Removed {remove_seed(db, keep_logins='--remove' not in sys.argv)} previously seeded documents.")
+    removed = remove_seed(db, keep_logins="--remove" not in sys.argv) + seed_demo_extras.remove_seed(db)
+    print(f"Removed {removed} previously seeded documents.")
     if "--remove" in sys.argv:
         client.close()
         return
@@ -310,6 +312,10 @@ def main() -> None:
         for email, entity_type in (("dummy.spicegarden@nununas.test", "restaurant"), ("dummy.bananigrand@nununas.test", "hotel"), ("dummy.lotusspa@nununas.test", "spa"))
     ])
 
+    # Support tickets and billing history depend on the users, providers and bookings above.
+    tickets = seed_demo_extras.seed_tickets(db, now)
+    paid, _ = seed_demo_extras.seed_paid_invoices(db, now)
+    print(f"Seeded {tickets} support tickets and marked {paid} commission invoices paid.")
     print(f"Seeded {len(PROVIDERS)} providers, {1 + len(others)} customers, {db.vendor_bookings.count_documents({'seed_tag': SEED_TAG})} bookings, {db.vendor_reviews.count_documents({'seed_tag': SEED_TAG})} reviews.")
     print(f"Dashboard login: {DEMO_EMAIL} (password from SEED_DEMO_PASSWORD)")
     print(f"App login:       {DEMO_EMAIL} (password from SEED_DEMO_PASSWORD)")
