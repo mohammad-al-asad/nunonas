@@ -1,24 +1,8 @@
 import { BillingManagementView } from "@/components/billing/client";
+import { type BillingOverview, emptyBillingOverview } from "@/lib/billing";
 import { fetchApiData } from "@/lib/server-api";
 
-type DataPayload = {
-  summaryCards: Array<{ label: string; value: string; note: string; tone: string }>;
-  recentPayments: Array<{
-    vendorCode: string;
-    vendorName: string;
-    totalEarnings: string;
-    commission: string;
-    netPayout: string;
-    status: "PAID" | "PENDING";
-  }>;
-};
-
-const fallbackData: DataPayload = {
-  summaryCards: [],
-  recentPayments: []
-};
-
 export async function BillingManagementViewServer() {
-  const data = await fetchApiData<DataPayload>("/api/billing", fallbackData);
+  const data = await fetchApiData<BillingOverview>("/api/billing", emptyBillingOverview);
   return <BillingManagementView data={data} />;
 }

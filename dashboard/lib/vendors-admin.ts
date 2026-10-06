@@ -16,8 +16,8 @@ export type VendorVerificationDocument = {
 
 export type VendorInsights = {
   totalEarned: number;
-  billingEarnings?: string | null;
-  billingPayout?: string | null;
+  /** Unpaid commission the provider owes the platform (all months). */
+  commissionDue: number;
   totalBookings: number;
   completedBookings: number;
   confirmedBookings: number;
@@ -211,8 +211,7 @@ export function mapVendorListItem(input: unknown): DashboardVendor {
   const insights: VendorInsights | undefined = hasInsights
     ? {
         totalEarned: asNumber(rawInsights.total_earned, 0),
-        billingEarnings: asString(rawInsights.billing_earnings) || null,
-        billingPayout: asString(rawInsights.billing_payout) || null,
+        commissionDue: asNumber(rawInsights.commission_due, 0),
         totalBookings: asNumber(rawInsights.total_bookings, asNumber(record.total_bookings ?? record.bookings, 0)),
         completedBookings: asNumber(rawInsights.completed_bookings, 0),
         confirmedBookings: asNumber(rawInsights.confirmed_bookings, 0),

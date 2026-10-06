@@ -547,8 +547,7 @@ export function VendorDetailPageClient({ vendorId }: { vendorId: string }) {
             {(() => {
               const insights = vendor.insights ?? {
                 totalEarned: 0,
-                billingEarnings: null,
-                billingPayout: null,
+                commissionDue: 0,
                 totalBookings: vendor.bookings || 0,
                 completedBookings: 0,
                 confirmedBookings: 0,
@@ -620,7 +619,9 @@ export function VendorDetailPageClient({ vendorId }: { vendorId: string }) {
                           <span className="truncate">Completed bookings</span>
                         </div>
                         <div className="mt-1 text-[10px] text-[#64748b] truncate">
-                          {insights.billingPayout ? `Payout: ${insights.billingPayout}` : "Live booking revenue"}
+                          {insights.commissionDue > 0
+                            ? `Commission due: $${insights.commissionDue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                            : "No commission due"}
                         </div>
                       </div>
                     </div>
