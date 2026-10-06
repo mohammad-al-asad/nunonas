@@ -1,3 +1,4 @@
+import re
 from datetime import UTC, datetime
 
 from bson import ObjectId
@@ -5,6 +6,7 @@ from bson.errors import InvalidId
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from pymongo.database import Database
 
+from app.domain import support_tickets
 from app.modules.platform_admin.deps import get_platform_admin_db
 from app.modules.platform_admin.deps_auth import get_current_platform_admin
 
@@ -15,79 +17,52 @@ router = APIRouter(
 )
 
 
-def _ensure_indexes(db: Database) -> None:
-    collection = db["support_tickets"]
-    collection.create_index([("user_id", 1), ("created_at", -1)])
-    collection.create_index([("status", 1), ("updated_at", -1)])
-    collection.create_index([("ticket_code", 1)], unique=True)
-
-
-def _title_case(value: str, fallback: str) -> str:
-    normalized = str(value or "").strip().replace("_", " ").lower()
-    if not normalized:
-        return fallback
-    return " ".join(part.capitalize() for part in normalized.split())
-
-
 def _resolve_ticket_query(ticket_id: str) -> dict:
     try:
         return {"_id": ObjectId(ticket_id)}
-    except (InvalidId, ValueError):
+    except (InvalidId, TypeError):
         return {"ticket_code": ticket_id}
-
-
-def _serialize_message(message: dict) -> dict:
-    created_at = message.get("created_at")
-    return {
-        "sender": "agent" if str(message.get("sender_role") or "").lower() == "agent" else "user",
-        "text": str(message.get("text") or ""),
-        "time": created_at.isoformat() if isinstance(created_at, datetime) else None,
-        "name": str(message.get("sender_name") or ""),
-    }
 
 
 def _serialize_ticket(document: dict | None) -> dict | None:
     if not document:
         return None
     messages = document.get("messages") if isinstance(document.get("messages"), list) else []
-    created_at = document.get("created_at")
-    updated_at = document.get("updated_at")
+    requester_type = document.get("requester_type") or ("vendor" if document.get("vendor_id") else "user")
+    requester_id = document.get("vendor_id") if requester_type == "vendor" else document.get("user_id")
     return {
         "id": str(document.get("ticket_code") or document.get("_id") or ""),
         "ticket_key": str(document.get("_id") or ""),
         "ticket_code": str(document.get("ticket_code") or ""),
-        "user_name": str(document.get("user_name") or "Unknown User"),
-        "user_role": "User",
-        "avatar": str(document.get("user_avatar") or ""),
-        "type": _title_case(str(document.get("issue_type") or ""), "Account"),
+        "requester_type": requester_type,
+        "requester_id": str(requester_id or ""),
+        "user_name": str(document.get("requester_name") or "Unknown"),
+        "user_email": str(document.get("requester_email") or ""),
+        "user_role": "Provider" if requester_type == "vendor" else "User",
+        "avatar": str(document.get("requester_avatar") or ""),
+        "type": support_tickets.title_case(document.get("issue_type"), "Technical"),
         "subject": str(document.get("subject") or ""),
-        "status": _title_case(str(document.get("status") or ""), "Open"),
-        "priority": _title_case(str(document.get("priority") or ""), "Medium"),
-        "opened_at": created_at.isoformat() if isinstance(created_at, datetime) else None,
+        "status": support_tickets.title_case(document.get("status"), "Open"),
+        "priority": support_tickets.title_case(document.get("priority"), "Medium"),
+        "opened_at": support_tickets.iso(document.get("created_at")),
         "issue_details": str(document.get("description") or ""),
-        "conversation": [_serialize_message(item) for item in messages],
-        "updated_at": updated_at.isoformat() if isinstance(updated_at, datetime) else None,
+        "conversation": [support_tickets.serialize_message(item) for item in messages],
+        "updated_at": support_tickets.iso(document.get("updated_at")),
     }
 
 
-def _summary_cards(tickets: list[dict]) -> list[dict]:
-    total = len(tickets)
-    open_count = sum(1 for ticket in tickets if ticket.get("status") == "Open")
-    in_progress = sum(1 for ticket in tickets if ticket.get("status") == "In Progress")
-    resolved = sum(1 for ticket in tickets if ticket.get("status") == "Resolved")
-    return [
-        {"label": "TOTAL TICKETS", "value": str(total), "note": "All support requests", "tone": "text-[#1f3d8f]"},
-        {"label": "IN PROGRESS", "value": str(in_progress), "note": "Needs follow-up", "tone": "text-[#b45309]"},
-        {"label": "RESOLVED", "value": str(resolved), "note": "Closed tickets", "tone": "text-[#15803d]"},
-        {"label": "OPEN", "value": str(open_count), "note": "Awaiting response", "tone": "text-[#1d4ed8]"},
-    ]
-
-
-def _normalize_status(raw_status: str) -> str:
-    normalized = str(raw_status or "").strip().lower().replace(" ", "_")
-    if normalized not in {"open", "in_progress", "resolved"}:
+def _status_or_400(raw_status: str) -> str:
+    normalized = support_tickets.normalize_status(raw_status)
+    if not normalized:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status.")
     return normalized
+
+
+def _find_or_404(db: Database, ticket_id: str) -> dict:
+    ticket = db[support_tickets.COLLECTION].find_one(_resolve_ticket_query(ticket_id))
+    if not ticket:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Support ticket not found.")
+    return ticket
 
 
 @router.get("")
@@ -97,41 +72,40 @@ def list_support_tickets(
     search: str | None = Query(default=None),
     status_filter: str | None = Query(default=None, alias="status"),
     priority_filter: str | None = Query(default=None, alias="priority"),
+    requester_filter: str | None = Query(default=None, alias="requester", description="user or vendor"),
     db: Database = Depends(get_platform_admin_db),
 ) -> dict:
-    _ensure_indexes(db)
+    collection = db[support_tickets.COLLECTION]
     query: dict = {}
     if search:
-        query["$or"] = [
-            {"ticket_code": {"$regex": search, "$options": "i"}},
-            {"user_name": {"$regex": search, "$options": "i"}},
-            {"subject": {"$regex": search, "$options": "i"}},
-        ]
+        pattern = {"$regex": re.escape(search), "$options": "i"}
+        query["$or"] = [{"ticket_code": pattern}, {"requester_name": pattern}, {"subject": pattern}]
     if status_filter:
-        query["status"] = _normalize_status(status_filter)
+        query["status"] = _status_or_400(status_filter)
     if priority_filter:
         query["priority"] = str(priority_filter).strip().lower()
+    if requester_filter:
+        if requester_filter not in support_tickets.REQUESTER_TYPES:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Requester must be user or vendor.")
+        query["requester_type"] = requester_filter
 
-    rows = list(db["support_tickets"].find(query).sort("updated_at", -1).skip(skip).limit(limit))
-    tickets = [_serialize_ticket(row) for row in rows if row]
+    rows = list(collection.find(query).sort("updated_at", -1).skip(skip).limit(limit))
+    counts = {row["_id"]: row["count"] for row in collection.aggregate([{"$group": {"_id": "$status", "count": {"$sum": 1}}}])}
     return {
-        "summary_cards": _summary_cards(tickets),
-        "tickets": tickets,
-        "total": int(db["support_tickets"].count_documents(query)),
+        "counts": {
+            "total": sum(counts.values()),
+            "open": counts.get("open", 0),
+            "in_progress": counts.get("in_progress", 0),
+            "resolved": counts.get("resolved", 0),
+        },
+        "tickets": [_serialize_ticket(row) for row in rows],
+        "total": int(collection.count_documents(query)),
     }
 
 
 @router.get("/{ticket_id}")
-def get_support_ticket(
-    ticket_id: str,
-    db: Database = Depends(get_platform_admin_db),
-) -> dict:
-    _ensure_indexes(db)
-    ticket = db["support_tickets"].find_one(_resolve_ticket_query(ticket_id))
-    serialized = _serialize_ticket(ticket)
-    if not serialized:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Support ticket not found.")
-    return serialized
+def get_support_ticket(ticket_id: str, db: Database = Depends(get_platform_admin_db)) -> dict:
+    return _serialize_ticket(_find_or_404(db, ticket_id)) or {}
 
 
 @router.post("/{ticket_id}/messages")
@@ -140,33 +114,20 @@ def reply_support_ticket(
     payload: dict = Body(...),
     db: Database = Depends(get_platform_admin_db),
 ) -> dict:
-    _ensure_indexes(db)
     message = str(payload.get("message") or "").strip()
     if not message:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Message is required.")
+    ticket = _find_or_404(db, ticket_id)
 
     now = datetime.now(UTC)
-    update = {
-        "$push": {
-            "messages": {
-                "sender_role": "agent",
-                "sender_name": str(payload.get("name") or "Support Agent"),
-                "text": message,
-                "created_at": now,
-            }
-        },
+    update: dict = {
+        "$push": {"messages": support_tickets.new_message("agent", str(payload.get("name") or "Support Agent"), message, now)},
         "$set": {"updated_at": now},
     }
-
-    ticket = db["support_tickets"].find_one(_resolve_ticket_query(ticket_id))
-    if not ticket:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Support ticket not found.")
-    if str(ticket.get("status") or "") == "open":
+    if ticket.get("status") == "open":
         update["$set"]["status"] = "in_progress"
-
-    db["support_tickets"].update_one({"_id": ticket["_id"]}, update)
-    updated = db["support_tickets"].find_one({"_id": ticket["_id"]})
-    return _serialize_ticket(updated) or {}
+    db[support_tickets.COLLECTION].update_one({"_id": ticket["_id"]}, update)
+    return _serialize_ticket(db[support_tickets.COLLECTION].find_one({"_id": ticket["_id"]})) or {}
 
 
 @router.patch("/{ticket_id}/status")
@@ -175,26 +136,16 @@ def update_support_ticket_status(
     payload: dict = Body(...),
     db: Database = Depends(get_platform_admin_db),
 ) -> dict:
-    _ensure_indexes(db)
-    normalized_status = _normalize_status(str(payload.get("status") or ""))
-    ticket = db["support_tickets"].find_one(_resolve_ticket_query(ticket_id))
-    if not ticket:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Support ticket not found.")
+    next_status = _status_or_400(str(payload.get("status") or ""))
+    ticket = _find_or_404(db, ticket_id)
 
     now = datetime.now(UTC)
-    db["support_tickets"].update_one(
+    note = f'Ticket status updated to "{support_tickets.title_case(next_status, "Open")}".'
+    db[support_tickets.COLLECTION].update_one(
         {"_id": ticket["_id"]},
         {
-            "$set": {"status": normalized_status, "updated_at": now},
-            "$push": {
-                "messages": {
-                    "sender_role": "agent",
-                    "sender_name": "System",
-                    "text": f'Ticket status updated to "{_title_case(normalized_status, "Open")}".',
-                    "created_at": now,
-                }
-            },
+            "$set": {"status": next_status, "updated_at": now},
+            "$push": {"messages": support_tickets.new_message("agent", "System", note, now)},
         },
     )
-    updated = db["support_tickets"].find_one({"_id": ticket["_id"]})
-    return _serialize_ticket(updated) or {}
+    return _serialize_ticket(db[support_tickets.COLLECTION].find_one({"_id": ticket["_id"]})) or {}

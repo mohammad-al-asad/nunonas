@@ -67,7 +67,6 @@ VENDOR_INDEXES: dict[str, list[IndexModel]] = {
         IndexModel([("vendor_id", ASCENDING), ("rating", DESCENDING)], name="vendor_review_rating"),
         IndexModel([("vendor_id", ASCENDING), ("provider_type", ASCENDING), ("created_at", DESCENDING)], name="vendor_review_service_created"),
     ],
-    "vendor_support_tickets": [IndexModel([("vendor_id", ASCENDING), ("created_at", DESCENDING)], name="vendor_ticket_created")],
     "vendor_notifications": [IndexModel([("vendor_id", ASCENDING), ("created_at", DESCENDING)], name="vendor_notification_created")],
     "vendor_portal_settings": [IndexModel([("vendor_id", ASCENDING)], unique=True, name="vendor_settings_unique")],
     "vendor_notification_settings": [IndexModel([("vendor_id", ASCENDING)], unique=True, name="vendor_notification_settings_unique")],

@@ -17,6 +17,7 @@ from app.api.deps import (
 from app.core.account_lookup import find_existing_email_async, find_existing_phone_async
 from app.core.responses import envelope
 from app.core.serializers import to_jsonable
+from app.domain import support_tickets
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.providers.s3_uploader import S3Uploader
 from app.repositories.user_repository import UserRepository
@@ -42,46 +43,21 @@ def serialize_personal_details(user: dict) -> PersonalDetailsResponse:
     )
 
 
-def _support_title_case(value: str, fallback: str) -> str:
-    normalized = str(value or "").strip().replace("_", " ").lower()
-    if not normalized:
-        return fallback
-    return " ".join(part.capitalize() for part in normalized.split())
-
-
-def _serialize_support_message(message: dict) -> dict:
-    created_at = message.get("created_at")
-    return {
-        "sender": "agent" if str(message.get("sender_role") or "").lower() == "agent" else "user",
-        "text": str(message.get("text") or ""),
-        "time": created_at.isoformat() if created_at else None,
-        "name": str(message.get("sender_name") or ""),
-    }
-
-
 def _serialize_support_ticket(document: dict) -> dict:
     messages = document.get("messages") if isinstance(document.get("messages"), list) else []
-    created_at = document.get("created_at")
-    updated_at = document.get("updated_at")
     return {
         "id": str(document.get("ticket_code") or document.get("_id") or ""),
         "ticket_key": str(document.get("_id") or ""),
         "ticket_code": str(document.get("ticket_code") or ""),
-        "issue_type": _support_title_case(str(document.get("issue_type") or ""), "Account"),
+        "issue_type": support_tickets.title_case(document.get("issue_type"), "Account"),
         "subject": str(document.get("subject") or ""),
         "description": str(document.get("description") or ""),
-        "status": _support_title_case(str(document.get("status") or ""), "Open"),
-        "priority": _support_title_case(str(document.get("priority") or ""), "Medium"),
-        "created_at": created_at.isoformat() if created_at else None,
-        "updated_at": updated_at.isoformat() if updated_at else None,
-        "messages": [_serialize_support_message(item) for item in messages],
+        "status": support_tickets.title_case(document.get("status"), "Open"),
+        "priority": support_tickets.title_case(document.get("priority"), "Medium"),
+        "created_at": support_tickets.iso(document.get("created_at")),
+        "updated_at": support_tickets.iso(document.get("updated_at")),
+        "messages": [support_tickets.serialize_message(item) for item in messages],
     }
-
-
-async def _ensure_support_indexes(db: AsyncIOMotorDatabase) -> None:
-    await db["support_tickets"].create_index([("user_id", 1), ("created_at", -1)])
-    await db["support_tickets"].create_index([("status", 1), ("updated_at", -1)])
-    await db["support_tickets"].create_index([("ticket_code", 1)], unique=True)
 
 
 def _support_ticket_query(ticket_id: str, user_id: str) -> dict:
@@ -204,12 +180,11 @@ async def list_my_support_tickets(
     user_repo: UserRepository = Depends(get_user_repo),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    await _ensure_support_indexes(db)
     user = await user_repo.find_by_id(user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    cursor = db["support_tickets"].find({"user_id": ObjectId(user_id)}).sort("updated_at", -1)
+    cursor = db[support_tickets.COLLECTION].find({"user_id": ObjectId(user_id)}).sort("updated_at", -1)
     tickets = [_serialize_support_ticket(ticket) async for ticket in cursor]
     return envelope(to_jsonable(tickets), meta={"count": len(tickets)})
 
@@ -221,7 +196,6 @@ async def create_support_ticket(
     user_repo: UserRepository = Depends(get_user_repo),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    await _ensure_support_indexes(db)
     user = await user_repo.find_by_id(user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -240,32 +214,19 @@ async def create_support_ticket(
     if priority not in {"low", "medium", "high"}:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid priority.")
 
-    now = datetime.now(UTC)
-    ticket_code = f"SUP-{now.strftime('%Y%m%d')}-{str(ObjectId())[-6:].upper()}"
-    created = {
-        "ticket_code": ticket_code,
-        "user_id": ObjectId(user_id),
-        "user_name": str(user.get("full_name") or user.get("email") or "Customer"),
-        "user_email": str(user.get("email") or ""),
-        "user_avatar": str(user.get("profile_image_url") or ""),
-        "issue_type": issue_type,
-        "subject": subject,
-        "description": description,
-        "status": "open",
-        "priority": priority,
-        "messages": [
-            {
-                "sender_role": "user",
-                "sender_name": str(user.get("full_name") or user.get("email") or "You"),
-                "text": description,
-                "created_at": now,
-            }
-        ],
-        "created_at": now,
-        "updated_at": now,
-    }
-    result = await db["support_tickets"].insert_one(created)
-    ticket = await db["support_tickets"].find_one({"_id": result.inserted_id})
+    created = support_tickets.new_ticket(
+        requester_type="user",
+        requester_id=ObjectId(user_id),
+        requester_name=str(user.get("full_name") or user.get("email") or "Customer"),
+        requester_email=str(user.get("email") or ""),
+        requester_avatar=str(user.get("profile_image_url") or ""),
+        subject=subject,
+        description=description,
+        issue_type=issue_type,
+        priority=priority,
+    )
+    result = await db[support_tickets.COLLECTION].insert_one(created)
+    ticket = await db[support_tickets.COLLECTION].find_one({"_id": result.inserted_id})
     return envelope(to_jsonable(_serialize_support_ticket(ticket or created)))
 
 
@@ -275,8 +236,7 @@ async def get_my_support_ticket(
     user_id: str = Depends(get_current_user_id),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    await _ensure_support_indexes(db)
-    ticket = await db["support_tickets"].find_one(_support_ticket_query(ticket_id, user_id))
+    ticket = await db[support_tickets.COLLECTION].find_one(_support_ticket_query(ticket_id, user_id))
     if not ticket:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Support ticket not found")
     return envelope(to_jsonable(_serialize_support_ticket(ticket)))
@@ -290,7 +250,6 @@ async def reply_to_my_support_ticket(
     user_repo: UserRepository = Depends(get_user_repo),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    await _ensure_support_indexes(db)
     user = await user_repo.find_by_id(user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -299,22 +258,17 @@ async def reply_to_my_support_ticket(
     if not message:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Message is required.")
 
-    ticket = await db["support_tickets"].find_one(_support_ticket_query(ticket_id, user_id))
+    ticket = await db[support_tickets.COLLECTION].find_one(_support_ticket_query(ticket_id, user_id))
     if not ticket:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Support ticket not found")
 
     now = datetime.now(UTC)
     update_doc = {
         "$push": {
-            "messages": {
-                "sender_role": "user",
-                "sender_name": str(user.get("full_name") or user.get("email") or "You"),
-                "text": message,
-                "created_at": now,
-            }
+            "messages": support_tickets.new_message("user", str(user.get("full_name") or user.get("email") or "You"), message, now)
         },
         "$set": {"updated_at": now, "status": "in_progress"},
     }
-    await db["support_tickets"].update_one({"_id": ticket["_id"]}, update_doc)
-    updated = await db["support_tickets"].find_one({"_id": ticket["_id"]})
+    await db[support_tickets.COLLECTION].update_one({"_id": ticket["_id"]}, update_doc)
+    updated = await db[support_tickets.COLLECTION].find_one({"_id": ticket["_id"]})
     return envelope(to_jsonable(_serialize_support_ticket(updated or ticket)))

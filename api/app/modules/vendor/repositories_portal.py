@@ -7,13 +7,15 @@ from typing import Any
 
 from bson import ObjectId
 from bson.errors import InvalidId
-from pymongo import DESCENDING
+from pymongo import DESCENDING, ReturnDocument
 from pymongo.collection import Collection
 from pymongo.database import Database
 
 from app.domain.event_categories import normalize_event_category
 from app.domain.service_listings import SERVICE_SETTINGS_TYPES, SERVICE_TYPES, collection_name_for, normalize_service_setting_type, normalize_service_type
+from app.domain import support_tickets
 from app.domain.vendor_categories import normalize_account_categories
+from app.modules.platform_admin import billing
 
 
 class VendorPortalRepository:
@@ -30,7 +32,7 @@ class VendorPortalRepository:
         self.loyalty_settings: Collection = db["vendor_loyalty_settings"]
         self.reviews: Collection = db["vendor_reviews"]
         self.settings: Collection = db["vendor_portal_settings"]
-        self.support_tickets: Collection = db["vendor_support_tickets"]
+        self.support_tickets: Collection = db[support_tickets.COLLECTION]
         self.notifications: Collection = db["vendor_notifications"]
         self.notification_settings: Collection = db["vendor_notification_settings"]
         # Public service listings are intentionally split by service type.
@@ -1785,34 +1787,23 @@ class VendorPortalRepository:
         return self.get_settings_general(vendor_id)
 
     def get_settings_commission(self, vendor_id: str) -> dict[str, Any]:
-        platform_settings = self.settings.database["platform_admin_settings"].find_one(
-            {"_id": "platform_admin_settings"},
-            {"commission": 1},
-        ) or {}
-        stored_commission = platform_settings.get("commission")
-        commission = stored_commission if isinstance(stored_commission, dict) else {}
-        global_rate = self._to_float(commission.get("globalRate", commission.get("global_rate", 12.5)))
-        category_rate = self._to_float(commission.get("categoryRate", commission.get("category_rate", global_rate)))
-        category_label = str(commission.get("categoryLabel") or commission.get("category_label") or "").strip()
-
-        business = self.settings.database["vendor_business_details"].find_one(
+        db = self.settings.database
+        vendor = db["vendors"].find_one({"_id": ObjectId(vendor_id)}, {"category": 1, "categories": 1}) or {}
+        business = db["vendor_business_details"].find_one(
             {"vendor_id": ObjectId(vendor_id)},
             {"category": 1, "categories": 1},
         ) or {}
-        vendor_categories = business.get("categories") if isinstance(business.get("categories"), list) else []
-        if business.get("category"):
-            vendor_categories.append(business["category"])
-        category_applies = bool(category_label) and any(
-            str(category).strip().casefold() == category_label.casefold() for category in vendor_categories
-        )
-        effective_rate = category_rate if category_applies else global_rate
+        candidates = [vendor.get("category"), *(vendor.get("categories") or []), business.get("category"), *(business.get("categories") or [])]
+        category = next((key for key in map(billing.normalize_category, candidates) if key), "restaurant")
+        rule = billing.current_rates(db)[category]
         return {
-            "commission_percent": effective_rate,
-            "globalRate": str(commission.get("globalRate") or commission.get("global_rate") or global_rate),
-            "categoryRate": str(commission.get("categoryRate") or commission.get("category_rate") or category_rate),
-            "categoryLabel": category_label,
-            "category_applies": category_applies,
-            "source": "platform_admin_settings",
+            "category": billing.CATEGORIES[category],
+            "model": rule["model"],
+            "value": rule["value"],
+            "commission_percent": rule["value"] if rule["model"] == "percentage" else None,
+            "per_lead_fee": rule["value"] if rule["model"] == "per_lead" else None,
+            "description": billing.describe_rule(rule),
+            "source": "platform_admin_billing",
         }
 
     def _default_legal_docs(self) -> dict[str, Any]:
@@ -2115,44 +2106,81 @@ class VendorPortalRepository:
         return self.get_settings_profile(vendor_id)
 
 
+    def _vendor_ticket_query(self, vendor_id: str, ticket_id: str | None = None) -> dict[str, Any]:
+        query: dict[str, Any] = {"requester_type": "vendor", "vendor_id": ObjectId(vendor_id)}
+        if ticket_id is not None:
+            query["_id"] = ObjectId(ticket_id)
+        return query
+
+    def _serialize_vendor_ticket(self, doc: dict[str, Any] | None) -> dict[str, Any] | None:
+        """Ticket in the shape the provider portal reads (the opening message is the description)."""
+        if not doc:
+            return None
+        replies = (doc.get("messages") or [])[1:]
+        return {
+            "id": str(doc["_id"]),
+            "ticket_code": str(doc.get("ticket_code") or ""),
+            "subject": str(doc.get("subject") or ""),
+            "description": str(doc.get("description") or ""),
+            "status": support_tickets.title_case(doc.get("status"), "Open"),
+            "priority": support_tickets.title_case(doc.get("priority"), "Medium"),
+            "created_at": support_tickets.iso(doc.get("created_at")),
+            "updated_at": support_tickets.iso(doc.get("updated_at")),
+            "messages": [
+                {
+                    "sender": "Support" if message.get("sender_role") == "agent" else "You",
+                    "sender_role": message.get("sender_role"),
+                    "message": str(message.get("text") or ""),
+                    "sent_at": support_tickets.iso(message.get("created_at")),
+                }
+                for message in replies
+            ],
+        }
+
     def create_support_ticket(self, vendor_id: str, subject: str, description: str) -> dict[str, Any]:
-        ticket_code = f"#SP-{datetime.now(UTC).year}-{str(ObjectId())[-3:]}"
-        inserted = self.support_tickets.insert_one(
-            {
-                "vendor_id": ObjectId(vendor_id),
-                "ticket_code": ticket_code,
-                "subject": subject,
-                "description": description,
-                "status": "open",
-                "messages": [],
-                "created_at": datetime.now(UTC),
-                "updated_at": datetime.now(UTC),
-            }
+        vendor = self.support_tickets.database["vendors"].find_one(
+            {"_id": ObjectId(vendor_id)}, {"business_name": 1, "owner_full_name": 1, "email": 1, "logo_url": 1}
+        ) or {}
+        ticket = support_tickets.new_ticket(
+            requester_type="vendor",
+            requester_id=ObjectId(vendor_id),
+            requester_name=str(vendor.get("business_name") or vendor.get("owner_full_name") or "Service provider"),
+            requester_email=str(vendor.get("email") or ""),
+            requester_avatar=str(vendor.get("logo_url") or ""),
+            subject=subject,
+            description=description,
         )
-        created = self.support_tickets.find_one({"_id": inserted.inserted_id})
-        return self._serialize(created)  # type: ignore[return-value]
+        inserted = self.support_tickets.insert_one(ticket)
+        return self._serialize_vendor_ticket(self.support_tickets.find_one({"_id": inserted.inserted_id}))  # type: ignore[return-value]
 
     def list_support_tickets(self, vendor_id: str, limit: int, skip: int) -> dict[str, Any]:
-        query = {"vendor_id": ObjectId(vendor_id)}
+        query = self._vendor_ticket_query(vendor_id)
         total = int(self.support_tickets.count_documents(query))
-        docs = self.support_tickets.find(query).sort("created_at", DESCENDING).skip(skip).limit(limit)
-        return {"items": [self._serialize(doc) for doc in docs], "total": total}
+        docs = self.support_tickets.find(query).sort("updated_at", DESCENDING).skip(skip).limit(limit)
+        return {"items": [self._serialize_vendor_ticket(doc) for doc in docs], "total": total}
 
     def get_support_ticket(self, vendor_id: str, ticket_id: str) -> dict[str, Any] | None:
-        return self._serialize(
-            self.support_tickets.find_one({"_id": ObjectId(ticket_id), "vendor_id": ObjectId(vendor_id)})
-        )
+        return self._serialize_vendor_ticket(self.support_tickets.find_one(self._vendor_ticket_query(vendor_id, ticket_id)))
 
     def add_support_ticket_message(
         self, vendor_id: str, ticket_id: str, message: str, metadata: dict | None = None
     ) -> dict[str, Any] | None:
-        msg_entry = {"sender": "vendor", "message": message, "metadata": metadata or {}, "sent_at": datetime.now(UTC)}
+        query = self._vendor_ticket_query(vendor_id, ticket_id)
+        ticket = self.support_tickets.find_one(query, {"requester_name": 1, "status": 1})
+        if not ticket:
+            return None
+        now = datetime.now(UTC)
+        entry = support_tickets.new_message("vendor", str(ticket.get("requester_name") or "Service provider"), message, now)
+        if metadata:
+            entry["metadata"] = metadata
+        # A provider writing again re-opens a resolved ticket for the support team.
+        status = "in_progress" if ticket.get("status") in {"resolved", "in_progress"} else ticket.get("status") or "open"
         result = self.support_tickets.find_one_and_update(
-            {"_id": ObjectId(ticket_id), "vendor_id": ObjectId(vendor_id)},
-            {"$push": {"messages": msg_entry}, "$set": {"updated_at": datetime.now(UTC)}},
-            return_document=True,
+            {"_id": ticket["_id"]},
+            {"$push": {"messages": entry}, "$set": {"updated_at": now, "status": status}},
+            return_document=ReturnDocument.AFTER,
         )
-        return self._serialize(result)
+        return self._serialize_vendor_ticket(result)
 
     def list_notifications(self, vendor_id: str, limit: int, skip: int) -> dict[str, Any]:
         query = {"vendor_id": ObjectId(vendor_id)}
