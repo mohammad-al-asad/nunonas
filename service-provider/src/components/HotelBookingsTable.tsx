@@ -41,9 +41,6 @@ export function HotelBookingsTable({
               <th className="pb-6 text-xs font-semibold uppercase tracking-wider text-slate-400 text-center">
                 Status
               </th>
-              <th className="pb-6 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Payment
-              </th>
               <th className="w-[150px] pb-6 text-center text-xs font-semibold uppercase tracking-wider text-slate-400">
                 Actions
               </th>
@@ -57,6 +54,7 @@ export function HotelBookingsTable({
               >
                 <td className="py-5 font-bold text-sky-500 text-sm whitespace-nowrap">
                   {booking.id}
+                  {booking.manual ? <span className="ml-2 rounded-md bg-violet-50 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-violet-600" title="Added by you. No commission.">Manual</span> : null}
                 </td>
                 <td className="py-5">
                   <div className="flex items-center gap-3">
@@ -103,18 +101,6 @@ export function HotelBookingsTable({
                       {booking.status}
                     </span>
                   </div>
-                </td>
-                <td className="py-5">
-                  <span
-                    className={cn(
-                      "text-sm font-bold",
-                      booking.payment === "Paid"
-                        ? "text-emerald-500"
-                        : "text-slate-300",
-                    )}
-                  >
-                    {booking.payment}
-                  </span>
                 </td>
                 <td className="w-[150px] py-5 text-center">
                   <div className="flex justify-center gap-2">

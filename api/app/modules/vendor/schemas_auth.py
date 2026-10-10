@@ -50,6 +50,9 @@ class VendorRegisterRequest(BaseModel):
     venue_capacity: int | None = None
     ticket_pricing_type: str | None = None
     business_location_label: str | None = None
+    # Pinned on the registration map; customers find the provider by these.
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
     equipment_availability: list[str] | None = None
 
     @field_validator("email_or_phone")
@@ -86,6 +89,8 @@ class VendorRegisterRequest(BaseModel):
             raise ValueError("Password and confirm_password must match.")
         if not self.terms_accepted:
             raise ValueError("terms_accepted must be true.")
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValueError("latitude and longitude must be provided together.")
         self.categories = normalize_account_categories(
             self.categories or [self.category]
         )

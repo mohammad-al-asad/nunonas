@@ -4,6 +4,8 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.domain.promotion_types import OFFER_TYPE_PATTERN
+
 from app.domain.event_categories import normalize_event_category
 from app.domain.vendor_categories import normalize_account_categories
 
@@ -17,6 +19,47 @@ class BookingRescheduleRequest(BaseModel):
     date: str
     time: str
     note: str | None = None
+
+
+class ManualBookingCreateRequest(BaseModel):
+    """A booking the provider adds for a walk-in or phone guest. No commission is charged."""
+
+    provider_type: str = Field(pattern="^(restaurant|hotel|spa)$")
+    customer_name: str = Field(min_length=1, max_length=120)
+    customer_phone: str | None = Field(default=None, max_length=40)
+    customer_email: str | None = Field(default=None, max_length=200)
+    date: str
+    time: str = Field(default="", max_length=20)
+    guests: int = Field(default=1, ge=1, le=100)
+    total_amount: float = Field(default=0, ge=0)
+    room_id: str | None = None
+    check_out_date: str | None = None
+    service_id: str | None = None
+    seating_preference: str | None = Field(default=None, max_length=50)
+    special_requests: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("customer_name", "customer_phone", "customer_email", "time", "seating_preference", "special_requests", mode="before")
+    @classmethod
+    def strip_text(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
+    @field_validator("date", "check_out_date")
+    @classmethod
+    def validate_dates(cls, value: str | None) -> str | None:
+        if value is None or value == "":
+            return None
+        return date.fromisoformat(value.strip()).isoformat()
+
+    @model_validator(mode="after")
+    def validate_by_type(self) -> "ManualBookingCreateRequest":
+        if self.provider_type in {"restaurant", "spa"} and not self.time:
+            raise ValueError("Choose a time for this booking.")
+        if self.provider_type == "hotel":
+            if not self.room_id:
+                raise ValueError("Choose a room type for this stay.")
+            if not self.check_out_date or self.check_out_date <= self.date:
+                raise ValueError("Check-out must be after check-in.")
+        return self
 
 
 class AssetUploadRequest(BaseModel):
@@ -45,7 +88,6 @@ class RoomUpsertRequest(BaseModel):
     base_price: float = Field(ge=0)
     weekend_price: float = Field(ge=0)
     default_discount_percent: float = Field(ge=0, le=100)
-    tax_included: bool = True
     amenities: list[str] = Field(default_factory=list)
     images: list[str] = Field(default_factory=list)
     inventory_count: int = Field(default=1, ge=0)
@@ -315,7 +357,8 @@ class VendorHappyHourStatusRequest(BaseModel):
 class PromotionUpsertRequest(BaseModel):
     promotion_name: str
     internal_description: str = ""
-    offer_type: str = Field(pattern="^(percentage|fixed_amount|happy_hour|custom_deal)$")
+    offer_type: str = Field(pattern=OFFER_TYPE_PATTERN)
+    terms: str = Field(default="", max_length=500)
     discount_value: float = Field(ge=0)
     applicable_to: str = "All Services"
     start_date: str
@@ -327,7 +370,7 @@ class PromotionUpsertRequest(BaseModel):
     minimum_spend: float | None = Field(default=None, ge=0)
     active: bool = True
 
-    @field_validator("promotion_name", "internal_description", "applicable_to", "promo_code", mode="before")
+    @field_validator("promotion_name", "internal_description", "terms", "applicable_to", "promo_code", mode="before")
     @classmethod
     def _strip_promotion_text(cls, value):
         return value.strip() if isinstance(value, str) else value
@@ -343,8 +386,6 @@ class PromotionUpsertRequest(BaseModel):
             raise ValueError("Promotion dates must use YYYY-MM-DD.") from exc
         if end < start:
             raise ValueError("Promotion end date must be on or after its start date.")
-        if self.offer_type == "percentage" and self.discount_value > 100:
-            raise ValueError("Percentage discounts cannot exceed 100%.")
         if self.require_promo_code and not self.promo_code:
             raise ValueError("A promo code is required when promo-code restriction is enabled.")
         self.promo_code = self.promo_code.upper() if self.promo_code else None
@@ -354,7 +395,8 @@ class PromotionUpsertRequest(BaseModel):
 class PromotionUpdateRequest(BaseModel):
     promotion_name: str | None = None
     internal_description: str | None = None
-    offer_type: str | None = Field(default=None, pattern="^(percentage|fixed_amount|happy_hour|custom_deal)$")
+    offer_type: str | None = Field(default=None, pattern=OFFER_TYPE_PATTERN)
+    terms: str | None = Field(default=None, max_length=500)
     discount_value: float | None = Field(default=None, ge=0)
     applicable_to: str | None = None
     start_date: str | None = None
@@ -378,8 +420,6 @@ class PromotionUpdateRequest(BaseModel):
             self.promo_code = self.promo_code.strip().upper() or None
         if self.require_promo_code is True and "promo_code" in self.model_fields_set and not self.promo_code:
             raise ValueError("A promo code is required when promo-code restriction is enabled.")
-        if self.offer_type == "percentage" and self.discount_value is not None and self.discount_value > 100:
-            raise ValueError("Percentage discounts cannot exceed 100%.")
         if self.start_date and self.end_date:
             try:
                 if date.fromisoformat(self.end_date) < date.fromisoformat(self.start_date):
@@ -399,15 +439,8 @@ class ReviewReplyRequest(BaseModel):
     reply_text: str = Field(min_length=2, max_length=2000)
 
 
-class LoyaltySettingsRequest(BaseModel):
-    enable_loyalty_program: bool
-    points_rule_type: str = Field(pattern="^(points_per_currency|percentage_based)$")
-    points_earned: float = Field(ge=0)
-    currency_unit: float = Field(default=1, ge=0)
-    percentage_value: float = Field(default=0, ge=0, le=100)
-    first_booking_bonus: int = Field(default=0, ge=0)
-    review_bonus_points: int = Field(default=0, ge=0)
-    points_expiry_policy: str = "1 Year"
+class LoyaltyEnrollmentRequest(BaseModel):
+    enabled: bool
 
 
 class VendorSettingsGeneralRequest(BaseModel):
@@ -423,15 +456,7 @@ class VendorSettingsGeneralRequest(BaseModel):
     emergency_contact: str | None = None
 
 
-class VendorServiceOffer(BaseModel):
-    title: str = Field(min_length=1, max_length=120)
-    description: str = Field(default="", max_length=500)
-    active: bool = True
-
-    @field_validator("title", "description", mode="before")
-    @classmethod
-    def strip_offer_text(cls, value):
-        return str(value or "").strip()
+WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 
 
 class VendorServiceSettings(BaseModel):
@@ -449,9 +474,13 @@ class VendorServiceSettings(BaseModel):
     closing_time: str = ""
     available_booking_times: list[str] = Field(default_factory=list)
     seating_preferences: list[str] = Field(default_factory=list)
+    # Restaurant booking rules, enforced by the customer app and the booking API.
+    booking_capacity: int | None = Field(default=None, ge=1, le=500)
+    max_guests: int | None = Field(default=None, ge=1, le=20)  # the booking API caps parties at 20
+    closed_days: list[str] = Field(default_factory=list)
+    blocked_dates: list[str] = Field(default_factory=list, max_length=366)
     policy: str = ""
     amenities: list[str] = Field(default_factory=list, max_length=50)
-    special_offers: list[VendorServiceOffer] = Field(default_factory=list, max_length=20)
     published: bool | None = None
     model_config = ConfigDict(extra="allow")
 
@@ -506,6 +535,37 @@ class VendorServiceSettings(BaseModel):
     def normalize_seating_preferences(cls, value):
         values = value if isinstance(value, list) else str(value or "").split(",")
         return list(dict.fromkeys(str(item).strip() for item in values if str(item).strip()))
+
+    @field_validator("booking_capacity", "max_guests", mode="before")
+    @classmethod
+    def empty_limit_is_unset(cls, value):
+        return None if value in (None, "") else value
+
+    @field_validator("closed_days", mode="before")
+    @classmethod
+    def normalize_closed_days(cls, value):
+        values = value if isinstance(value, list) else str(value or "").split(",")
+        days = {str(item).strip().title() for item in values if str(item).strip()}
+        unknown = days - set(WEEKDAYS)
+        if unknown:
+            raise ValueError(f"Unknown closed day: {', '.join(sorted(unknown))}.")
+        return [day for day in WEEKDAYS if day in days]
+
+    @field_validator("blocked_dates", mode="before")
+    @classmethod
+    def normalize_blocked_dates(cls, value):
+        from datetime import date as _date
+        values = value if isinstance(value, list) else str(value or "").split(",")
+        normalized = set()
+        for item in values:
+            text = str(item or "").strip()
+            if not text:
+                continue
+            try:
+                normalized.add(_date.fromisoformat(text).isoformat())
+            except ValueError as exc:
+                raise ValueError("Blocked dates must use the YYYY-MM-DD format.") from exc
+        return sorted(normalized)
 
     @field_validator("latitude", "longitude", mode="before")
     @classmethod
@@ -614,8 +674,8 @@ class NotificationActionRequest(BaseModel):
     action: str = Field(pattern="^(accept_request|view_details|reply_review|mark_read)$")
 
 
-class PlatformCampaignJoinRequest(BaseModel):
-    join: bool
+class PlatformOfferResponseRequest(BaseModel):
+    accept: bool
 
 
 class VendorPasswordChangeRequest(BaseModel):

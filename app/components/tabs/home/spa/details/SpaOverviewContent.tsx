@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import theme from "../../../../../constants/theme";
 import { useGridColumns } from "../../../../../lib/use-grid-columns";
 import type { NormalizedSpa } from "../../../../../lib/provider-types";
+import ProviderOffers, { type ProviderOffer } from "../../../../ui/ProviderOffers";
 
 const AMENITY_COLOR = "#3b82f6";
 
@@ -31,10 +32,11 @@ function amenityIcon(name: string) {
   return AMENITY_ICONS.find(([keyword]) => lower.includes(keyword))?.[1] ?? "checkmark-circle";
 }
 
-const SpaOverviewContent = ({ spa }: { spa: NormalizedSpa }) => {
+const SpaOverviewContent = ({ spa, offers = [] }: { spa: NormalizedSpa; offers?: ProviderOffer[] }) => {
   const grid = useGridColumns();
   return (
     <View style={styles.container}>
+      <ProviderOffers offers={offers} />
       {/* About Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>About</Text>

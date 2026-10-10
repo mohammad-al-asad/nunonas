@@ -7,7 +7,6 @@ import {
 describe("dashboardTitleForPath", () => {
   it("maps top-level management pages", () => {
     expect(dashboardTitleForPath("/dashboard")).toBe("Business Overview");
-    expect(dashboardTitleForPath("/analytics")).toBe("Business Analytics");
     expect(dashboardTitleForPath("/spa-bookings")).toBe(
       "Spa Booking Management",
     );
@@ -25,9 +24,9 @@ describe("dashboardTitleForPath", () => {
   });
 
   it("provides one centralized title and description per route", () => {
-    expect(dashboardHeaderForPath("/analytics")).toEqual({
-      title: "Business Analytics",
-      description: "Live metrics from the vendor analytics endpoints.",
+    expect(dashboardHeaderForPath("/dashboard")).toEqual({
+      title: "Business Overview",
+      description: "Live activity and performance across your enabled services.",
     });
     expect(dashboardHeaderForPath("/hotel-services/rooms/room-id").title).toBe(
       "Edit Room",

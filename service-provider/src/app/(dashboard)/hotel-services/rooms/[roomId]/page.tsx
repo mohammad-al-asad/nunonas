@@ -53,7 +53,6 @@ export default function EditRoomPage() {
     basePrice: "0",
     weekendPrice: "0",
     discount: "0",
-    taxIncluded: true,
     activeStatus: true,
     totalInventory: "1",
     minStay: "1",
@@ -80,7 +79,6 @@ export default function EditRoomPage() {
           basePrice: String(room.base_price ?? 0),
           weekendPrice: String(room.weekend_price ?? room.base_price ?? 0),
           discount: String(room.default_discount_percent ?? 0),
-          taxIncluded: Boolean(room.tax_included ?? true),
           activeStatus: Boolean(room.active_status ?? room.available ?? true),
           totalInventory: String(room.inventory_count ?? 1),
           minStay: String(room.min_stay_nights ?? 1),
@@ -153,7 +151,6 @@ export default function EditRoomPage() {
         base_price: parseFloat(formData.basePrice) || 0,
         weekend_price: parseFloat(formData.weekendPrice) || 0,
         default_discount_percent: parseFloat(formData.discount) || 0,
-        tax_included: formData.taxIncluded,
         amenities: selectedAmenities,
         images,
         inventory_count: parseInt(formData.totalInventory, 10) || 1,
@@ -251,20 +248,6 @@ export default function EditRoomPage() {
             <input name="basePrice" value={formData.basePrice} onChange={handleInputChange} placeholder="Base price" className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 px-6 py-4 text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-sky-50" />
             <input name="weekendPrice" value={formData.weekendPrice} onChange={handleInputChange} placeholder="Weekend price" className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 px-6 py-4 text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-sky-50" />
             <input name="discount" value={formData.discount} onChange={handleInputChange} placeholder="Discount %" className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 px-6 py-4 text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-sky-50" />
-            <label className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/50 px-6 py-4 text-sm font-bold text-slate-700">
-              Tax included
-              <input
-                type="checkbox"
-                checked={formData.taxIncluded}
-                onChange={(event) =>
-                  setFormData((current) => ({
-                    ...current,
-                    taxIncluded: event.target.checked,
-                  }))
-                }
-                className="h-4 w-4 accent-[#1e2a5e]"
-              />
-            </label>
             <input name="totalInventory" value={formData.totalInventory} onChange={handleInputChange} placeholder="Inventory count" className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 px-6 py-4 text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-sky-50" />
             <input name="minStay" value={formData.minStay} onChange={handleInputChange} placeholder="Min stay nights" className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 px-6 py-4 text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-sky-50" />
             <input name="maxStay" value={formData.maxStay} onChange={handleInputChange} placeholder="Max stay nights" className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 px-6 py-4 text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-sky-50" />

@@ -17,10 +17,11 @@ from app.modules.vendor.schemas_portal import (
     AssetUploadRequest,  # kept for backward-compat but no longer used by file-upload endpoints
     BookingRescheduleRequest,
     BookingStatusUpdateRequest,
-    LoyaltySettingsRequest,
+    ManualBookingCreateRequest,
+    LoyaltyEnrollmentRequest,
     NotificationActionRequest,
     NotificationSettingsRequest,
-    PlatformCampaignJoinRequest,
+    PlatformOfferResponseRequest,
     PromotionStatusRequest,
     PromotionUpdateRequest,
     PromotionUpsertRequest,
@@ -43,6 +44,7 @@ from app.modules.vendor.schemas_portal import (
     VendorSupportTicketCreateRequest,
     VendorSupportTicketMessageRequest,
 )
+from app.domain import loyalty, platform_offers
 from app.domain.service_listings import normalize_service_setting_type, normalize_service_type
 from app.modules.vendor.service_auth import VendorAuthService
 from app.modules.vendor.service_portal import VendorPortalService
@@ -220,6 +222,18 @@ def list_vendor_bookings(
         date_from=date_from,
         date_to=date_to,
     )
+
+
+@router.post("/booking-management/bookings", tags=["Vendor - Bookings"], status_code=status.HTTP_201_CREATED)
+def create_manual_vendor_booking(
+    payload: ManualBookingCreateRequest,
+    current_vendor: dict = Depends(get_current_vendor),
+    portal_service: VendorPortalService = Depends(get_vendor_portal_service),
+) -> dict:
+    try:
+        return portal_service.repo.create_manual_booking(_vendor_id(current_vendor), payload.model_dump())
+    except (InvalidId, ValueError) as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc) or "Invalid booking.") from exc
 
 
 @router.get("/booking-management/bookings/{booking_id}", tags=["Vendor - Bookings"])
@@ -812,11 +826,11 @@ def list_vendor_promotions(
     vendor_id = _vendor_id(current_vendor)
     portal_service.initialize(vendor_id)
     business_promotions = portal_service.repo.list_promotions(vendor_id, search=search, active=active)
-    platform_campaigns = portal_service.repo.list_platform_campaigns(vendor_id)
+    platform_offer_rows = platform_offers.list_for_vendor(portal_service.repo.promotions.database, vendor_id)
     return {
         "summary": portal_service.repo.summarize_promotions(business_promotions),
         "business_promotions": business_promotions,
-        "platform_campaigns": platform_campaigns,
+        "platform_offers": platform_offer_rows,
     }
 
 
@@ -896,91 +910,21 @@ def delete_vendor_promotion(
     return MessageResponse(message="Promotion deleted.")
 
 
-@router.patch("/promotions/platform-campaigns/{campaign_id}/join", tags=["Vendor - Promotions"])
-def join_platform_campaign(
-    campaign_id: str,
-    payload: PlatformCampaignJoinRequest,
+@router.post("/promotions/platform-offers/{offer_id}/respond", tags=["Vendor - Promotions"])
+def respond_to_platform_offer(
+    offer_id: str,
+    payload: PlatformOfferResponseRequest,
     current_vendor: dict = Depends(get_current_vendor),
     portal_service: VendorPortalService = Depends(get_vendor_portal_service),
 ) -> dict:
+    db = portal_service.repo.promotions.database
+    platform_offers.ensure_indexes(db)
     try:
-        return portal_service.repo.set_platform_campaign_join(
-            _vendor_id(current_vendor), campaign_id, payload.join
-        )
-    except InvalidId as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found.") from exc
-    except ValueError as exc:
+        return platform_offers.respond(db, _vendor_id(current_vendor), offer_id, payload.accept)
+    except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-
-
-# ---------------------------------------------------------------------------
-# Analytics
-# ---------------------------------------------------------------------------
-
-
-@router.get("/analytics/overview", tags=["Vendor - Analytics"])
-def get_vendor_analytics_overview(
-    date_from: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
-    date_to: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
-    current_vendor: dict = Depends(get_current_vendor),
-    portal_service: VendorPortalService = Depends(get_vendor_portal_service),
-) -> dict:
-    vendor_id = _vendor_id(current_vendor)
-    portal_service.initialize(vendor_id)
-    return _safe_call(
-        portal_service.repo.get_analytics_overview,
-        vendor_id,
-        date_from,
-        date_to,
-        detail="Failed to load analytics",
-    )
-
-
-@router.get("/analytics/demographics", tags=["Vendor - Analytics"])
-def get_vendor_analytics_demographics(
-    current_vendor: dict = Depends(get_current_vendor),
-    portal_service: VendorPortalService = Depends(get_vendor_portal_service),
-) -> dict:
-    vendor_id = _vendor_id(current_vendor)
-    portal_service.initialize(vendor_id)
-    return portal_service.repo.get_demographics(vendor_id)
-
-
-@router.get("/analytics/occupancy", tags=["Vendor - Analytics"])
-def get_vendor_analytics_occupancy(
-    current_vendor: dict = Depends(get_current_vendor),
-    portal_service: VendorPortalService = Depends(get_vendor_portal_service),
-) -> dict:
-    vendor_id = _vendor_id(current_vendor)
-    portal_service.initialize(vendor_id)
-    return portal_service.repo.get_occupancy_metrics(vendor_id)
-
-
-@router.get("/analytics/reviews-summary", tags=["Vendor - Analytics"])
-def get_vendor_analytics_reviews_summary(
-    provider_type: str | None = Query(default=None, pattern="^(restaurant|hotel|spa|event)$"),
-    current_vendor: dict = Depends(get_current_vendor),
-    portal_service: VendorPortalService = Depends(get_vendor_portal_service),
-) -> dict:
-    vendor_id = _vendor_id(current_vendor)
-    portal_service.initialize(vendor_id)
-    return portal_service.repo.get_reviews_summary(vendor_id, provider_type=provider_type)
-
-
-@router.get("/analytics/export", tags=["Vendor - Analytics"])
-def export_vendor_analytics(
-    date_from: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
-    date_to: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
-    current_vendor: dict = Depends(get_current_vendor),
-    portal_service: VendorPortalService = Depends(get_vendor_portal_service),
-) -> dict:
-    return _safe_call(
-        portal_service.repo.export_analytics,
-        _vendor_id(current_vendor),
-        date_from,
-        date_to,
-        detail="Failed to export analytics",
-    )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------
@@ -988,23 +932,33 @@ def export_vendor_analytics(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/loyalty/settings", tags=["Vendor - Loyalty"])
-def get_vendor_loyalty_settings(
+@router.get("/loyalty", tags=["Vendor - Loyalty"])
+def get_vendor_loyalty(
     current_vendor: dict = Depends(get_current_vendor),
     portal_service: VendorPortalService = Depends(get_vendor_portal_service),
 ) -> dict:
     vendor_id = _vendor_id(current_vendor)
     portal_service.initialize(vendor_id)
-    return portal_service.repo.get_loyalty_settings(vendor_id)
+    return portal_service.repo.get_loyalty_overview(vendor_id)
 
 
-@router.patch("/loyalty/settings", tags=["Vendor - Loyalty"])
-def update_vendor_loyalty_settings(
-    payload: LoyaltySettingsRequest,
+@router.post("/loyalty/enrollment", tags=["Vendor - Loyalty"])
+def set_vendor_loyalty_enrollment(
+    payload: LoyaltyEnrollmentRequest,
     current_vendor: dict = Depends(get_current_vendor),
     portal_service: VendorPortalService = Depends(get_vendor_portal_service),
 ) -> dict:
-    return portal_service.repo.update_loyalty_settings(_vendor_id(current_vendor), payload.model_dump())
+    """Turning on sends a request to the admin; turning off is allowed after the minimum period."""
+    vendor_id = _vendor_id(current_vendor)
+    db = portal_service.repo.loyalty_settings.database
+    try:
+        if payload.enabled:
+            loyalty.request_enrollment(db, vendor_id)
+        else:
+            loyalty.turn_off(db, vendor_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    return portal_service.repo.get_loyalty_overview(vendor_id)
 
 
 # ---------------------------------------------------------------------------

@@ -7,6 +7,16 @@ from bson import ObjectId
 from pymongo.collection import Collection
 from pymongo.database import Database
 
+RESEND_COOLDOWN = timedelta(seconds=60)
+FAILURE_WINDOW = timedelta(minutes=15)
+MAX_FAILURES_PER_WINDOW = 10
+
+
+def _as_utc(value: Any) -> datetime | None:
+    if not isinstance(value, datetime):
+        return None
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+
 
 class AdminPasswordResetRepository:
     def __init__(self, db: Database):
@@ -17,50 +27,75 @@ class AdminPasswordResetRepository:
         self.token_collection.create_index("token", unique=True)
         self.token_collection.create_index("expires_at", expireAfterSeconds=0)
 
-    def create_validation_code(self, admin_id: str, code_length: int, expires_in_minutes: int) -> str:
+    def create_validation_code(self, admin_id: str, code_length: int, expires_in_minutes: int) -> str | None:
+        """Issue a new code, or return None while resends are on cooldown or guessing is locked out.
+
+        Wrong guesses are counted per admin over FAILURE_WINDOW, not per code, so requesting
+        a fresh code does not reset the limit.
+        """
+        now = datetime.now(UTC)
+        record = self.code_collection.find_one({"admin_id": ObjectId(admin_id)})
+        window_start = _as_utc(record.get("window_started_at")) if record else None
+        window_active = window_start is not None and window_start > now - FAILURE_WINDOW
+        if record and window_active and record.get("window_failures", 0) >= MAX_FAILURES_PER_WINDOW:
+            return None
+        issued_at = _as_utc(record.get("issued_at")) if record else None
+        if issued_at is not None and issued_at > now - RESEND_COOLDOWN:
+            return None
+
+        if not window_active:
+            window_start = now
+        code_expires_at = now + timedelta(minutes=expires_in_minutes)
         max_code = 10**code_length
         code = f"{secrets.randbelow(max_code):0{code_length}d}"
-        now = datetime.now(UTC)
+        update: dict[str, Any] = {
+            "code_hash": self._hash_code(admin_id, code),
+            "code_expires_at": code_expires_at,
+            # The document (and its failure count) lives until both the code and the window end.
+            "expires_at": max(code_expires_at, window_start + FAILURE_WINDOW),
+            "issued_at": now,
+            "used": False,
+            "attempts": 0,
+            "updated_at": now,
+        }
+        if not window_active:
+            update.update({"window_started_at": now, "window_failures": 0})
         self.code_collection.update_one(
             {"admin_id": ObjectId(admin_id)},
-            {
-                "$set": {
-                    "code_hash": self._hash_code(admin_id, code),
-                    "expires_at": now + timedelta(minutes=expires_in_minutes),
-                    "used": False,
-                    "attempts": 0,
-                    "updated_at": now,
-                },
-                "$setOnInsert": {"created_at": now},
-            },
+            {"$set": update, "$setOnInsert": {"created_at": now}},
             upsert=True,
         )
         return code
 
     def validate_and_consume_code(self, admin_id: str, code: str, max_attempts: int = 5) -> bool:
-        record = self.code_collection.find_one(
-            {"admin_id": ObjectId(admin_id), "used": False, "expires_at": {"$gt": datetime.now(UTC)}}
-        )
+        now = datetime.now(UTC)
+        record = self.code_collection.find_one({"admin_id": ObjectId(admin_id), "used": False})
         if not record:
             return False
+        code_expires_at = _as_utc(record.get("code_expires_at") or record.get("expires_at"))
+        if code_expires_at is None or code_expires_at <= now:
+            return False
 
-        if record.get("attempts", 0) >= max_attempts:
+        if (
+            record.get("attempts", 0) >= max_attempts
+            or record.get("window_failures", 0) >= MAX_FAILURES_PER_WINDOW
+        ):
             self.code_collection.update_one(
                 {"_id": record["_id"]},
-                {"$set": {"used": True, "updated_at": datetime.now(UTC)}},
+                {"$set": {"used": True, "updated_at": now}},
             )
             return False
 
-        if record.get("code_hash") != self._hash_code(admin_id, code):
+        if not secrets.compare_digest(str(record.get("code_hash") or ""), self._hash_code(admin_id, code)):
             self.code_collection.update_one(
                 {"_id": record["_id"]},
-                {"$inc": {"attempts": 1}, "$set": {"updated_at": datetime.now(UTC)}},
+                {"$inc": {"attempts": 1, "window_failures": 1}, "$set": {"updated_at": now}},
             )
             return False
 
         self.code_collection.update_one(
             {"_id": record["_id"]},
-            {"$set": {"used": True, "updated_at": datetime.now(UTC)}},
+            {"$set": {"used": True, "updated_at": now}},
         )
         return True
 

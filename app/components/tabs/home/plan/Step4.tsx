@@ -6,37 +6,24 @@ import {
   StyleSheet,
   TouchableOpacity,
   Switch,
-  Modal,
-  Pressable,
   TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import theme from "../../../../constants/theme";
 
-// Static areas until a location search provider is wired up.
-const AREA_OPTIONS = ["Anywhere", "Dhaka", "Feni", "Comilla"];
-
 const Step4 = ({ data, setData, onComplete }) => {
   const [vouchersOnly, setVouchersOnly] = useState(data.vouchersOnly || false);
-  const [selectedArea, setSelectedArea] = useState(
-    data.area || "Anywhere",
-  );
-
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [customArea, setCustomArea] = useState("");
+  // An empty field means "Anywhere".
+  const [area, setArea] = useState(data.area && data.area !== "Anywhere" ? data.area : "");
 
   const handleToggle = (value) => {
     setVouchersOnly(value);
     setData({ ...data, vouchersOnly: value });
   };
 
-  const handleSelectArea = (area) => {
-    const value = area.trim();
-    if (!value) return;
-    setSelectedArea(value);
-    setData({ ...data, area: value });
-    setCustomArea("");
-    setPickerOpen(false);
+  const handleAreaChange = (value) => {
+    setArea(value);
+    setData({ ...data, area: value.trim() || "Anywhere" });
   };
 
   return (
@@ -46,18 +33,21 @@ const Step4 = ({ data, setData, onComplete }) => {
 
       <View style={styles.card}>
         <Text style={styles.label}>Preferred Area</Text>
-        <TouchableOpacity
-          style={styles.dropdown}
-          onPress={() => setPickerOpen(true)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.dropdownText}>{selectedArea}</Text>
-          <Ionicons
-            name="chevron-down"
-            size={20}
-            color={theme.COLORS.textSecondary}
+        <View style={styles.areaInputWrap}>
+          <Ionicons name="location-outline" size={20} color={theme.COLORS.textSecondary} />
+          <TextInput
+            style={styles.areaInput}
+            value={area}
+            onChangeText={handleAreaChange}
+            placeholder="e.g. Gulshan, Dhaka"
+            placeholderTextColor={theme.COLORS.textSecondary}
+            accessibilityLabel="Preferred area"
+            autoCapitalize="words"
+            returnKeyType="done"
+            maxLength={120}
           />
-        </TouchableOpacity>
+        </View>
+        <Text style={styles.helper}>Leave empty to search anywhere.</Text>
 
         <View style={styles.row}>
           <View style={styles.voucherIconContainer}>
@@ -84,56 +74,6 @@ const Step4 = ({ data, setData, onComplete }) => {
         <Text style={styles.revealButtonText}>Reveal My Plan ✨</Text>
       </TouchableOpacity>
 
-      <Modal
-        visible={pickerOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setPickerOpen(false)}
-      >
-        <Pressable style={styles.backdrop} onPress={() => setPickerOpen(false)}>
-          <Pressable style={styles.sheet}>
-            <Text style={styles.sheetTitle}>Preferred Area</Text>
-            {AREA_OPTIONS.map((area) => (
-              <TouchableOpacity
-                key={area}
-                style={styles.option}
-                onPress={() => handleSelectArea(area)}
-              >
-                <Text style={styles.optionText}>{area}</Text>
-                {selectedArea === area && (
-                  <Ionicons
-                    name="checkmark"
-                    size={20}
-                    color={theme.COLORS.primary}
-                  />
-                )}
-              </TouchableOpacity>
-            ))}
-            <View style={styles.customRow}>
-              <TextInput
-                style={styles.customInput}
-                value={customArea}
-                onChangeText={setCustomArea}
-                placeholder="Or type another area"
-                placeholderTextColor={theme.COLORS.textSecondary}
-                returnKeyType="done"
-                onSubmitEditing={() => handleSelectArea(customArea)}
-                maxLength={60}
-              />
-              <TouchableOpacity
-                style={[
-                  styles.customButton,
-                  !customArea.trim() && styles.customButtonDisabled,
-                ]}
-                onPress={() => handleSelectArea(customArea)}
-                disabled={!customArea.trim()}
-              >
-                <Ionicons name="checkmark" size={20} color={theme.COLORS.white} />
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </View>
   );
 };
@@ -172,20 +112,26 @@ const styles = StyleSheet.create({
     color: theme.COLORS.textPrimary,
     marginBottom: 12,
   },
-  dropdown: {
+  areaInputWrap: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 10,
     borderWidth: 1,
     borderColor: theme.COLORS.border,
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: 24,
+    paddingHorizontal: 14,
   },
-  dropdownText: {
+  areaInput: {
+    flex: 1,
+    paddingVertical: 14,
     fontSize: 16,
     color: theme.COLORS.textPrimary,
+  },
+  helper: {
+    marginTop: 6,
+    marginBottom: 24,
+    fontSize: 12,
+    color: theme.COLORS.textSecondary,
   },
   row: {
     flexDirection: "row",
@@ -225,62 +171,6 @@ const styles = StyleSheet.create({
     color: theme.COLORS.white,
     fontSize: 18,
     fontWeight: "700",
-  },
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.4)",
-    justifyContent: "center",
-    padding: 24,
-  },
-  sheet: {
-    backgroundColor: theme.COLORS.white,
-    borderRadius: 24,
-    padding: 20,
-  },
-  sheetTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: theme.COLORS.textPrimary,
-    marginBottom: 8,
-  },
-  option: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.COLORS.border,
-  },
-  optionText: {
-    fontSize: 16,
-    color: theme.COLORS.textPrimary,
-  },
-  customRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 16,
-  },
-  customInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: theme.COLORS.border,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: theme.COLORS.textPrimary,
-  },
-  customButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 12,
-    backgroundColor: theme.COLORS.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  customButtonDisabled: {
-    opacity: 0.5,
   },
 });
 

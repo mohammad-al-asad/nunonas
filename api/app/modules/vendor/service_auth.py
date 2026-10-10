@@ -322,6 +322,8 @@ class VendorAuthService:
                 "venue_capacity": payload.venue_capacity,
                 "ticket_pricing_type": payload.ticket_pricing_type,
                 "business_location_label": payload.business_location_label,
+                "latitude": payload.latitude,
+                "longitude": payload.longitude,
                 "equipment_availability": payload.equipment_availability,
             },
             verification_payload={

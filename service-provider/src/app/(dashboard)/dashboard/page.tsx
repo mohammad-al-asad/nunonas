@@ -12,6 +12,7 @@ import { AllBookingsTable, type DashboardBooking } from "@/components/AllBooking
 import type { UpcomingBooking } from "@/components/UpcomingBookingsTable";
 import { CalendarPreview, type CalendarPreviewPayload } from "@/components/CalendarPreview";
 import { RecentReviews, type RecentReview } from "@/components/RecentReviews";
+import { CustomerDemographics, type CustomerDemographicsData } from "@/components/CustomerDemographics";
 import { dashboardOverviewQuery, vendorProfileQuery } from "@/lib/vendor-queries";
 import { extractVendorCategories } from "@/lib/vendor-access";
 
@@ -28,6 +29,7 @@ type DashboardOverview = {
   calendar_preview?: CalendarPreviewPayload;
   upcoming_bookings?: UpcomingBooking[];
   recent_reviews?: RecentReview[];
+  customer_demographics?: CustomerDemographicsData;
 };
 
 function currencyCode(profile: Record<string, unknown> | undefined) {
@@ -66,6 +68,16 @@ export default function Dashboard() {
         : categories.includes("Event")
           ? "/event-bookings"
           : "/happy-hours";
+  const bookingPages: Record<string, string> = {
+    Restaurant: "/restaurant-bookings",
+    Hotel: "/hotel-bookings",
+    Spa: "/spa-bookings",
+    Event: "/event-bookings",
+  };
+  // One "View all" link per booking service the provider offers.
+  const viewAllBookingLinks = categories
+    .filter((category) => category in bookingPages)
+    .map((category) => ({ label: category, href: bookingPages[category] }));
   const bookingsLinkLabel =
     categories.includes("Happy Hour") &&
     !categories.some((category) =>
@@ -83,13 +95,11 @@ export default function Dashboard() {
     categories.includes("Happy Hour") ? { label: "Manage Happy Hours", href: "/happy-hours", icon: BadgePercent } : null,
   ].filter(Boolean) as Array<{ label: string; href: string; icon: typeof Hotel }>;
   const pendingBookings = (overview?.upcoming_bookings ?? []).filter((booking) => String(booking.status ?? "").toLowerCase() === "pending").length;
-  const unpaidBookings = (overview?.upcoming_bookings ?? []).filter((booking) => ["unpaid", "failed"].includes(String(booking.payment_status ?? booking.payment ?? "").toLowerCase())).length;
   const unansweredReviews = (overview?.recent_reviews ?? []).filter(
     (review) => !(review.vendor_reply ?? review.reply),
   ).length;
   const attentionItems = [
     { label: "Pending confirmations", count: pendingBookings, href: bookingsHref },
-    { label: "Payments needing attention", count: unpaidBookings, href: bookingsHref },
     { label: "Reviews awaiting reply", count: unansweredReviews, href: "/reviews" },
   ].filter((item) => item.count > 0);
 
@@ -121,7 +131,8 @@ export default function Dashboard() {
               <StatsCard title="Average rating" value={Number(kpis?.average_rating ?? 0).toFixed(1)} trend={{ value: "Out of 5", type: "rating" }} />
             </section>
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8"><div className="lg:col-span-2"><BookingTrendsChart trends={overview?.booking_trends} /></div><CalendarPreview initialData={overview?.calendar_preview} /></div>
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8"><div className="lg:col-span-2"><AllBookingsTable bookings={overview?.booking_rows} /></div><RecentReviews reviews={overview?.recent_reviews} /></div>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8"><div className="lg:col-span-2"><AllBookingsTable bookings={overview?.booking_rows} viewAllLinks={viewAllBookingLinks} /></div><RecentReviews reviews={overview?.recent_reviews} /></div>
+            <CustomerDemographics data={overview?.customer_demographics} />
           </>
         )}
       </main>

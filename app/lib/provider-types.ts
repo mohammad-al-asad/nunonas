@@ -38,6 +38,7 @@ export type ProviderPayload = {
   amenities?: string[] | null;
   offers?: ProviderOffer[] | null;
   seating_preferences?: string[] | null;
+  booking_rules?: { closed_days?: string[] | null; blocked_dates?: string[] | null; max_guests?: number | null } | null;
   policy?: string | null;
   booking_policy?: string | null;
   opening_hours?: { open_time?: string | null; close_time?: string | null; is_open_now?: boolean; available_times?: string[] } | null;
@@ -49,6 +50,12 @@ export type ProviderPayload = {
   available?: boolean | null;
   phone?: string | null;
   contact?: { phone?: string | null; email?: string | null; reservations_email?: string | null } | null;
+};
+
+export type RestaurantBookingRules = {
+  closedDays: string[];
+  blockedDates: string[];
+  maxGuests: number;
 };
 
 export type ProviderOffer = {
@@ -81,6 +88,7 @@ export type NormalizedRestaurant = {
   description: string;
   amenities: string[];
   seatingPreferences: string[];
+  bookingRules: RestaurantBookingRules;
   bookingPolicy: string;
   phone?: string;
   latitude?: number | null;

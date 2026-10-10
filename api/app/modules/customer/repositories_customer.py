@@ -11,6 +11,7 @@ from pymongo.collection import Collection
 from pymongo.database import Database
 
 from app.domain.event_categories import normalize_event_category
+from app.domain import loyalty, platform_offers, promotion_types
 from app.domain.service_listings import SERVICE_TYPES, collection_name_for, normalize_service_type
 from app.domain.vendor_categories import normalize_account_categories
 
@@ -392,7 +393,11 @@ class CustomerRepository:
         except ValueError:
             booking_day = datetime.now(UTC)
 
+        code_matched = False
         for promotion in self.vendor_promotions.find({"vendor_id": vendor_id, "active": True}):
+            # In-venue offers (buy one get one, % off food...) are honoured at the venue, not priced here.
+            if not promotion_types.is_booking_discount(promotion):
+                continue
             if not self._promotion_applies_to_service(promotion, service_type):
                 continue
             start_date = str(promotion.get("start_date") or "")
@@ -428,23 +433,41 @@ class CustomerRepository:
                 if previous:
                     continue
 
-            value = max(float(promotion.get("discount_value") or 0), 0)
-            offer_type = str(promotion.get("offer_type") or "percentage").lower()
-            discount = subtotal * min(value, 100) / 100 if offer_type == "percentage" else value
-            candidates.append((min(round(discount, 2), subtotal), promotion))
+            code_matched = code_matched or bool(normalized_code)
+            candidates.append((self._discount_amount(promotion.get("offer_type"), promotion.get("discount_value"), subtotal), promotion))
 
-        if normalized_code and not candidates:
+        if normalized_code and not code_matched:
             raise ValueError("Promo code is invalid or not available for this booking.")
+        # Platform offers the provider accepted compete with its own promotions; the best one wins.
+        for offer in platform_offers.accepted_offers(self.vendors.database, vendor_id, booking_day.date().isoformat()):
+            candidates.append(
+                (self._discount_amount(offer.get("discount_type"), offer.get("discount_value"), subtotal), {**offer, "platform": True})
+            )
         if not candidates:
-            return {"discount_amount": 0.0, "promotion_id": None, "promotion_name": None, "promo_code": None}
+            return {"discount_amount": 0.0, "promotion_id": None, "platform_offer_id": None, "promotion_name": None, "promo_code": None}
 
         discount, promotion = max(candidates, key=lambda item: item[0])
+        if promotion.get("platform"):
+            return {
+                "discount_amount": discount,
+                "promotion_id": None,
+                "platform_offer_id": promotion["_id"],
+                "promotion_name": promotion.get("name") or "Platform offer",
+                "promo_code": None,
+            }
         return {
             "discount_amount": discount,
             "promotion_id": promotion["_id"],
+            "platform_offer_id": None,
             "promotion_name": promotion.get("promotion_name") or "Promotion",
             "promo_code": normalized_code or promotion.get("promo_code"),
         }
+
+    @staticmethod
+    def _discount_amount(offer_type: Any, value: Any, subtotal: float) -> float:
+        amount = max(float(value or 0), 0)
+        discount = subtotal * min(amount, 100) / 100 if str(offer_type or "percentage").lower() == "percentage" else amount
+        return min(round(discount, 2), subtotal)
 
     def _estimate_loyalty_points(
         self,
@@ -452,52 +475,38 @@ class CustomerRepository:
         customer_id: ObjectId | None,
         total: float,
     ) -> int:
-        loyalty = self.vendor_loyalty_settings.find_one({"vendor_id": vendor_id}) or {}
-        if loyalty.get("enable_loyalty_program") is not True:
+        rules = loyalty.rules_for_vendor(self.vendor_loyalty_settings.database, vendor_id)
+        if not rules:
             return 0
-        if loyalty.get("points_rule_type") == "percentage_based":
-            points = int(total * float(loyalty.get("percentage_value") or 0) / 100)
-        else:
-            currency_unit = float(loyalty.get("currency_unit") or 1)
-            points = int((total / currency_unit) * float(loyalty.get("points_earned") or 0))
-        if customer_id and not self.vendor_bookings.find_one(
+        first_booking = bool(customer_id) and not self.vendor_bookings.find_one(
             {
                 "vendor_id": vendor_id,
                 "customer_id": customer_id,
                 "status": {"$in": ["complete", "completed"]},
             },
             {"_id": 1},
-        ):
-            points += max(int(loyalty.get("first_booking_bonus") or 0), 0)
-        return max(points, 0)
+        )
+        return loyalty.booking_points(rules, total, first_booking)
 
-    def _list_service_offers(
-        self,
-        vendor_id: ObjectId,
-        service_type: str,
-        service_settings: dict[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
+    def _list_service_offers(self, vendor_id: ObjectId, service_type: str) -> list[dict[str, Any]]:
+        """Active promotions that apply to this service, shown in the app's Offers tab."""
         normalized = normalize_service_type(service_type)
-        if service_settings is None:
-            service_settings = self._service_settings(
-                self._get_vendor_bundle(vendor_id, normalized), normalized
-            )
-        settings_offers = [
-            {
-                "id": f"{normalized}-setting-offer-{index}",
-                "title": str(offer.get("title") or "").strip(),
-                "description": str(offer.get("description") or "").strip(),
-                "active": True,
-                "service_type": normalized,
-                "source": f"{normalized}_settings",
-            }
-            for index, offer in enumerate(service_settings.get("special_offers") or [])
-            if isinstance(offer, dict)
-            and str(offer.get("title") or "").strip()
-            and offer.get("active", True) is not False
-        ]
-        promotion_offers = []
         today = datetime.now(UTC).date().isoformat()
+        promotion_offers = [
+            {
+                "id": str(offer["_id"]),
+                "title": offer.get("name") or "Platform offer",
+                "label": platform_offers.discount_label(offer),
+                "description": offer.get("purpose") or "",
+                "terms": "",
+                "kind": "booking",
+                "start_date": offer.get("start_date"),
+                "end_date": offer.get("end_date"),
+                "service_type": normalized,
+                "source": "platform",
+            }
+            for offer in platform_offers.accepted_offers(self.vendors.database, vendor_id, today)
+        ]
         for document in self.vendor_promotions.find(
             {"vendor_id": vendor_id, "active": True}
         ).sort("created_at", DESCENDING):
@@ -514,14 +523,17 @@ class CustomerRepository:
                     "title": offer.get("promotion_name")
                     or offer.get("title")
                     or "Special offer",
+                    "label": promotion_types.label(offer),
                     "description": offer.get("internal_description")
                     or offer.get("description")
                     or "",
+                    "terms": offer.get("terms") or "",
+                    "kind": "booking" if promotion_types.is_booking_discount(offer) else "in_venue",
                     "service_type": normalized,
                     "source": "promotion",
                 }
             )
-        return [*settings_offers, *promotion_offers]
+        return promotion_offers
 
     @staticmethod
     def _service_is_open(settings: dict[str, Any], fallback: bool) -> bool:
@@ -790,43 +802,8 @@ class CustomerRepository:
             normalized_offer_service = normalize_service_type(offer_service_type)
         except ValueError:
             normalized_offer_service = "restaurant"
-        offer_settings = profile_settings.get(
-            f"{normalized_offer_service}_settings", {}
-        )
-        if not isinstance(offer_settings, dict):
-            offer_settings = {}
-        settings_offer = next(
-            (
-                offer
-                for offer in offer_settings.get("special_offers") or []
-                if isinstance(offer, dict)
-                and str(offer.get("title") or "").strip()
-                and offer.get("active", True) is not False
-            ),
-            None,
-        )
-        if settings_offer:
-            active_offer = {
-                "promotion_name": str(settings_offer.get("title") or "").strip(),
-                "internal_description": str(
-                    settings_offer.get("description") or ""
-                ).strip(),
-                "service_type": normalized_offer_service,
-                "source": f"{normalized_offer_service}_settings",
-            }
-        else:
-            active_offer = next(
-                (
-                    promotion
-                    for promotion in self.vendor_promotions.find(
-                        {"vendor_id": vendor_id, "active": True}
-                    ).sort("created_at", DESCENDING)
-                    if self._promotion_applies_to_service(
-                        promotion, normalized_offer_service
-                    )
-                ),
-                None,
-            )
+        # Same promotions as the Offers tab (active and within their dates); cards show the newest.
+        active_offer = next(iter(self._list_service_offers(vendor_id, normalized_offer_service)), None)
         return {
             "vendor": vendor,
             "profile": profile,
@@ -1025,7 +1002,7 @@ class CustomerRepository:
         gallery_count = self.vendor_assets.count_documents(
             self._asset_query(vendor_id, "gallery", "hotel")
         )
-        offers = self._list_service_offers(vendor_id, "hotel", service_settings)
+        offers = self._list_service_offers(vendor_id, "hotel")
         room_amenities = []
         for room in rooms:
             for amenity in room.get("amenities") or []:
@@ -1093,7 +1070,6 @@ class CustomerRepository:
                 "default_discount_percent": float(
                     doc.get("default_discount_percent", 0)
                 ),
-                "tax_included": bool(doc.get("tax_included", True)),
                 "inventory_count": int(doc.get("inventory_count", 1)),
                 "min_stay_nights": int(doc.get("min_stay_nights", 1)),
                 "max_stay_nights": int(doc.get("max_stay_nights", 30)),
@@ -1107,8 +1083,6 @@ class CustomerRepository:
         base_price = float(doc.get("base_price", 298.0))
         nights = 2
         room_rate = base_price * nights
-        tax_included = bool(doc.get("tax_included", True))
-        taxes = 0.0 if tax_included else room_rate * 0.2
         raw_amenities = doc.get("amenities") if isinstance(doc.get("amenities"), list) else []
         amenities_with_icons = []
         for name in raw_amenities:
@@ -1143,15 +1117,12 @@ class CustomerRepository:
             "default_discount_percent": float(
                 doc.get("default_discount_percent", 0)
             ),
-            "tax_included": tax_included,
             "inventory_count": int(doc.get("inventory_count", 1)),
             "min_stay_nights": int(doc.get("min_stay_nights", 1)),
             "max_stay_nights": int(doc.get("max_stay_nights", 30)),
             "price": {
                 "rate": str(int(room_rate)),
-                "taxes": str(int(taxes)),
-                "total": str(int(room_rate + taxes)),
-                "tax_included": tax_included,
+                "total": str(int(room_rate)),
             }
         }
 
@@ -1191,7 +1162,35 @@ class CustomerRepository:
             "quick_access": quick_access,
             "trending_now": self.get_trending_hotels(customer_id),
             "featured_experiences": featured,
+            "platform_offers": self._home_platform_offers(),
         }
+
+    def _home_platform_offers(self) -> list[dict[str, Any]]:
+        offers = []
+        for offer, vendor_ids in platform_offers.live_offers_with_providers(self.vendors.database):
+            providers = []
+            for vendor in self.vendors.find({"_id": {"$in": vendor_ids}, "status": "approved"}):
+                categories = normalize_account_categories(vendor.get("categories") or vendor.get("category"))
+                service = next(
+                    (key for key in ("restaurant", "hotel", "spa") if key.title() in categories),
+                    None,
+                )
+                if not service:
+                    continue
+                bundle = self._get_vendor_bundle(vendor["_id"], service)
+                name = vendor.get("business_name") or "Provider"
+                providers.append(
+                    {
+                        "id": str(vendor["_id"]),
+                        "name": name,
+                        "service_type": service,
+                        "image_url": self._service_profile_image(bundle, self._service_settings(bundle, service)) or bundle["cover_image"],
+                        "rating": bundle["rating"],
+                    }
+                )
+            if providers:
+                offers.append({**platform_offers.serialize(offer), "providers": providers})
+        return offers
 
     def get_trending_hotels(self, customer_id: str, limit: int = 6) -> list[dict[str, Any]]:
         """Return a mixed, nearby trending feed for all customer offerings."""
@@ -1239,7 +1238,7 @@ class CustomerRepository:
             distance = self._distance_between_km(customer_lat, customer_lng, lat, lng)
             if nearby and (distance is None or distance > max_distance_km):
                 continue
-            items.append({"id": str(vendor["_id"]), "name": name, "title": name, "category": "spa", "service_type": "spa", "entity_type": "spa", "rating": bundle["rating"], "reviews_count": bundle["reviews_count"], "distance_km": distance, "latitude": lat, "longitude": lng, "location": settings.get("address") or settings.get("city"), "profile_image_url": self._service_profile_image(bundle, settings), "cover_image_url": bundle["cover_image"]})
+            items.append({"id": str(vendor["_id"]), "name": name, "title": name, "category": "spa", "service_type": "spa", "entity_type": "spa", "rating": bundle["rating"], "reviews_count": bundle["reviews_count"], "distance_km": distance, "latitude": lat, "longitude": lng, "location": settings.get("address") or settings.get("city"), "profile_image_url": self._service_profile_image(bundle, settings), "cover_image_url": bundle["cover_image"], "offer_text": (bundle["active_offer"] or {}).get("promotion_name")})
         for item in items:
             item["title"] = item.get("name") or "Spa"
             item["type"] = item.get("category") or "Wellness"
@@ -1616,7 +1615,9 @@ class CustomerRepository:
         self.customer_plan_sessions.update_one({"_id": self._oid(session_id), "customer_id": self._oid(customer_id)}, {"$set": {f"values.{key}": value, "updated_at": datetime.now(UTC)}})
         return self._serialize(self.customer_plan_sessions.find_one({"_id": self._oid(session_id), "customer_id": self._oid(customer_id)}))
 
-    def get_personalized_plan_context(self, customer_id: str) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]]]:
+    def get_personalized_plan_context(
+        self, customer_id: str, preferences: dict[str, Any] | None = None
+    ) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]]]:
         profile = self.get_customer_profile(customer_id)
         saved = self.list_saved_items(customer_id).get("items", [])[:20]
         bookings = self.list_customer_bookings(customer_id, limit=20, skip=0).get("items", [])
@@ -1662,12 +1663,32 @@ class CustomerRepository:
             "recent_searches": [{"query": item.get("query")} for item in searches],
         }
 
+        preferences = preferences if isinstance(preferences, dict) else {}
+        area = str(preferences.get("area") or "").strip()
+        if area.casefold() == "anywhere":
+            area = ""
+        vouchers_only = bool(preferences.get("vouchersOnly") or preferences.get("vouchers_only"))
+        # A typed area may be outside the usual nearby radius, so search wider then filter by address.
+        limit, nearby = (50, False) if area else (12, True)
         raw_groups = {
-            "restaurants": self.list_restaurants(customer_id, 12, 0, nearby=True).get("items", []),
-            "events": self.list_events(customer_id, 12, 0).get("items", []),
-            "spas": self.list_spas(customer_id, 12, 0, nearby=True).get("items", []),
-            "hotels": self.list_hotels(customer_id, 12, 0, nearby=True).get("items", []),
-            "happy_hours": self.list_happy_hours(customer_id, 12, 0).get("items", []),
+            "restaurants": self.list_restaurants(customer_id, limit, 0, nearby=nearby).get("items", []),
+            "events": self.list_events(customer_id, limit, 0).get("items", []),
+            "spas": self.list_spas(customer_id, limit, 0, nearby=nearby).get("items", []),
+            "hotels": self.list_hotels(customer_id, limit, 0, nearby=nearby).get("items", []),
+            "happy_hours": self.list_happy_hours(customer_id, limit, 0).get("items", []),
+        }
+        matched_area = ""
+        if area:
+            matched_area, raw_groups = self._filter_plan_area(raw_groups, area)
+        if vouchers_only:
+            raw_groups = {
+                category: [row for row in rows if self._plan_offer_text(category, row)]
+                for category, rows in raw_groups.items()
+            }
+        user_context["plan_filters"] = {
+            "area": area or "Anywhere",
+            "matched_area": matched_area or None,
+            "vouchers_only": vouchers_only,
         }
         candidates: dict[str, list[dict[str, Any]]] = {}
         for category, rows in raw_groups.items():
@@ -1680,7 +1701,7 @@ class CustomerRepository:
                     "distance_km": row.get("distance_km"),
                     "rating": row.get("rating") or row.get("avg_rating"),
                     "reviews_count": row.get("reviews_count"),
-                    "offer_text": row.get("offer_text"),
+                    "offer_text": self._plan_offer_text(category, row),
                     "image_url": row.get("banner_image_url") or row.get("cover_image_url") or row.get("profile_image_url"),
                     "detail_route": row.get("detail_route"),
                     "event_date": row.get("event_date"),
@@ -1689,9 +1710,47 @@ class CustomerRepository:
                     "original_price": row.get("original_price"),
                     "happy_hour_price": row.get("happy_hour_price"),
                 }
-                for row in rows
+                for row in rows[:12]
             ]
         return user_context, candidates
+
+    @staticmethod
+    def _plan_offer_text(category: str, row: dict[str, Any]) -> str | None:
+        """The place's current offer, or None. Event cards fall back to the event type, so use the promotion."""
+        if category == "events":
+            return row.get("promotion_name") or None
+        if category == "hotels":
+            return row.get("badge") or row.get("offer_text") or None
+        return row.get("offer_text") or None
+
+    @staticmethod
+    def _filter_plan_area(
+        groups: dict[str, list[dict[str, Any]]], area: str
+    ) -> tuple[str, dict[str, list[dict[str, Any]]]]:
+        """Keep places whose address mentions the area. "Gulshan, Dhaka" tries Gulshan first, then Dhaka."""
+        parts = [part.strip() for part in area.split(",") if part.strip()] or [area]
+        def mentions(row: dict[str, Any], needle: str) -> bool:
+            fields = ("location", "address", "venue", "city", "name", "title")
+            return needle in " ".join(str(row.get(field) or "") for field in fields).casefold()
+
+        for part in parts:
+            needle = part.casefold()
+            filtered = {category: [row for row in rows if mentions(row, needle)] for category, rows in groups.items()}
+            # Happy hours list the venue name as their address, so also keep those at a matching venue.
+            venue_ids = {
+                str(row.get("id"))
+                for category in ("restaurants", "spas", "hotels")
+                for row in filtered.get(category, [])
+            }
+            if "happy_hours" in groups:
+                filtered["happy_hours"] = [
+                    row
+                    for row in groups["happy_hours"]
+                    if mentions(row, needle) or str(row.get("vendor_id")) in venue_ids
+                ]
+            if any(filtered.values()):
+                return part, filtered
+        return "", {category: [] for category in groups}
 
     def get_restaurant_details(self, customer_id: str, restaurant_id: str, service_type: str = "restaurant") -> dict[str, Any] | None:
         service_type = normalize_service_type(service_type)
@@ -1714,7 +1773,7 @@ class CustomerRepository:
         if service_settings.get("published") is False:
             return None
         offers_count = len(
-            self._list_service_offers(vendor_id, service_type, service_settings)
+            self._list_service_offers(vendor_id, service_type)
         )
         vendor_lat, vendor_lng = self._get_vendor_coords(bundle, service_type)
         display_label = service_type.title()
@@ -1754,6 +1813,11 @@ class CustomerRepository:
                 "available_times": service_settings.get("available_booking_times") or opening_slots,
             },
             "seating_preferences": service_settings.get("seating_preferences") or ["Indoor", "Outdoor", "No preference"],
+            "booking_rules": {
+                "closed_days": service_settings.get("closed_days") or [],
+                "blocked_dates": service_settings.get("blocked_dates") or [],
+                "max_guests": service_settings.get("max_guests"),
+            },
             "booking_policy": service_settings.get("policy") or "You can modify or cancel this booking later.",
             "amenities": service_settings.get("amenities") or [],
             "tabs": {
@@ -1908,6 +1972,7 @@ class CustomerRepository:
                      "profile_image_url": self._service_profile_image(bundle, event_settings),
                     "banner_image_url": event.get("banner_image_url") or "",
                     "offer_text": active_offer.get("promotion_name") or event_type,
+                    "promotion_name": active_offer.get("promotion_name"),
                     "description": event.get("description") or "",
                     "ticket_price": event.get("ticket_price"),
                     "capacity": event.get("capacity"),
@@ -2227,10 +2292,9 @@ class CustomerRepository:
             "discount_amount": promotion["discount_amount"],
             "promotion_id": str(promotion["promotion_id"]) if promotion["promotion_id"] else None,
             "promotion_name": promotion["promotion_name"],
+            "platform_offer_id": str(promotion["platform_offer_id"]) if promotion["platform_offer_id"] else None,
             "promo_code": promotion["promo_code"],
             "subtotal": subtotal,
-            "service_fee": 0.0,
-            "taxes": 0.0,
             "total": subtotal,
             "estimated_points": self._estimate_loyalty_points(
                 vendor_id, self._oid(customer_id), subtotal
@@ -2299,10 +2363,9 @@ class CustomerRepository:
             "discount_amount": quote["discount_amount"],
             "promotion_id": promotion_id,
             "promotion_name": quote["promotion_name"],
+            "platform_offer_id": self._oid(quote["platform_offer_id"]) if quote.get("platform_offer_id") else None,
             "promo_code": quote["promo_code"],
             "subtotal": quote["subtotal"],
-            "service_fee": quote["service_fee"],
-            "taxes": quote["taxes"],
             "unit_price": quote["unit_price"],
             "estimated_points": quote["estimated_points"],
             "source": "customer_app",
@@ -2364,6 +2427,20 @@ class CustomerRepository:
         )
         return self._serialize(created) or {}
 
+    @staticmethod
+    def _restaurant_closed_reason(settings: dict[str, Any], date: str) -> str | None:
+        """Why a restaurant takes no bookings on `date` (YYYY-MM-DD), or None when it is open."""
+        try:
+            day = datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            return None
+        if date in (settings.get("blocked_dates") or []):
+            return "The restaurant is not taking bookings on this date."
+        weekday = day.strftime("%A")
+        if weekday in (settings.get("closed_days") or []):
+            return f"The restaurant is closed on {weekday}s."
+        return None
+
     def get_booking_availability(
         self, provider_id: str, date: str, provider_type: str = "restaurant"
     ) -> dict[str, Any]:
@@ -2375,6 +2452,18 @@ class CustomerRepository:
             provider_type if provider_type in {"restaurant", "hotel", "spa"} else "restaurant"
         )
         service_settings = self._service_settings(bundle, normalized_type)
+        closed_reason = (
+            self._restaurant_closed_reason(service_settings, date) if normalized_type == "restaurant" else None
+        )
+        if closed_reason:
+            return {
+                "provider_id": provider_id,
+                "provider_type": normalized_type,
+                "date": date,
+                "closed": True,
+                "closed_reason": closed_reason,
+                "slots": [],
+            }
         slots = service_settings.get("available_booking_times") or general.get(
             "booking_availability_slots",
             ["06:00 PM", "06:30 PM", "07:00 PM", "07:30 PM", "08:00 PM", "08:30 PM", "09:00 PM", "09:30 PM", "10:00 PM"],
@@ -2414,6 +2503,8 @@ class CustomerRepository:
             "provider_id": provider_id,
             "provider_type": normalized_type,
             "date": date,
+            "closed": False,
+            "closed_reason": None,
             "slots": [
                 {"time": slot, "available": booked_counts.get(slot, 0) < capacity, "booked": booked_counts.get(slot, 0)}
                 for slot in slots
@@ -2460,9 +2551,7 @@ class CustomerRepository:
             promo_code,
         )
         subtotal = round(original_subtotal - promotion["discount_amount"], 2)
-        service_fee = round(subtotal * 0.08, 2)
-        taxes = round(subtotal * 0.05, 2)
-        total = round(subtotal + service_fee + taxes, 2)
+        total = subtotal
         points = self._estimate_loyalty_points(
             vendor["_id"], self._oid(customer_id) if customer_id else None, total
         )
@@ -2478,10 +2567,9 @@ class CustomerRepository:
             "discount_amount": promotion["discount_amount"],
             "promotion_id": str(promotion["promotion_id"]) if promotion["promotion_id"] else None,
             "promotion_name": promotion["promotion_name"],
+            "platform_offer_id": str(promotion["platform_offer_id"]) if promotion["platform_offer_id"] else None,
             "promo_code": promotion["promo_code"],
             "subtotal": subtotal,
-            "service_fee": service_fee,
-            "taxes": taxes,
             "total": total,
             "estimated_points": points,
         }
@@ -2509,7 +2597,12 @@ class CustomerRepository:
         allowed_seating = restaurant_settings.get("seating_preferences") or ["Indoor", "Outdoor", "No preference"]
         if seating_preference and str(seating_preference).strip().lower() not in {str(item).strip().lower() for item in allowed_seating}:
             raise ValueError("Selected seating preference is not available at this restaurant.")
+        max_guests = restaurant_settings.get("max_guests")
+        if max_guests and guests > int(max_guests):
+            raise ValueError(f"This restaurant accepts bookings for up to {int(max_guests)} guests.")
         availability = self.get_booking_availability(provider_id, date)
+        if availability.get("closed"):
+            raise ValueError(availability["closed_reason"])
         slot = next((row for row in availability["slots"] if row["time"] == time), None)
         if not slot or not slot["available"]:
             raise ValueError("Selected slot is not available.")
@@ -2548,10 +2641,9 @@ class CustomerRepository:
             "discount_amount": quote["discount_amount"],
             "promotion_id": self._oid(quote["promotion_id"]) if quote["promotion_id"] else None,
             "promotion_name": quote["promotion_name"],
+            "platform_offer_id": self._oid(quote["platform_offer_id"]) if quote.get("platform_offer_id") else None,
             "promo_code": quote["promo_code"],
             "subtotal": quote["subtotal"],
-            "service_fee": quote["service_fee"],
-            "taxes": quote["taxes"],
             "estimated_points": quote["estimated_points"],
             "source": "customer_app",
             "requested_at": now,
@@ -2642,9 +2734,7 @@ class CustomerRepository:
             vendor["_id"], "spa", original_subtotal, customer_obj_id, date, promo_code
         )
         subtotal = round(original_subtotal - promotion["discount_amount"], 2)
-        service_fee = round(subtotal * 0.08, 2)
-        taxes = round(subtotal * 0.05, 2)
-        total = round(subtotal + service_fee + taxes, 2)
+        total = subtotal
         return {
             "provider_id": spa_id,
             "provider_name": vendor.get("business_name") or "Spa",
@@ -2659,10 +2749,9 @@ class CustomerRepository:
             "discount_amount": promotion["discount_amount"],
             "promotion_id": str(promotion["promotion_id"]) if promotion["promotion_id"] else None,
             "promotion_name": promotion["promotion_name"],
+            "platform_offer_id": str(promotion["platform_offer_id"]) if promotion["platform_offer_id"] else None,
             "promo_code": promotion["promo_code"],
             "subtotal": subtotal,
-            "service_fee": service_fee,
-            "taxes": taxes,
             "total": total,
             "estimated_points": self._estimate_loyalty_points(
                 vendor["_id"], customer_obj_id, total
@@ -2714,10 +2803,9 @@ class CustomerRepository:
             "discount_amount": quote["discount_amount"],
             "promotion_id": promotion_id,
             "promotion_name": quote["promotion_name"],
+            "platform_offer_id": self._oid(quote["platform_offer_id"]) if quote.get("platform_offer_id") else None,
             "promo_code": quote["promo_code"],
             "subtotal": quote["subtotal"],
-            "service_fee": quote["service_fee"],
-            "taxes": quote["taxes"],
             "unit_price": quote["unit_price"],
             "estimated_points": quote["estimated_points"],
             "source": "customer_app",
@@ -2841,9 +2929,7 @@ class CustomerRepository:
             promo_code,
         )
         subtotal = round(discounted_room_subtotal - promotion["discount_amount"], 2)
-        service_fee = round(subtotal * 0.08, 2)
-        taxes = 0.0 if room.get("tax_included", True) else round(subtotal * 0.05, 2)
-        total = round(subtotal + service_fee + taxes, 2)
+        total = subtotal
         return {
             "provider_id": hotel_id,
             "provider_name": vendor.get("business_name") or "Hotel",
@@ -2861,11 +2947,9 @@ class CustomerRepository:
             "discount_amount": promotion["discount_amount"],
             "promotion_id": str(promotion["promotion_id"]) if promotion["promotion_id"] else None,
             "promotion_name": promotion["promotion_name"],
+            "platform_offer_id": str(promotion["platform_offer_id"]) if promotion["platform_offer_id"] else None,
             "promo_code": promotion["promo_code"],
             "subtotal": subtotal,
-            "service_fee": service_fee,
-            "taxes": taxes,
-            "tax_included": bool(room.get("tax_included", True)),
             "total": total,
             "estimated_points": self._estimate_loyalty_points(
                 vendor["_id"], self._oid(customer_id), total
@@ -2940,11 +3024,9 @@ class CustomerRepository:
             "discount_amount": quote["discount_amount"],
             "promotion_id": promotion_id,
             "promotion_name": quote["promotion_name"],
+            "platform_offer_id": self._oid(quote["platform_offer_id"]) if quote.get("platform_offer_id") else None,
             "promo_code": quote["promo_code"],
             "subtotal": quote["subtotal"],
-            "service_fee": quote["service_fee"],
-            "taxes": quote["taxes"],
-            "tax_included": quote["tax_included"],
             "rate_per_night": quote["rate_per_night"],
             "estimated_points": quote["estimated_points"],
             "source": "customer_app",
@@ -3095,21 +3177,10 @@ class CustomerRepository:
             "updated_at": now,
         }
         review_id = self.vendor_reviews.insert_one(review).inserted_id
-        loyalty = self.vendor_loyalty_settings.find_one({"vendor_id": vendor_obj_id}) or {}
-        review_points = (
-            max(int(loyalty.get("review_bonus_points") or 0), 0)
-            if loyalty.get("enable_loyalty_program") is True
-            else 0
-        )
+        rules = loyalty.rules_for_vendor(self.vendor_loyalty_settings.database, vendor_obj_id)
+        review_points = max(int((rules or {}).get("review_bonus_points") or 0), 0)
         if review_points:
-            expiry_policy = str(loyalty.get("points_expiry_policy") or "1 Year")
-            expires_at = None
-            if expiry_policy != "No Expiry":
-                years = 2 if expiry_policy == "2 Years" else 1
-                try:
-                    expires_at = now.replace(year=now.year + years)
-                except ValueError:
-                    expires_at = now.replace(month=2, day=28, year=now.year + years)
+            expires_at = loyalty.points_expiry(rules, now)
             self.users.update_one(
                 {"_id": customer_obj_id},
                 {"$inc": {"points_balance": review_points}, "$set": {"updated_at": now}},
@@ -3172,6 +3243,7 @@ class CustomerRepository:
                 {
                     "id": row["id"],
                     "name": row["name"],
+                    "location": row.get("location") or row.get("address"),
                     "lat": lat,
                     "lng": lng,
                     "rating": row["rating"],

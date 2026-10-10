@@ -12,6 +12,8 @@ import { formatBookingTimestamp } from "./BookingsTable";
 
 export interface HotelBooking {
   id: string;
+  /** Added by the provider for a walk-in or phone guest. */
+  manual?: boolean;
   backendId?: string;
   customer: {
     name: string;
@@ -24,10 +26,10 @@ export interface HotelBooking {
   roomType: string;
   roomNumber: string;
   ratePerNight: number;
-  serviceFee: number;
-  tourismTax: number;
+  stayAmount: number;
+  discountAmount: number;
+  totalAmount: number;
   status: "CONFIRMED" | "PENDING" | "CANCELLED" | "CHECK IN" | "COMPLETE";
-  payment: "Paid" | "Unpaid";
   phone: string;
   email: string;
   specialRequests: string;
@@ -45,12 +47,14 @@ interface HotelBookingDetailsModalProps {
   booking: HotelBooking | null;
   onClose: () => void;
   onUpdateStatus: (status: string) => void;
+  onGenerateReceipt: () => void;
 }
 
 export function HotelBookingDetailsModal({
   booking,
   onClose,
   onUpdateStatus,
+  onGenerateReceipt,
 }: HotelBookingDetailsModalProps) {
   if (!booking) return null;
   const status = booking.status.toLowerCase();
@@ -59,11 +63,6 @@ export function HotelBookingDetailsModal({
   const canComplete = status === "check in";
   const canCancel = status === "pending" || status === "confirmed" || status === "check in";
 
-  const totalAmount =
-    booking.nights * booking.ratePerNight +
-    booking.serviceFee +
-    booking.tourismTax;
-
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="hotel-booking-title">
       <div
@@ -71,11 +70,14 @@ export function HotelBookingDetailsModal({
         onClick={onClose}
       />
 
-      <div className="relative w-full max-w-[480px] bg-white rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-300">
-        <div className="p-8 pb-4 flex items-center justify-between border-b border-slate-50">
-          <h2 id="hotel-booking-title" className="text-2xl font-black text-slate-800 tracking-tight">
-            Booking Details
-          </h2>
+      <div className="relative flex max-h-[calc(100dvh-2rem)] w-full max-w-[480px] flex-col bg-white rounded-[40px] shadow-2xl overflow-hidden sm:max-h-[calc(100dvh-3rem)] animate-in zoom-in-95 fade-in duration-300">
+        <div className="p-8 pb-4 flex shrink-0 items-center justify-between border-b border-slate-50">
+          <div>
+            <h2 id="hotel-booking-title" className="text-2xl font-black text-slate-800 tracking-tight">
+              Booking Details
+            </h2>
+            {booking.manual ? <p className="mt-1 text-xs font-bold text-violet-600">Manual booking · added by you, no commission</p> : null}
+          </div>
           <button
             type="button"
             aria-label="Close booking details"
@@ -86,7 +88,7 @@ export function HotelBookingDetailsModal({
           </button>
         </div>
 
-        <div className="p-8 space-y-8 overflow-y-auto max-h-[80vh]">
+        <div className="min-h-0 flex-1 p-8 space-y-8 overflow-y-auto">
           {/* Guest Info Section */}
           <div className="space-y-6">
             <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
@@ -191,27 +193,24 @@ export function HotelBookingDetailsModal({
                   {booking.nights} Nights x ${booking.ratePerNight}
                 </span>
                 <span className="text-slate-800">
-                  ${(booking.nights * booking.ratePerNight).toLocaleString()}
+                  ${booking.stayAmount.toLocaleString()}
                 </span>
               </div>
-              <div className="flex justify-between text-sm font-bold text-slate-500">
-                <span>Service Fee</span>
-                <span className="text-slate-800">
-                  ${booking.serviceFee.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm font-bold text-slate-500 pb-4 border-b border-slate-50">
-                <span>Tourism Tax</span>
-                <span className="text-slate-800">
-                  ${booking.tourismTax.toFixed(2)}
-                </span>
-              </div>
+              {booking.discountAmount > 0 ? (
+                <div className="flex justify-between text-sm font-bold text-slate-500">
+                  <span>Discount</span>
+                  <span className="text-emerald-600">
+                    -${booking.discountAmount.toLocaleString()}
+                  </span>
+                </div>
+              ) : null}
+              <div className="border-b border-slate-50" />
               <div className="flex justify-between items-center pt-2">
                 <span className="text-lg font-black text-slate-800">
                   Total Amount
                 </span>
                 <span className="text-2xl font-black text-[#3b82f6]">
-                  ${totalAmount.toLocaleString()}
+                  ${booking.totalAmount.toLocaleString()}
                 </span>
               </div>
             </div>
@@ -238,6 +237,7 @@ export function HotelBookingDetailsModal({
             {canCheckIn ? <button type="button" onClick={() => onUpdateStatus("check_in")} className="flex items-center justify-center gap-3 py-5 rounded-[24px] bg-[#1e2a5e] text-white font-black text-sm hover:bg-[#1a234d] transition-all shadow-xl shadow-[#1e2a5e]/20"><CircleCheck className="h-5 w-5" />Check-in</button> : null}
             {canComplete ? <button type="button" onClick={() => onUpdateStatus("complete")} className="flex items-center justify-center py-5 rounded-[24px] bg-sky-500 text-white font-black text-sm hover:bg-sky-600 transition-all">Mark complete</button> : null}
             {canCancel ? <button type="button" onClick={() => onUpdateStatus("cancelled")} className="text-xs font-black uppercase tracking-widest text-rose-500 hover:text-rose-600 transition-colors py-2">CANCEL RESERVATION</button> : <span className="text-center text-xs font-black uppercase tracking-widest text-slate-300 py-2">NO FURTHER ACTIONS</span>}
+            <button type="button" onClick={onGenerateReceipt} className="text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors py-2">PRINT RECEIPT</button>
           </div>
         </div>
       </div>

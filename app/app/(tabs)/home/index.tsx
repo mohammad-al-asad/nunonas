@@ -17,6 +17,7 @@ import theme from "../../../constants/theme";
 import ExploreNearbyBanner from "../../../components/tabs/home/ExploreNearbyBanner";
 import PlanForMeBanner from "../../../components/tabs/home/PlanForMeBanner";
 import QuickAccess from "../../../components/tabs/home/QuickAccess";
+import PlatformOffers from "../../../components/tabs/home/PlatformOffers";
 import TrendingNow from "../../../components/tabs/home/TrendingNow";
 import FeaturedExperiences from "../../../components/tabs/home/FeaturedExperiences";
 import HomeSearchBar from "../../../components/tabs/home/HomeSearchBar";
@@ -216,6 +217,7 @@ export default function HomeScreen() {
         <ExploreNearbyBanner refreshToken={mapRefreshToken} onPullToRefresh={handleRefresh} />
         <PlanForMeBanner />
         <QuickAccess />
+        <PlatformOffers />
         <TrendingNow />
         <FeaturedExperiences />
         <UpcomingBookings />

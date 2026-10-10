@@ -12,12 +12,13 @@ import {
   Tag,
 } from "lucide-react";
 import { useToast } from "@/components/ui/ToastProvider";
-import { PromotionsTable, Promotion } from "@/components/PromotionsTable";
-import { CampaignCard } from "@/components/CampaignCard";
+import { PromotionsTable, PromotionsTableSkeleton, Promotion } from "@/components/PromotionsTable";
+import { PlatformOffers } from "@/components/PlatformOffers";
 import {
   vendorListPromotions,
-  vendorJoinPlatformCampaign,
+  vendorRespondToPlatformOffer,
   vendorUpdatePromotionStatus,
+  type VendorPlatformOffer,
 } from "@/lib/vendor-api";
 import { vendorQueryKeys } from "@/lib/vendor-queries";
 
@@ -29,26 +30,11 @@ type PromotionSummary = {
   totalPromoRevenue: string | null;
 };
 
-type PlatformCampaign = {
-  id: string;
-  title: string;
-  description: string;
-  requirement: string;
-  requirementValue: string;
-  duration: string;
-  durationValue: string;
-  boostType: "visibility" | "acquisition" | "premium";
-  boostText: string;
-  boostSubtext: string;
-  commission: string;
-  isActive: boolean;
-};
-
 type PromotionsResponse = {
   items?: Record<string, unknown>[];
   summary?: Record<string, unknown>;
   business_promotions?: Record<string, unknown>[];
-  platform_campaigns?: Record<string, unknown>[];
+  platform_offers?: VendorPlatformOffer[];
 };
 
 function toNumber(value: unknown): number {
@@ -85,55 +71,6 @@ function formatMoney(value: unknown): string | null {
     }).format(value);
   }
   return null;
-}
-
-function normalizeBoostType(value: unknown): PlatformCampaign["boostType"] {
-  if (typeof value === "string") {
-    const normalized = value.toLowerCase();
-    if (normalized === "acquisition" || normalized === "premium") {
-      return normalized;
-    }
-  }
-  return "visibility";
-}
-
-function normalizePlatformCampaign(
-  campaign: Record<string, unknown>,
-): PlatformCampaign {
-  const requirementValue =
-    (campaign.requirement_value ??
-      campaign.requirementValue ??
-      campaign.min_discount ??
-      campaign.discount ??
-      campaign.offer_value) as string | number | undefined;
-  const durationValue =
-    (campaign.duration_value ??
-      campaign.durationValue ??
-      campaign.duration ??
-      campaign.validity ??
-      campaign.date_range) as string | undefined;
-  const commissionPercent = campaign.commission_percent ?? campaign.commission;
-
-  return {
-    id: String(campaign.id ?? campaign._id ?? ""),
-    title: String(campaign.campaign_name ?? campaign.title ?? campaign.name ?? "Campaign"),
-    description: String(campaign.description ?? ""),
-    requirement: "Requirement",
-    requirementValue:
-      requirementValue !== undefined && requirementValue !== null && `${requirementValue}`.trim()
-        ? `${requirementValue}`
-        : "--",
-    duration: "Duration",
-    durationValue: durationValue && durationValue.trim() ? durationValue : "--",
-    boostType: normalizeBoostType(campaign.boost_type ?? campaign.type),
-    boostText: String(campaign.boost_text ?? campaign.boost_label ?? "PLATFORM BOOST"),
-    boostSubtext: String(campaign.boost_subtext ?? campaign.boost_description ?? "Live campaign visibility from the platform."),
-    commission:
-      commissionPercent !== undefined && commissionPercent !== null && `${commissionPercent}`.trim()
-        ? `${commissionPercent}${typeof commissionPercent === "number" ? "%" : ""}`
-        : "--",
-    isActive: Boolean(campaign.joined ?? campaign.is_active ?? campaign.active),
-  };
 }
 
 const EMPTY_SUMMARY: PromotionSummary = {
@@ -174,23 +111,20 @@ export default function PromotionsPage() {
     averageConversionPercent: rawSummary.avg_conversion_percent == null ? null : toNumber(rawSummary.avg_conversion_percent),
     totalPromoRevenue: formatMoney(rawSummary.total_promo_revenue ?? rawSummary.promo_revenue),
   } : EMPTY_SUMMARY;
-  const platformCampaigns = (raw?.platform_campaigns ?? []).map(normalizePlatformCampaign);
 
-  const campaignMutation = useMutation({
-    mutationFn: ({ id, joined }: { id: string; joined: boolean }) => vendorJoinPlatformCampaign(id, joined),
-    onMutate: async ({ id, joined }) => {
-      await queryClient.cancelQueries({ queryKey: promotionsKey });
-      const previous = queryClient.getQueryData<PromotionsResponse>(promotionsKey);
-      queryClient.setQueryData<PromotionsResponse>(promotionsKey, (current) => current ? {
-        ...current,
-        platform_campaigns: current.platform_campaigns?.map((campaign) => String(campaign.id ?? campaign._id) === id ? { ...campaign, joined } : campaign),
-      } : current);
-      return { previous };
+  const platformOffers = raw?.platform_offers ?? [];
+  const respondMutation = useMutation({
+    mutationFn: ({ offer, accept }: { offer: VendorPlatformOffer; accept: boolean }) =>
+      vendorRespondToPlatformOffer(offer.id, accept),
+    onSuccess: (updated, { accept }) => {
+      queryClient.setQueryData<PromotionsResponse>(promotionsKey, (current) =>
+        current
+          ? { ...current, platform_offers: current.platform_offers?.map((offer) => (offer.id === updated.id ? updated : offer)) }
+          : current,
+      );
+      toast(accept ? "Offer accepted. It will apply during the offer period." : "Offer rejected.", "success");
     },
-    onError: (error, _variables, context) => {
-      queryClient.setQueryData(promotionsKey, context?.previous);
-      toast(error instanceof Error ? error.message : "Failed to update campaign.", "error");
-    },
+    onError: (error) => toast(error instanceof Error ? error.message : "Could not save your answer.", "error"),
     onSettled: () => queryClient.invalidateQueries({ queryKey: promotionsKey }),
   });
   const promotionMutation = useMutation({
@@ -212,10 +146,6 @@ export default function PromotionsPage() {
     onSettled: () => queryClient.invalidateQueries({ queryKey: promotionsKey }),
   });
 
-  const toggleCampaign = (id: string) => {
-    const campaign = platformCampaigns.find((item) => item.id === id);
-    if (campaign) campaignMutation.mutate({ id, joined: !campaign.isActive });
-  };
   const togglePromotionStatus = (promotion: Promotion) => promotionMutation.mutate({ id: promotion.id, active: !promotion.isActive });
   const stats = [
     {
@@ -286,48 +216,23 @@ export default function PromotionsPage() {
             ))}
           </div>
 
+          {promotionsQuery.isSuccess ? (
+            <PlatformOffers
+              offers={platformOffers}
+              busyId={respondMutation.isPending ? respondMutation.variables?.offer.id ?? null : null}
+              onRespond={(offer, accept) => respondMutation.mutate({ offer, accept })}
+            />
+          ) : null}
+
           {/* Business Promotions Table */}
           {promotionsQuery.isPending ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="w-6 h-6 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" />
-            </div>
+            <PromotionsTableSkeleton />
           ) : promotionsQuery.isError ? (
             <div className="rounded-[32px] border border-red-100 bg-white p-10 text-center text-sm text-red-600">Promotions could not be loaded. <button type="button" onClick={() => promotionsQuery.refetch()} className="font-bold underline">Try again</button></div>
           ) : (
             <PromotionsTable promotions={businessPromotions} onToggleStatus={togglePromotionStatus} />
           )}
 
-          {/* Platform Campaigns */}
-          <section className="space-y-6 pt-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-slate-800">
-                  Platform Campaigns
-                </h2>
-                <p className="text-sm text-slate-400 mt-1">
-                  Join network-wide events to boost your visibility.
-                </p>
-              </div>
-              <span className="text-sm font-bold text-slate-400">{platformCampaigns.length} opportunities</span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {platformCampaigns.length > 0 ? (
-                platformCampaigns.map((campaign) => (
-                  <CampaignCard
-                    key={campaign.id}
-                    {...campaign}
-                    isActive={campaign.isActive}
-                    onToggle={() => toggleCampaign(campaign.id)}
-                  />
-                ))
-              ) : (
-                <div className="md:col-span-2 lg:col-span-3 rounded-[32px] border border-dashed border-slate-200 bg-white p-8 text-sm text-slate-500">
-                  No platform campaigns available.
-                </div>
-              )}
-            </div>
-          </section>
         </div>
       </main>
     </div>

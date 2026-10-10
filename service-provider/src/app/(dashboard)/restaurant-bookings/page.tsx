@@ -5,10 +5,12 @@ import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-quer
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { BookingsHeader } from "@/components/BookingsHeader";
+import { ManualBookingModal } from "@/components/bookings/ManualBookingModal";
 import { BookingsTable, type Booking } from "@/components/BookingsTable";
 import { Pagination } from "@/components/Pagination";
 import { BookingDetailsModal } from "@/components/BookingDetailsModal";
 import { vendorGenerateReceipt, vendorListBookings, vendorRescheduleBooking, vendorUpdateBookingStatus } from "@/lib/vendor-api";
+import { downloadReceipt } from "@/lib/download-receipt";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 
 const ITEMS_PER_PAGE = 10;
@@ -42,7 +44,7 @@ function toBooking(raw: Record<string, unknown>): Booking {
     guests: Number(raw.guests ?? raw.guest_count ?? raw.num_guests ?? 1),
     service: String(raw.service ?? raw.room_type ?? raw.listing_type ?? "Booking"),
     status: normalizeStatus(raw.status),
-    payment: String(raw.payment_status ?? raw.payment ?? "Unpaid").toLowerCase() === "paid" ? "Paid" : "Unpaid",
+    manual: raw.source === "manual",
   };
 }
 
@@ -62,6 +64,7 @@ export default function RestaurantBookingsPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+  const [manualOpen, setManualOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(() => validPage(searchParams.get("page")));
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get("search") ?? "");
   const [statusFilter, setStatusFilter] = useState(() => searchParams.get("status") ?? "All");
@@ -114,24 +117,15 @@ export default function RestaurantBookingsPage() {
     setActionError("");
     try {
       const result = await vendorGenerateReceipt(booking.backendId);
-      const url = String(result.download_url ?? result.receipt_url ?? "");
-      if (url) window.open(url, "_blank", "noopener,noreferrer");
-      else if (typeof result.content === "string") {
-        const blob = new Blob([result.content], { type: String(result.content_type ?? "text/html;charset=utf-8") });
-        const objectUrl = URL.createObjectURL(blob);
-        const anchor = document.createElement("a");
-        anchor.href = objectUrl;
-        anchor.download = String(result.filename ?? `receipt-${booking.id}.html`);
-        anchor.click();
-        URL.revokeObjectURL(objectUrl);
-      } else setActionError("The receipt response was incomplete. Please try again.");
+      if (!downloadReceipt(result, `receipt-${booking.id}.pdf`)) setActionError("The receipt response was incomplete. Please try again.");
     } catch (error) { setActionError(error instanceof Error ? error.message : "Failed to generate receipt."); }
   };
 
   return (
     <div className="min-h-full overflow-x-hidden bg-[#f8fafc] px-4 py-6 sm:px-6 lg:px-8">
       <div className="w-full">
-        <BookingsHeader searchQuery={searchQuery} onSearchChange={(value) => { setSearchQuery(value); setCurrentPage(1); }} statusFilter={statusFilter} onStatusChange={(value) => { setStatusFilter(value); setCurrentPage(1); }} dateRange={dateRange} onDateRangeChange={(value) => { setDateRange(value); setCurrentPage(1); }} />
+        <BookingsHeader searchQuery={searchQuery} onSearchChange={(value) => { setSearchQuery(value); setCurrentPage(1); }} statusFilter={statusFilter} onStatusChange={(value) => { setStatusFilter(value); setCurrentPage(1); }} dateRange={dateRange} onDateRangeChange={(value) => { setDateRange(value); setCurrentPage(1); }} onAddBooking={() => setManualOpen(true)} />
+        <ManualBookingModal providerType="restaurant" open={manualOpen} onClose={() => setManualOpen(false)} onCreated={() => void queryClient.invalidateQueries({ queryKey: bookingQueryRoot })} />
         {bookingsQuery.isFetching && !bookingsQuery.isPending ? <div className="mb-3 text-right text-xs font-bold text-sky-600">Updating results…</div> : null}
         {actionError ? <div role="alert" className="mb-4 rounded-xl bg-red-50 p-4 text-sm font-bold text-red-700">{actionError}</div> : null}
         {bookingsQuery.isPending ? <div className="flex items-center justify-center py-24"><div className="h-8 w-8 animate-spin rounded-full border-2 border-sky-500 border-t-transparent" /></div> : bookingsQuery.isError ? <div className="rounded-2xl border border-red-100 bg-white p-10 text-center"><p className="text-sm text-red-600">Bookings could not be loaded.</p><button type="button" onClick={() => bookingsQuery.refetch()} className="mt-4 rounded-xl bg-slate-100 px-4 py-2 text-sm font-bold">Try again</button></div> : bookings.length === 0 ? <div className="rounded-2xl border border-slate-100 bg-white p-10 text-center text-sm text-slate-400">No bookings found.</div> : <BookingsTable bookings={bookings} onViewDetails={setSelectedBooking} onUpdateStatus={handleUpdateStatus} />}

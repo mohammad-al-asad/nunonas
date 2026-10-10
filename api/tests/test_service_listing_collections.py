@@ -411,20 +411,32 @@ def test_hotel_detail_uses_saved_overview_settings_and_merges_room_amenities():
         "address": "12 Lake Road, Dhaka",
         "about": "A quiet city stay close to the lake.",
         "amenities": ["Free WiFi", "Air Conditioning"],
-        "special_offers": [
+        "published": True,
+    }
+    database.vendor_promotions.insert_many(
+        [
             {
-                "title": "Weekend escape",
-                "description": "Stay two nights and save 15%.",
+                "vendor_id": vendor_id,
+                "promotion_name": "Weekend escape",
+                "internal_description": "Stay two nights and save 15%.",
+                "applicable_to": "Hotel Only",
                 "active": True,
             },
             {
-                "title": "Expired internal offer",
-                "description": "Not visible",
+                "vendor_id": vendor_id,
+                "promotion_name": "Ended promotion",
+                "applicable_to": "Hotel Only",
+                "end_date": "2020-01-31",
+                "active": True,
+            },
+            {
+                "vendor_id": vendor_id,
+                "promotion_name": "Paused promotion",
+                "applicable_to": "Hotel Only",
                 "active": False,
             },
-        ],
-        "published": True,
-    }
+        ]
+    )
     database.vendor_portal_settings.insert_one(
         {
             "vendor_id": vendor_id,
@@ -442,15 +454,8 @@ def test_hotel_detail_uses_saved_overview_settings_and_merges_room_amenities():
     assert detail["about"] == "A quiet city stay close to the lake."
     assert detail["address"] == "12 Lake Road, Dhaka"
     assert detail["amenities"] == ["Free WiFi", "Air Conditioning", "Smart TV"]
-    assert detail["offers"] == [
-        {
-            "id": "hotel-setting-offer-0",
-            "title": "Weekend escape",
-            "description": "Stay two nights and save 15%.",
-            "active": True,
-            "service_type": "hotel",
-            "source": "hotel_settings",
-        }
+    assert [(offer["title"], offer["description"], offer["source"]) for offer in detail["offers"]] == [
+        ("Weekend escape", "Stay two nights and save 15%.", "promotion")
     ]
     assert detail["tabs"]["offers_count"] == 1
 
@@ -663,47 +668,19 @@ def test_hotel_service_uses_hotel_settings_for_inherited_location():
     assert service["longitude"] == 90.4
 
 
-def test_room_tax_setting_changes_customer_price_breakdown():
+def test_room_price_breakdown_has_no_added_tax():
     database = mongomock.MongoClient().nuno
-    vendor_id = ObjectId()
-    included_room_id = database.vendor_rooms.insert_one(
-        {
-            "vendor_id": vendor_id,
-            "name": "Tax Included",
-            "base_price": 100,
-            "tax_included": True,
-        }
+    room_id = database.vendor_rooms.insert_one(
+        {"vendor_id": ObjectId(), "name": "Deluxe", "base_price": 100}
     ).inserted_id
-    excluded_room_id = database.vendor_rooms.insert_one(
-        {
-            "vendor_id": vendor_id,
-            "name": "Tax Extra",
-            "base_price": 100,
-            "tax_included": False,
-        }
-    ).inserted_id
-    repository = CustomerRepository(database)
 
-    included = repository.get_hotel_room_details(str(included_room_id))
-    excluded = repository.get_hotel_room_details(str(excluded_room_id))
+    room = CustomerRepository(database).get_hotel_room_details(str(room_id))
 
-    assert included is not None
-    assert included["price"] == {
-        "rate": "200",
-        "taxes": "0",
-        "total": "200",
-        "tax_included": True,
-    }
-    assert excluded is not None
-    assert excluded["price"] == {
-        "rate": "200",
-        "taxes": "40",
-        "total": "240",
-        "tax_included": False,
-    }
+    assert room is not None
+    assert room["price"] == {"rate": "200", "total": "200"}
 
 
-def test_restaurant_and_spa_settings_drive_their_own_amenities_and_offers():
+def test_restaurant_and_spa_settings_drive_their_own_amenities_and_promotions():
     database = mongomock.MongoClient().nuno
     vendor_id = ObjectId()
     customer_id = ObjectId()
@@ -720,25 +697,11 @@ def test_restaurant_and_spa_settings_drive_their_own_amenities_and_offers():
                 "restaurant_settings": {
                     "name": "Garden Dining",
                     "amenities": ["Outdoor seating"],
-                    "special_offers": [
-                        {
-                            "title": "Lunch deal",
-                            "description": "Lunch menu discount",
-                            "active": True,
-                        }
-                    ],
                     "published": True,
                 },
                 "spa_settings": {
                     "name": "Garden Spa",
                     "amenities": ["Sauna"],
-                    "special_offers": [
-                        {
-                            "title": "Wellness day",
-                            "description": "Full-day spa access",
-                            "active": True,
-                        }
-                    ],
                     "published": True,
                 },
             },
@@ -785,11 +748,5 @@ def test_restaurant_and_spa_settings_drive_their_own_amenities_and_offers():
     assert restaurant["amenities"] == ["Outdoor seating"]
     assert spa is not None
     assert spa["amenities"] == ["Sauna"]
-    assert {offer["title"] for offer in restaurant_offers} == {
-        "Lunch deal",
-        "Dining promotion",
-    }
-    assert {offer["title"] for offer in spa_offers} == {
-        "Wellness day",
-        "Spa promotion",
-    }
+    assert [offer["title"] for offer in restaurant_offers] == ["Dining promotion"]
+    assert [offer["title"] for offer in spa_offers] == ["Spa promotion"]

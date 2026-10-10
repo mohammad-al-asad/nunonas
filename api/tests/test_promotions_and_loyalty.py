@@ -31,14 +31,11 @@ def test_active_promotion_changes_booking_quote_and_estimated_points():
             "active": True,
         }
     )
+    database.platform_loyalty_config.insert_one(
+        {"_id": "config", "points_rule_type": "points_per_currency", "points_earned": 1, "currency_unit": 1}
+    )
     database.vendor_loyalty_settings.insert_one(
-        {
-            "vendor_id": vendor_id,
-            "enable_loyalty_program": True,
-            "points_rule_type": "points_per_currency",
-            "points_earned": 1,
-            "currency_unit": 1,
-        }
+        {"vendor_id": vendor_id, "status": "active", "approved_at": datetime.now(UTC)}
     )
 
     quote = CustomerRepository(database).get_booking_quote(
@@ -54,9 +51,9 @@ def test_active_promotion_changes_booking_quote_and_estimated_points():
     assert quote["original_subtotal"] == 200
     assert quote["discount_amount"] == 40
     assert quote["subtotal"] == 160
-    assert quote["total"] == 180.8
+    assert quote["total"] == 160
     assert quote["promotion_name"] == "Twenty off"
-    assert quote["estimated_points"] == 180
+    assert quote["estimated_points"] == 160
 
 
 def test_loyalty_awards_and_promotion_usage_are_idempotent():
@@ -75,10 +72,10 @@ def test_loyalty_awards_and_promotion_usage_are_idempotent():
     database.users.insert_one(
         {"_id": customer_id, "full_name": "Loyal Customer", "points_balance": 0}
     )
-    database.vendor_loyalty_settings.insert_one(
+    # Platform rules set by the admin; the provider's program has been approved.
+    database.platform_loyalty_config.insert_one(
         {
-            "vendor_id": vendor_id,
-            "enable_loyalty_program": True,
+            "_id": "config",
             "points_rule_type": "points_per_currency",
             "points_earned": 2,
             "currency_unit": 1,
@@ -86,6 +83,9 @@ def test_loyalty_awards_and_promotion_usage_are_idempotent():
             "review_bonus_points": 25,
             "points_expiry_policy": "1 Year",
         }
+    )
+    database.vendor_loyalty_settings.insert_one(
+        {"vendor_id": vendor_id, "status": "active", "approved_at": datetime.now(UTC)}
     )
     booking_id = database.vendor_bookings.insert_one(
         {
@@ -115,7 +115,7 @@ def test_loyalty_awards_and_promotion_usage_are_idempotent():
     promotion = database.vendor_promotions.find_one({"_id": promotion_id})
     assert promotion["usage_count"] == 1
     assert promotion["total_promo_revenue"] == 100
-    analytics = repository.get_loyalty_settings(str(vendor_id))
+    analytics = repository.get_loyalty_overview(str(vendor_id))
     assert analytics["total_points_issued"] == 210
     assert analytics["active_members"] == 1
     assert analytics["recent_activity"][0]["reference"] == "#LOYAL-1"
@@ -145,13 +145,11 @@ def test_verified_review_awards_configured_bonus():
             "created_at": datetime.now(UTC),
         }
     )
+    database.platform_loyalty_config.insert_one(
+        {"_id": "config", "review_bonus_points": 25, "points_expiry_policy": "No Expiry"}
+    )
     database.vendor_loyalty_settings.insert_one(
-        {
-            "vendor_id": vendor_id,
-            "enable_loyalty_program": True,
-            "review_bonus_points": 25,
-            "points_expiry_policy": "No Expiry",
-        }
+        {"vendor_id": vendor_id, "status": "active", "approved_at": datetime.now(UTC)}
     )
 
     review = CustomerRepository(database).create_booking_review(
@@ -160,6 +158,23 @@ def test_verified_review_awards_configured_bonus():
 
     assert review["points_awarded"] == 25
     assert database.users.find_one({"_id": customer_id})["points_balance"] == 35
-    analytics = VendorPortalRepository(database).get_loyalty_settings(str(vendor_id))
+    analytics = VendorPortalRepository(database).get_loyalty_overview(str(vendor_id))
     assert analytics["total_points_issued"] == 35
     assert any(activity["type"] == "review" for activity in analytics["recent_activity"])
+
+
+def test_completing_a_booking_marks_it_paid():
+    database = mongomock.MongoClient().nuno
+    vendor_id = ObjectId()
+    booking_id = database.vendor_bookings.insert_one(
+        {"vendor_id": vendor_id, "status": "confirmed", "payment_status": "unpaid", "total_amount": 100}
+    ).inserted_id
+    database.bookings.insert_one({"booking_id": booking_id, "vendor_id": vendor_id, "status": "confirmed"})
+    repository = VendorPortalRepository(database)
+
+    completed = repository.update_booking_status(str(vendor_id), str(booking_id), "completed")
+    assert completed["payment_status"] == "paid"
+    assert database.bookings.find_one({"booking_id": booking_id})["payment_status"] == "paid"
+
+    reopened = repository.update_booking_status(str(vendor_id), str(booking_id), "confirmed")
+    assert reopened["payment_status"] == "unpaid"

@@ -7,7 +7,7 @@ import { GoGift, GoPeople } from "react-icons/go";
 import { LiaHeadsetSolid } from "react-icons/lia";
 import { LuLayoutDashboard } from "react-icons/lu";
 import { TbBuildingStore, TbNotebook } from "react-icons/tb";
-import { FiCreditCard, FiLogOut, FiSettings } from "react-icons/fi";
+import { FiAward, FiCreditCard, FiLogOut, FiSettings } from "react-icons/fi";
 
 type RouteNavItem = {
   type: "route";
@@ -32,6 +32,7 @@ const navItems: NavItem[] = [
   { type: "route", href: "/content-moderation", label: "Content Moderation", icon: <TbNotebook /> },
   { type: "route", href: "/offers", label: "Offers", icon: <GoGift /> },
   { type: "route", href: "/billing", label: "Billing", icon: <FiCreditCard /> },
+  { type: "route", href: "/loyalty", label: "Loyalty", icon: <FiAward /> },
   { type: "route", href: "/support", label: "Support", icon: <LiaHeadsetSolid /> },
   { type: "route", href: "/settings", label: "Settings", icon: <FiSettings /> }
 ];
@@ -72,7 +73,7 @@ export function Sidebar({
                 type="button"
                 onClick={() => onOpenPanel(item.panel)}
                 className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-[#e9efff] transition-colors hover:bg-white/15 ${
-                  isActive ? "bg-[var(--bg-sidebar-accent)] text-[#0f2b55] font-semibold" : ""
+                  isActive ? "bg-[var(--bg-sidebar-accent)] font-semibold" : ""
                 }`}
               >
                 <span className="flex h-[22px] w-[22px] items-center justify-center text-[22px] leading-none">
@@ -90,7 +91,7 @@ export function Sidebar({
               key={item.href}
               href={item.href}
               className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-[#e9efff] transition-colors hover:bg-white/15 ${
-                isActive ? "bg-[var(--bg-sidebar-accent)] text-[#0f2b55] font-semibold" : ""
+                isActive ? "bg-[var(--bg-sidebar-accent)] font-semibold" : ""
               }`}
             >
               <span className="flex h-[22px] w-[22px] items-center justify-center text-[22px] leading-none">

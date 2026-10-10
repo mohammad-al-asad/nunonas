@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 
 import mongomock
+import pytest
 from bson import ObjectId
 
 from app.modules.customer.repositories_customer import CustomerRepository
@@ -107,7 +108,7 @@ def test_spa_quote_and_booking_use_live_service_and_create_vendor_booking():
     )
 
     assert quote["service_name"] == "Deep Tissue Massage"
-    assert quote["total"] == 90.4
+    assert quote["total"] == 80  # the service price; no fee or tax is added
     assert booking["provider_type"] == "spa"
     assert booking["service"] == "Deep Tissue Massage"
     assert booking["status"] == "pending"
@@ -130,7 +131,6 @@ def test_hotel_quote_enforces_inventory_and_booking_uses_same_total():
             "max_guests": 2,
             "min_stay_nights": 1,
             "max_stay_nights": 5,
-            "tax_included": True,
         }
     ).inserted_id
     repository = CustomerRepository(database)
@@ -205,3 +205,40 @@ def test_event_quote_and_booking_return_matching_dynamic_amounts():
     assert booking["total_amount"] == 50
     assert booking["quantity"] == 2
     assert booking["status_history"][0]["status"] == "pending"
+
+
+def test_restaurant_booking_rules_close_dates_and_cap_guests():
+    database = mongomock.MongoClient().nuno
+    customer_id, vendor_id = _base_customer_and_vendor(database)
+    database.vendor_portal_settings.update_one(
+        {"vendor_id": vendor_id},
+        {
+            "$set": {
+                "profile.restaurant_settings": {
+                    "available_booking_times": ["10:00 AM"],
+                    "closed_days": ["Wednesday"],
+                    "blocked_dates": ["2026-07-30"],
+                    "max_guests": 4,
+                    "booking_capacity": 1,
+                }
+            }
+        },
+    )
+    repository = CustomerRepository(database)
+
+    def book(date: str, guests: int = 2):
+        return repository.create_booking(
+            str(customer_id), str(vendor_id), "restaurant", date, "10:00 AM", guests, None, None, False
+        )
+
+    closed_weekday = repository.get_booking_availability(str(vendor_id), "2026-07-29")
+    assert closed_weekday["closed"] is True and closed_weekday["slots"] == []
+    assert repository.get_booking_availability(str(vendor_id), "2026-07-30")["closed"] is True
+    with pytest.raises(ValueError, match="closed on Wednesdays"):
+        book("2026-07-29")
+    with pytest.raises(ValueError, match="up to 4 guests"):
+        book("2026-07-31", guests=5)
+
+    book("2026-07-31")
+    # One booking per slot: the 10:00 AM slot is now full.
+    assert repository.get_booking_availability(str(vendor_id), "2026-07-31")["slots"][0]["available"] is False

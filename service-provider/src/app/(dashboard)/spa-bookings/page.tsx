@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { BookingDetailsModal } from "@/components/BookingDetailsModal";
 import { BookingsHeader } from "@/components/BookingsHeader";
+import { ManualBookingModal } from "@/components/bookings/ManualBookingModal";
 import { BookingsTable, type Booking } from "@/components/BookingsTable";
 import { Pagination } from "@/components/Pagination";
 import {
@@ -14,6 +15,7 @@ import {
   vendorRescheduleBooking,
   vendorUpdateBookingStatus,
 } from "@/lib/vendor-api";
+import { downloadReceipt } from "@/lib/download-receipt";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 
 const ITEMS_PER_PAGE = 10;
@@ -61,11 +63,7 @@ function toSpaBooking(raw: Record<string, unknown>): Booking {
         "Spa treatment",
     ),
     status: normalizeStatus(raw.status),
-    payment:
-      String(raw.payment_status ?? raw.payment ?? "Unpaid").toLowerCase() ===
-      "paid"
-        ? "Paid"
-        : "Unpaid",
+    manual: raw.source === "manual",
   };
 }
 
@@ -85,6 +83,7 @@ export default function SpaBookingsPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+  const [manualOpen, setManualOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(() =>
     validPage(searchParams.get("page")),
   );
@@ -205,22 +204,7 @@ export default function SpaBookingsPage() {
     setActionError("");
     try {
       const result = await vendorGenerateReceipt(booking.backendId);
-      const url = String(result.download_url ?? result.receipt_url ?? "");
-      if (url) {
-        window.open(url, "_blank", "noopener,noreferrer");
-      } else if (typeof result.content === "string") {
-        const blob = new Blob([result.content], {
-          type: String(result.content_type ?? "text/html;charset=utf-8"),
-        });
-        const objectUrl = URL.createObjectURL(blob);
-        const anchor = document.createElement("a");
-        anchor.href = objectUrl;
-        anchor.download = String(
-          result.filename ?? `receipt-${booking.id}.html`,
-        );
-        anchor.click();
-        URL.revokeObjectURL(objectUrl);
-      } else {
+      if (!downloadReceipt(result, `receipt-${booking.id}.pdf`)) {
         setActionError(
           "The receipt response was incomplete. Please try again.",
         );
@@ -239,7 +223,7 @@ export default function SpaBookingsPage() {
       <div className="w-full">
         <BookingsHeader
           title="Spa booking management"
-          description="Manage spa appointments, guest requests, payments, and booking status."
+          description="Manage spa appointments, guest requests, and booking status."
           searchQuery={searchQuery}
           onSearchChange={(value) => {
             setSearchQuery(value);
@@ -255,7 +239,8 @@ export default function SpaBookingsPage() {
             setDateRange(value);
             setCurrentPage(1);
           }}
-        />
+        onAddBooking={() => setManualOpen(true)} />
+        <ManualBookingModal providerType="spa" open={manualOpen} onClose={() => setManualOpen(false)} onCreated={() => void queryClient.invalidateQueries({ queryKey: bookingQueryRoot })} />
         {bookingsQuery.isFetching && !bookingsQuery.isPending ? (
           <div className="mb-3 text-right text-xs font-bold text-sky-600">
             Updating results…

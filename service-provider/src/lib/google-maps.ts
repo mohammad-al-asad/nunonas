@@ -12,8 +12,14 @@ export type GoogleMapMouseEvent = {
   latLng?: GoogleLatLng | null;
 };
 
+export type GoogleAddressComponent = {
+  long_name?: string;
+  types?: string[];
+};
+
 export type GoogleGeocoderResult = {
   formatted_address?: string;
+  address_components?: GoogleAddressComponent[];
   geometry?: {
     location?: GoogleLatLng;
   };
@@ -144,6 +150,24 @@ export function toGoogleLatLngLiteral(
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
 
   return { lat: Number(latitude), lng: Number(longitude) };
+}
+
+const CITY_COMPONENT_TYPES = [
+  "locality",
+  "postal_town",
+  "administrative_area_level_2",
+  "administrative_area_level_1",
+];
+
+export function cityFromGeocoderResult(
+  result: GoogleGeocoderResult | null | undefined,
+): string {
+  const components = result?.address_components ?? [];
+  for (const type of CITY_COMPONENT_TYPES) {
+    const match = components.find((component) => component.types?.includes(type));
+    if (match?.long_name) return match.long_name;
+  }
+  return "";
 }
 
 export function loadGoogleMaps(apiKey: string): Promise<ReadyGoogleMaps> {

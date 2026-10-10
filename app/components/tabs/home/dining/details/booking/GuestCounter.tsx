@@ -4,7 +4,8 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import theme from "../../../../../../constants/theme";
 
-const GuestCounter = ({ guests, onGuestsChange }) => {
+const GuestCounter = ({ guests, onGuestsChange, max = undefined }) => {
+  const atMax = max !== undefined && guests >= max;
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Number of Guests</Text>
@@ -19,18 +20,29 @@ const GuestCounter = ({ guests, onGuestsChange }) => {
           </TouchableOpacity>
           <Text style={styles.guestsCount}>{guests}</Text>
           <TouchableOpacity
-            style={[styles.counterButton, styles.plusButton]}
-            onPress={() => onGuestsChange(guests + 1)}
+            style={[styles.counterButton, styles.plusButton, atMax && styles.disabledButton]}
+            disabled={atMax}
+            accessibilityState={{ disabled: atMax }}
+            onPress={() => onGuestsChange(max !== undefined ? Math.min(max, guests + 1) : guests + 1)}
           >
             <Ionicons name="add" size={20} color={theme.COLORS.white} />
           </TouchableOpacity>
         </View>
       </View>
+      {atMax ? <Text style={styles.limitText}>Maximum {max} guests per booking.</Text> : null}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  disabledButton: {
+    opacity: 0.4,
+  },
+  limitText: {
+    marginTop: 8,
+    fontSize: 13,
+    color: theme.COLORS.textSecondary,
+  },
   section: {
     marginBottom: 25,
   },

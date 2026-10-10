@@ -24,6 +24,7 @@ import {
   FiUsers
 } from "react-icons/fi";
 import { FaStar } from "react-icons/fa6";
+import { CustomerDemographics, type CustomerDemographicsData } from "@/components/dashboard/demographics";
 
 type Range = "weekly" | "monthly" | "custom";
 
@@ -52,6 +53,7 @@ export type DashboardData = {
     offers?: { total: number; active: number; inactive: number };
   };
   recentBookings?: Array<{ id: string; customer: string; vendor: string; type: string; amount: number; status: string; date: string }>;
+  demographics?: CustomerDemographicsData;
 };
 
 const EMPTY_DATA: DashboardData = {
@@ -538,6 +540,8 @@ export function DashboardView({ data }: { data: DashboardData }) {
           </div>
         </article>
       </section>
+
+      <CustomerDemographics data={liveData.demographics} />
 
       <section className="rounded-xl border border-[#dbe2ef] bg-white p-4">
         <div className="mb-3 flex items-center justify-between">

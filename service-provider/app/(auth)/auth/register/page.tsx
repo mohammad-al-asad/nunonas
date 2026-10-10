@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -12,23 +12,13 @@ import {
   Bed,
   Sparkles,
   Check,
-  Map,
   MapPin
 } from "lucide-react";
 import { vendorGetPublicLegalDoc } from "@/lib/vendor-api";
 import AuthFeedbackModal from "@/components/auth/auth-feedback-modal";
 import SignaturePad from "@/components/auth/signature-pad";
-import {
-  loadGoogleMaps,
-  toGoogleLatLngLiteral,
-  type GoogleAdvancedMarkerInstance,
-  type GoogleGeocoderResult,
-  type GoogleMapInstance,
-  type GoogleMapMouseEvent,
-} from "@/lib/google-maps";
-
-const GOOGLE_MAPS_MAP_ID =
-  process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || "DEMO_MAP_ID";
+import { GoogleLocationPickerModal } from "@/components/maps/GoogleLocationPickerModal";
+import { GoogleLocationPreview } from "@/components/maps/GoogleLocationPreview";
 
 type RegisterFormData = {
   businessName: string;
@@ -78,9 +68,10 @@ type VendorContract = {
   sections: { number: string; heading: string; clauses: string[] }[];
 };
 
-type MapCoords = {
-  lat: number;
-  lng: number;
+type PinnedLocation = {
+  address: string;
+  latitude: number;
+  longitude: number;
 };
 
 type RegistrationDraft = {
@@ -89,11 +80,23 @@ type RegistrationDraft = {
   commercialRegistrationDocumentName?: string;
   tradeLicenseDocumentUrl?: string;
   commercialRegistrationDocumentUrl?: string;
-  tempCoords?: MapCoords;
-  confirmedCoords?: MapCoords;
-  tempAddress?: string;
-  hasPinnedLocation?: boolean;
+  pinnedLocation?: PinnedLocation | null;
 };
+
+function validPinnedLocation(value: unknown): PinnedLocation | null {
+  if (!value || typeof value !== "object") return null;
+  const { address, latitude, longitude } = value as Partial<PinnedLocation>;
+  if (
+    typeof address !== "string"
+    || !Number.isFinite(latitude)
+    || !Number.isFinite(longitude)
+    || Math.abs(Number(latitude)) > 90
+    || Math.abs(Number(longitude)) > 180
+  ) {
+    return null;
+  }
+  return { address, latitude: Number(latitude), longitude: Number(longitude) };
+}
 
 function isAccountConflictMessage(message: string) {
   return [
@@ -119,7 +122,7 @@ const initialFormData: RegisterFormData = {
   password: "",
   confirmPassword: "",
   address: "",
-  city: "New York", // Defaults to pass validation
+  city: "Dhaka", // Replaced by the city of the pinned map location
   website: "",
   description: "Activity Planner service provider business registration.", // Defaults to pass validation
   tradeLicenseNumber: "",
@@ -396,7 +399,6 @@ async function uploadRegistrationDocument(file: File) {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
   const [formData, setFormData] = useState(initialFormData);
   const [registrationConfig, setRegistrationConfig] = useState<VendorRegistrationFormConfig>({
     categories: defaultCategories,
@@ -414,55 +416,8 @@ export default function RegisterPage() {
   const [contract, setContract] = useState<VendorContract | null>(null);
   const [contractLoadFailed, setContractLoadFailed] = useState(false);
   const [contractSignature, setContractSignature] = useState("");
-
-  // Interactive Map Selector modal states
   const [showMapModal, setShowMapModal] = useState(false);
-  const [tempCoords, setTempCoords] = useState({ lat: 40.7128, lng: -74.0060 });
-  const [tempAddress, setTempAddress] = useState("Manhattan, New York");
-  const [confirmedCoords, setConfirmedCoords] = useState({ lat: 40.7128, lng: -74.0060 });
-  const [hasPinnedLocation, setHasPinnedLocation] = useState(false);
-  const mapSeedRef = useRef({
-    address: formData.address,
-    coords: tempCoords,
-  });
-  mapSeedRef.current = {
-    address: formData.address,
-    coords: tempCoords,
-  };
-
-  // Geocode typed address to update background preview map in real-time
-  useEffect(() => {
-    if (!googleMapsApiKey || formData.address.trim().length <= 3 || hasPinnedLocation) return;
-
-    let cancelled = false;
-    const delayDebounce = setTimeout(() => {
-      void loadGoogleMaps(googleMapsApiKey)
-        .then((googleMaps) => {
-          if (cancelled) return;
-          const geocoder = new googleMaps.Geocoder();
-          geocoder.geocode(
-            { address: formData.address },
-            (results: GoogleGeocoderResult[] | null, status: string) => {
-              const location = results?.[0]?.geometry?.location;
-              if (cancelled || status !== "OK" || !location) return;
-              const coords = {
-                lat: Number(location.lat()),
-                lng: Number(location.lng()),
-              };
-              setConfirmedCoords(coords);
-              setTempCoords(coords);
-              setTempAddress(results?.[0]?.formatted_address || formData.address);
-            },
-          );
-        })
-        .catch(() => undefined);
-    }, 1200);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(delayDebounce);
-    };
-  }, [formData.address, googleMapsApiKey, hasPinnedLocation]);
+  const [pinnedLocation, setPinnedLocation] = useState<PinnedLocation | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -484,16 +439,7 @@ export default function RegisterPage() {
         setCommercialRegistrationDocumentName(parsed.commercialRegistrationDocumentName ?? "");
         setTradeLicenseDocumentUrl(parsed.tradeLicenseDocumentUrl ?? "");
         setCommercialRegistrationDocumentUrl(parsed.commercialRegistrationDocumentUrl ?? "");
-        if (parsed.tempCoords) {
-          setTempCoords(parsed.tempCoords);
-        }
-        if (parsed.confirmedCoords) {
-          setConfirmedCoords(parsed.confirmedCoords);
-        }
-        if (parsed.tempAddress) {
-          setTempAddress(parsed.tempAddress);
-        }
-        setHasPinnedLocation(Boolean(parsed.hasPinnedLocation));
+        setPinnedLocation(validPinnedLocation(parsed.pinnedLocation));
       }, 0);
       return () => window.clearTimeout(restoreTimeout);
     } catch {
@@ -577,10 +523,7 @@ export default function RegisterPage() {
         commercialRegistrationDocumentName,
         tradeLicenseDocumentUrl,
         commercialRegistrationDocumentUrl,
-        tempCoords,
-        confirmedCoords,
-        tempAddress,
-        hasPinnedLocation,
+        pinnedLocation,
       }),
     );
   }, [
@@ -589,133 +532,8 @@ export default function RegisterPage() {
     commercialRegistrationDocumentName,
     tradeLicenseDocumentUrl,
     commercialRegistrationDocumentUrl,
-    tempCoords,
-    confirmedCoords,
-    tempAddress,
-    hasPinnedLocation,
+    pinnedLocation,
   ]);
-
-  useEffect(() => {
-    if (!showMapModal || !googleMapsApiKey) return;
-
-    let cancelled = false;
-    let map: GoogleMapInstance | undefined;
-    let marker: GoogleAdvancedMarkerInstance | undefined;
-    void loadGoogleMaps(googleMapsApiKey)
-      .then((googleMaps) => {
-      if (cancelled) return;
-      const mapDiv = document.getElementById("google-map-element");
-      if (!mapDiv) return;
-
-      const mapSeed = mapSeedRef.current;
-      const initialCenter = mapSeed.coords;
-      map = new googleMaps.Map(mapDiv, {
-        center: initialCenter,
-        zoom: 14,
-        mapId: GOOGLE_MAPS_MAP_ID,
-        disableDefaultUI: false,
-        zoomControl: true,
-      });
-
-      marker = new googleMaps.AdvancedMarkerElement({
-        position: initialCenter,
-        map,
-        gmpDraggable: true,
-      });
-      const geocoder = new googleMaps.Geocoder();
-      const reverseGeocode = (position: MapCoords, fallbackLabel: string) => {
-        geocoder.geocode(
-          { location: position },
-          (results: GoogleGeocoderResult[] | null, status: string) => {
-            if (cancelled) return;
-            setTempAddress(
-              status === "OK" && results?.[0]?.formatted_address
-                ? results[0].formatted_address
-                : fallbackLabel,
-            );
-          },
-        );
-      };
-      const updateLocation = (position: MapCoords) => {
-        if (marker) marker.position = position;
-        setTempCoords(position);
-        reverseGeocode(
-          position,
-          `Coordinate (${position.lat.toFixed(4)}, ${position.lng.toFixed(4)})`,
-        );
-      };
-
-      const tryGeolocation = () => {
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              const pos = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude,
-              };
-              map?.setCenter(pos);
-              if (marker) marker.position = pos;
-              setTempCoords(pos);
-              reverseGeocode(
-                pos,
-                `Current Location (${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)})`,
-              );
-            },
-            () => {
-              // Geolocation failed or denied
-            }
-          );
-        }
-      };
-
-      // Check if user has entered a business address first
-      if (mapSeed.address.trim().length > 3) {
-        geocoder.geocode({ address: mapSeed.address }, (results: GoogleGeocoderResult[] | null, status: string) => {
-          const location = results?.[0]?.geometry?.location;
-          if (status === "OK" && location) {
-            const position = {
-              lat: Number(location.lat()),
-              lng: Number(location.lng()),
-            };
-            map?.setCenter(position);
-            if (marker) marker.position = position;
-            setTempCoords(position);
-            setTempAddress(results?.[0]?.formatted_address || mapSeed.address);
-          } else {
-            tryGeolocation();
-          }
-        });
-      } else {
-        tryGeolocation();
-      }
-
-      // Handle map clicks
-      map.addListener("click", (event: GoogleMapMouseEvent) => {
-        const position = toGoogleLatLngLiteral(event.latLng);
-        if (position) updateLocation(position);
-      });
-
-      // Handle marker drags (AdvancedMarkerElement uses gmp-dragend with addEventListener)
-      const onMarkerDragEnd = () => {
-        const position = toGoogleLatLngLiteral(marker?.position);
-        if (position) updateLocation(position);
-      };
-      if (marker && "addEventListener" in marker && typeof (marker as unknown as HTMLElement).addEventListener === "function") {
-        (marker as unknown as HTMLElement).addEventListener("gmp-dragend", onMarkerDragEnd);
-      } else if (marker && typeof marker.addListener === "function") {
-        marker.addListener("dragend", onMarkerDragEnd);
-      }
-      })
-      .catch(() => undefined);
-
-    return () => {
-      cancelled = true;
-      const googleMaps = window.google?.maps;
-      if (googleMaps?.event && map) googleMaps.event.clearInstanceListeners(map);
-      if (googleMaps?.event && marker) googleMaps.event.clearInstanceListeners(marker);
-      if (marker) marker.map = null;
-    };
-  }, [showMapModal, googleMapsApiKey]);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -874,6 +692,8 @@ export default function RegisterPage() {
             formData.businessLocationLabel.trim()
               ? formData.businessLocationLabel.trim()
               : null,
+          latitude: pinnedLocation?.latitude ?? null,
+          longitude: pinnedLocation?.longitude ?? null,
           equipment_availability: null,
         }),
       );
@@ -900,13 +720,17 @@ export default function RegisterPage() {
     year: "numeric",
   });
 
-  const handleConfirmMapLocation = () => {
+  const handleConfirmMapLocation = (location: PinnedLocation & { city: string }) => {
+    setPinnedLocation({
+      address: location.address,
+      latitude: location.latitude,
+      longitude: location.longitude,
+    });
     setFormData((prev) => ({
       ...prev,
-      businessLocationLabel: `${tempAddress} (${tempCoords.lat.toFixed(4)}, ${tempCoords.lng.toFixed(4)})`,
+      address: prev.address.trim() ? prev.address : location.address,
+      city: location.city || prev.city,
     }));
-    setConfirmedCoords({ lat: tempCoords.lat, lng: tempCoords.lng });
-    setHasPinnedLocation(true);
     setShowMapModal(false);
   };
 
@@ -939,83 +763,15 @@ export default function RegisterPage() {
         }
       />
 
-      {/* Map Selector Modal */}
-      {showMapModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[32px] w-full max-w-lg overflow-hidden shadow-2xl border border-slate-100 flex flex-col">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                <Map className="h-5 w-5 text-blue-600" />
-                Select Business Location
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowMapModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
-              >
-                Cancel
-              </button>
-            </div>
-            {/* Real Google Map Element inside Modal */}
-            <div className="bg-slate-100 h-96 relative flex flex-col items-center justify-center overflow-hidden">
-              {googleMapsApiKey ? (
-                <div id="google-map-element" className="w-full h-full" />
-              ) : (
-                /* Fallback Map Mock */
-                <div className="w-full h-full relative flex items-center justify-center p-4">
-                  <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]" />
-                  <div className="absolute top-1/3 left-1/4 h-24 w-40 bg-blue-200/40 rounded-full blur-xl animate-pulse" />
-                  <div className="absolute bottom-1/4 right-1/4 h-24 w-48 bg-emerald-200/30 rounded-full blur-xl" />
-                  <div className="absolute top-1/2 left-0 right-0 h-1 bg-white/60" />
-                  <div className="absolute left-1/2 top-0 bottom-0 w-1 bg-white/60" />
-
-                  <div className="relative bg-white/95 backdrop-blur px-5 py-3 rounded-2xl shadow-xl border border-slate-100/50 flex flex-col items-center gap-1 z-10 max-w-[85%] text-center">
-                    <MapPin className="h-7 w-7 text-red-500 animate-bounce" />
-                    <span className="text-xs font-black text-slate-800">{tempAddress}</span>
-                    <span className="text-[10px] text-slate-400 font-bold tracking-wider">
-                      Lat: {tempCoords.lat.toFixed(4)}, Lng: {tempCoords.lng.toFixed(4)}
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTempCoords({ lat: 40.7306, lng: -73.9352 });
-                      setTempAddress("Brooklyn, New York");
-                    }}
-                    className="absolute top-12 right-12 w-3 h-3 bg-red-400 border border-white rounded-full animate-ping cursor-pointer"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTempCoords({ lat: 40.7580, lng: -73.9855 });
-                      setTempAddress("Times Square, NY");
-                    }}
-                    className="absolute bottom-16 left-16 w-3 h-3 bg-blue-400 border border-white rounded-full animate-pulse cursor-pointer"
-                  />
-                </div>
-              )}
-            </div>
-            <div className="p-6 bg-slate-50 flex items-center justify-between gap-4">
-              <div className="flex flex-col">
-                <span className="text-xs font-black text-slate-800 line-clamp-1 max-w-[280px]">
-                  {tempAddress}
-                </span>
-                <span className="text-[9px] text-slate-450 font-bold tracking-wider">
-                  Lat: {tempCoords.lat.toFixed(4)}, Lng: {tempCoords.lng.toFixed(4)}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={handleConfirmMapLocation}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm px-6 py-3 rounded-2xl shadow-lg transition"
-              >
-                Confirm Location
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <GoogleLocationPickerModal
+        open={showMapModal}
+        title="Select business location"
+        initialAddress={pinnedLocation?.address || formData.address}
+        initialLatitude={pinnedLocation?.latitude}
+        initialLongitude={pinnedLocation?.longitude}
+        onClose={() => setShowMapModal(false)}
+        onConfirm={handleConfirmMapLocation}
+      />
 
       {/* Main Container matches light lavender/blueish white color from screenshot */}
       <div className="w-full min-h-screen bg-white font-sans">
@@ -1238,38 +994,43 @@ export default function RegisterPage() {
                     </p>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block ml-1">Location Preview</label>
-                      <div className="bg-[#e2e4ed]/70 rounded-2xl h-36 relative flex flex-col items-center justify-center overflow-hidden border border-slate-200/40">
-                        <iframe
-                          src={`https://www.openstreetmap.org/export/embed.html?bbox=${confirmedCoords.lng - 0.015}%2C${confirmedCoords.lat - 0.008}%2C${confirmedCoords.lng + 0.015}%2C${confirmedCoords.lat + 0.008}&layer=mapnik&marker=${confirmedCoords.lat}%2C${confirmedCoords.lng}`}
-                          className="absolute inset-0 w-full h-full border-0 opacity-75 pointer-events-none"
-                          title="Real Map View"
-                        />
-                        <div className="absolute inset-0 bg-slate-900/5 pointer-events-none" />
-
-                        {formData.businessLocationLabel ? (
-                          <div className="relative text-center flex flex-col items-center gap-1 z-10 bg-white/90 backdrop-blur px-5 py-3 rounded-2xl border border-slate-100 shadow-md">
-                            <Check className="h-5 w-5 text-emerald-600 bg-emerald-50 p-1 rounded-full" />
-                            <span className="text-[10px] font-black text-slate-700 max-w-[180px] truncate block">
-                              {formData.businessLocationLabel}
-                            </span>
+                      {pinnedLocation ? (
+                        <div className="overflow-hidden rounded-2xl border border-slate-200/40 bg-white">
+                          <GoogleLocationPreview
+                            latitude={pinnedLocation.latitude}
+                            longitude={pinnedLocation.longitude}
+                            className="h-36 w-full bg-[#e2e4ed]/70 pointer-events-none"
+                          />
+                          <div className="flex items-center gap-3 px-4 py-3">
+                            <Check className="h-5 w-5 shrink-0 text-emerald-600 bg-emerald-50 p-1 rounded-full" />
+                            <div className="min-w-0 flex-1">
+                              <span className="text-[10px] font-black text-slate-700 truncate block" title={pinnedLocation.address}>
+                                {pinnedLocation.address}
+                              </span>
+                              <span className="text-[9px] font-bold text-slate-400 tracking-wider">
+                                {pinnedLocation.latitude.toFixed(5)}, {pinnedLocation.longitude.toFixed(5)}
+                              </span>
+                            </div>
                             <button
                               type="button"
                               onClick={() => setShowMapModal(true)}
-                              className="text-[9px] text-blue-600 hover:underline font-black mt-1 uppercase tracking-wider"
+                              className="shrink-0 text-[9px] text-blue-600 hover:underline font-black uppercase tracking-wider"
                             >
-                              Change Location
+                              Change
                             </button>
                           </div>
-                        ) : (
+                        </div>
+                      ) : (
+                        <div className="bg-[#e2e4ed]/70 rounded-2xl h-36 flex items-center justify-center border border-slate-200/40">
                           <button
                             type="button"
                             onClick={() => setShowMapModal(true)}
-                            className="bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold px-5 py-3 rounded-full shadow-lg border border-slate-100/50 transition z-10"
+                            className="bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold px-5 py-3 rounded-full shadow-lg border border-slate-100/50 transition"
                           >
                             Open Map Selector
                           </button>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     <input
                       type="text"
                       name="businessLocationLabel"

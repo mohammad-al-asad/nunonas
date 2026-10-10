@@ -15,8 +15,6 @@ export interface UpcomingBooking {
   guest_count?: number;
   guests?: number;
   status?: string;
-  payment_status?: string;
-  payment?: string;
 }
 
 export function UpcomingBookingsTable({ bookings = [], viewAllHref = "/restaurant-bookings" }: { bookings?: UpcomingBooking[]; viewAllHref?: string }) {

@@ -35,14 +35,6 @@ export default function BookingPriceSummary({ quote, loading = false }: BookingP
               <Text style={styles.discountValue}>-{money(quote.discount_amount)}</Text>
             </View>
           ) : null}
-          <View style={styles.row}>
-            <Text style={styles.label}>Service fee</Text>
-            <Text style={styles.value}>{money(quote.service_fee)}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>{quote.tax_included ? "Taxes (included)" : "Taxes"}</Text>
-            <Text style={styles.value}>{money(quote.taxes)}</Text>
-          </View>
           <View style={styles.divider} />
           <View style={styles.row}>
             <Text style={styles.totalLabel}>Total</Text>

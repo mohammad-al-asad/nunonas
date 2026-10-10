@@ -31,10 +31,13 @@ export async function POST(request: Request) {
     }
 
     const nextResponse = NextResponse.json({ ok: true }, { status: 200 });
+    // Same lifetime as the backend reset token (15 minutes).
     nextResponse.cookies.set("nunos_dashboard_reset_token", payload.reset_token, {
       httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      path: "/"
+      path: "/",
+      maxAge: 15 * 60
     });
     return nextResponse;
   } catch {

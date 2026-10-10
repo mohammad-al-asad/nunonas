@@ -1,12 +1,32 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FiBell, FiCheckCircle, FiInfo, FiUser } from "react-icons/fi";
+import { FiBell, FiInfo, FiUser } from "react-icons/fi";
 import { Sidebar } from "@/components/main/sidebar";
 import { Topbar } from "@/components/main/topbar";
 import { useRouter } from "next/navigation";
 
 type PanelType = "notifications" | "profile" | null;
+
+type AdminNotification = {
+  id: string;
+  title: string;
+  message: string;
+  link: string | null;
+  read: boolean;
+  created_at: string | null;
+};
+
+const NOTIFICATION_POLL_MS = 60_000;
+
+function timeAgo(value: string | null) {
+  if (!value) return "";
+  const seconds = Math.max(0, (Date.now() - new Date(value).getTime()) / 1000);
+  if (seconds < 60) return "Just now";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
+  if (seconds < 86_400) return `${Math.floor(seconds / 3600)} h ago`;
+  return new Date(value).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
 
 export function MainLayoutShell({
   children
@@ -16,6 +36,43 @@ export function MainLayoutShell({
   const [panel, setPanel] = useState<PanelType>(null);
   const router = useRouter();
   const [adminProfile, setAdminProfile] = useState<{ name: string; email: string; avatar?: string } | null>(null);
+  const [notifications, setNotifications] = useState<AdminNotification[]>([]);
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch("/api/notifications", { cache: "no-store", signal: AbortSignal.timeout(15_000) });
+        if (!res.ok) return;
+        const data = (await res.json()) as { items?: AdminNotification[]; unread?: number };
+        if (!cancelled) {
+          setNotifications(data.items ?? []);
+          setUnread(Number(data.unread ?? 0));
+        }
+      } catch {
+        // Keep the last list; the next poll retries.
+      }
+    };
+    void load();
+    const timer = window.setInterval(() => void load(), NOTIFICATION_POLL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  const openPanel = (next: PanelType) => {
+    setPanel(next);
+    if (next === "notifications" && unread > 0) {
+      // Seen once the panel is open; the unread highlight stays until the panel closes.
+      setUnread(0);
+      void fetch("/api/notifications/read", { method: "POST" }).catch(() => undefined);
+    }
+    if (next !== "notifications") {
+      setNotifications((items) => items.map((item) => ({ ...item, read: true })));
+    }
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -55,12 +112,13 @@ export function MainLayoutShell({
 
   return (
     <div className="grid min-h-screen grid-cols-[220px_1fr] max-[980px]:grid-cols-1 min-[981px]:h-screen min-[981px]:overflow-hidden">
-      <Sidebar activePanel={panel} onOpenPanel={(next) => setPanel(next)} />
+      <Sidebar activePanel={panel} onOpenPanel={openPanel} />
       <main className="min-w-0 px-[14px] pb-[18px] min-[981px]:h-screen min-[981px]:overflow-y-auto">
         <Topbar
-          onOpenPanel={(next) => setPanel(next)}
+          onOpenPanel={openPanel}
           adminAvatar={adminProfile?.avatar}
           adminName={adminProfile?.name}
+          unreadNotifications={unread}
         />
         {children}
       </main>
@@ -87,45 +145,29 @@ export function MainLayoutShell({
               </button>
             </header>
             <div className="space-y-3 overflow-y-auto px-5 py-5">
-              <button
-                type="button"
-                onClick={() => {
-                  setPanel(null);
-                  router.push("/vendors?status=PENDING");
-                }}
-                className="w-full text-left rounded-xl border border-[#e6ecf7] bg-[#f8fbff] p-3 transition hover:border-[#8ca0d8] hover:bg-[#f3f7ff] cursor-pointer"
-              >
-                <p className="m-0 flex items-center gap-2 text-[12px] font-semibold text-[#1f3d8f]">
-                  <FiInfo size={14} /> New service provider signup pending review
-                </p>
-                <p className="m-0 mt-1 text-[11px] text-[#6c7890]">2 minutes ago</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setPanel(null);
-                  router.push("/billing");
-                }}
-                className="w-full text-left rounded-xl border border-[#e6ecf7] bg-white p-3 transition hover:border-[#8ca0d8] hover:bg-[#f3f7ff] cursor-pointer"
-              >
-                <p className="m-0 flex items-center gap-2 text-[12px] font-semibold text-[#0f766e]">
-                  <FiCheckCircle size={14} /> Billing cycle completed successfully
-                </p>
-                <p className="m-0 mt-1 text-[11px] text-[#6c7890]">1 hour ago</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setPanel(null);
-                  router.push("/dashboard");
-                }}
-                className="w-full text-left rounded-xl border border-[#e6ecf7] bg-white p-3 transition hover:border-[#8ca0d8] hover:bg-[#f3f7ff] cursor-pointer"
-              >
-                <p className="m-0 flex items-center gap-2 text-[12px] font-semibold text-[#1f3d8f]">
-                  <FiBell size={14} /> Weekly performance report is ready
-                </p>
-                <p className="m-0 mt-1 text-[11px] text-[#6c7890]">Today</p>
-              </button>
+              {notifications.length === 0 ? (
+                <p className="m-0 rounded-xl bg-[#f8fafc] p-4 text-center text-[12px] text-[#6c7890]">You&apos;re all caught up.</p>
+              ) : (
+                notifications.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setPanel(null);
+                      if (item.link) router.push(item.link);
+                    }}
+                    className={`w-full text-left rounded-xl border p-3 transition hover:border-[#8ca0d8] hover:bg-[#f3f7ff] cursor-pointer ${
+                      item.read ? "border-[#e6ecf7] bg-white" : "border-[#c7d4f3] bg-[#f8fbff]"
+                    }`}
+                  >
+                    <p className="m-0 flex items-center gap-2 text-[12px] font-semibold text-[#1f3d8f]">
+                      <FiInfo size={14} /> {item.title}
+                    </p>
+                    <p className="m-0 mt-1 text-[12px] text-[#1f2d46]">{item.message}</p>
+                    <p className="m-0 mt-1 text-[11px] text-[#6c7890]">{timeAgo(item.created_at)}</p>
+                  </button>
+                ))
+              )}
             </div>
           </div>
         )}

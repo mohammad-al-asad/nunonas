@@ -22,6 +22,7 @@ import BookingPriceSummary from "../../../../components/ui/BookingPriceSummary";
 import PromoCodeInput from "../../../../components/ui/PromoCodeInput";
 import { useAppDispatch, useAppSelector } from "../../../../store/hooks";
 import { hydrateSavedItems, markSaved, markUnsaved, savedKey } from "../../../../store/slices/savedSlice";
+import { LOYALTY_POINTS_ENABLED } from "../../../../lib/features";
 
 type BookingState = {
   loading: boolean;
@@ -176,7 +177,7 @@ export default function EventDetailsScreen() {
       });
       const bookingCode = response.booking_code ?? response.bookingCode ?? "";
       setBookingState({ loading: false, code: bookingCode });
-      const pointsText = Number(response.estimated_points || 0) > 0
+      const pointsText = LOYALTY_POINTS_ENABLED && Number(response.estimated_points || 0) > 0
         ? ` You can earn approximately ${response.estimated_points} points after completion.`
         : "";
       const promotionText = response.promotion_name

@@ -2,11 +2,10 @@ import React from "react";
 import { Image, View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import theme from "../../../../../constants/theme";
-import type { NormalizedRestaurant, ProviderPayload } from "../../../../../lib/provider-types";
+import type { NormalizedRestaurant } from "../../../../../lib/provider-types";
 
 type DetailsInfoProps = {
   restaurant: NormalizedRestaurant;
-  offers?: ProviderPayload[];
 };
 
 export default function DetailsInfo({ restaurant }: DetailsInfoProps) {
@@ -27,8 +26,12 @@ export default function DetailsInfo({ restaurant }: DetailsInfoProps) {
 
       <View style={styles.infoRow}>
         <Text style={styles.subText}>{restaurant.category}</Text>
-        <View style={styles.dot} />
-        <Text style={styles.priceText}>{restaurant.priceRange}</Text>
+        {restaurant.priceRange ? (
+          <>
+            <View style={styles.dot} />
+            <Text style={styles.priceText}>{restaurant.priceRange}</Text>
+          </>
+        ) : null}
       </View>
 
       <View style={styles.locationRow}>

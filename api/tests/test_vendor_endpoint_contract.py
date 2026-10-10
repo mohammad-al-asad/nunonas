@@ -73,14 +73,9 @@ FRONTEND_VENDOR_ENDPOINTS = {
     ("PATCH", "/api/v1/vendor/promotions/{promotion_id}"),
     ("PATCH", "/api/v1/vendor/promotions/{promotion_id}/status"),
     ("DELETE", "/api/v1/vendor/promotions/{promotion_id}"),
-    ("PATCH", "/api/v1/vendor/promotions/platform-campaigns/{campaign_id}/join"),
-    ("GET", "/api/v1/vendor/analytics/overview"),
-    ("GET", "/api/v1/vendor/analytics/demographics"),
-    ("GET", "/api/v1/vendor/analytics/occupancy"),
-    ("GET", "/api/v1/vendor/analytics/reviews-summary"),
-    ("GET", "/api/v1/vendor/analytics/export"),
-    ("GET", "/api/v1/vendor/loyalty/settings"),
-    ("PATCH", "/api/v1/vendor/loyalty/settings"),
+    ("POST", "/api/v1/vendor/promotions/platform-offers/{offer_id}/respond"),
+    ("GET", "/api/v1/vendor/loyalty"),
+    ("POST", "/api/v1/vendor/loyalty/enrollment"),
     ("GET", "/api/v1/vendor/reviews"),
     ("POST", "/api/v1/vendor/reviews/{review_id}/reply"),
     ("GET", "/api/v1/vendor/settings"),
@@ -259,7 +254,6 @@ def test_room_and_service_schemas_preserve_ui_specific_fields():
         base_price=200,
         weekend_price=250,
         default_discount_percent=10,
-        tax_included=False,
         min_stay_nights=2,
         max_stay_nights=10,
     )
@@ -270,7 +264,6 @@ def test_room_and_service_schemas_preserve_ui_specific_fields():
         price=25,
     )
 
-    assert room.model_dump()["tax_included"] is False
     assert service.model_dump()["service_type"] == "hotel"
 
 
@@ -283,7 +276,6 @@ def test_mobile_service_alias_endpoints_exist(app):
     expected = {
         ("GET", "/api/v1/restaurants"),
         ("GET", "/api/v1/restaurants/{restaurant_id}"),
-        ("GET", "/api/v1/restaurants/{restaurant_id}/menu"),
         ("GET", "/api/v1/hotels"),
         ("GET", "/api/v1/hotels/{hotel_id}"),
         ("GET", "/api/v1/hotels/{hotel_id}/rooms"),

@@ -5,7 +5,8 @@ import theme from "../../../../constants/theme";
 import { getFirstQueryParam } from "../../../../lib/event-map-utils";
 import { getErrorMessage, normalizeSpa } from "../../../../lib/provider-utils";
 import type { NormalizedSpa, ProviderCollectionResponse, ProviderPayload } from "../../../../lib/provider-types";
-import { getSpa, getSpaGallery, getSpaMenu, getSpaServices } from "../../../../lib/customer-api";
+import { getSpa, getSpaGallery, getSpaOffers, getSpaServices } from "../../../../lib/customer-api";
+import type { ProviderOffer } from "../../../../components/ui/ProviderOffers";
 
 // Import Details Components
 import SpaImageHeader from "../../../../components/tabs/home/spa/details/SpaImageHeader";
@@ -13,8 +14,7 @@ import SpaDetailsInfo from "../../../../components/tabs/home/spa/details/SpaDeta
 import SpaDetailsActions from "../../../../components/tabs/home/spa/details/SpaDetailsActions";
 import SpaDetailsTabs from "../../../../components/tabs/home/spa/details/SpaDetailsTabs";
 import SpaOverviewContent from "../../../../components/tabs/home/spa/details/SpaOverviewContent";
-import SpaMenuContent from "../../../../components/tabs/home/spa/details/SpaMenuContent";
-import SpaServicesContent from "../../../../components/tabs/home/spa/details/SpaServicesContent";
+import MenuContent from "../../../../components/tabs/home/dining/details/MenuContent";
 import SpaGalleryContent from "../../../../components/tabs/home/spa/details/SpaGalleryContent";
 import ReviewsContent from "../../../../components/tabs/home/reviews/ReviewsContent";
 
@@ -23,9 +23,9 @@ export default function SpaDetailsScreen() {
   const spaId = getFirstQueryParam(id);
   const [activeTab, setActiveTab] = useState("Overview");
   const [spa, setSpa] = useState<NormalizedSpa | null>(null);
-  const [menuItems, setMenuItems] = useState<ProviderPayload[]>([]);
   const [galleryItems, setGalleryItems] = useState<ProviderPayload[]>([]);
   const [serviceItems, setServiceItems] = useState<ProviderPayload[]>([]);
+  const [offers, setOffers] = useState<ProviderOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -40,21 +40,22 @@ export default function SpaDetailsScreen() {
       }
 
       try {
-        const [detail, menu, gallery, services] = await Promise.all([
+        const [detail, gallery, services] = await Promise.all([
           getSpa<ProviderPayload>(spaId),
-          getSpaMenu<ProviderCollectionResponse>(spaId),
           getSpaGallery<ProviderCollectionResponse>(spaId),
           getSpaServices<ProviderCollectionResponse>(spaId),
         ]);
+        // Offers are optional; the page still works without them.
+        const offerData = await getSpaOffers<{ items?: ProviderOffer[] }>(spaId).catch(() => null);
 
         if (cancelled) {
           return;
         }
 
         setSpa(normalizeSpa(detail));
-        setMenuItems(menu.items ?? []);
         setGalleryItems(gallery.items ?? []);
         setServiceItems(services.items ?? []);
+        setOffers(offerData?.items ?? []);
       } catch (error: unknown) {
         if (!cancelled) {
           setError(getErrorMessage(error, "Failed to load spa details."));
@@ -138,9 +139,14 @@ export default function SpaDetailsScreen() {
 
         {/* Tab Content */}
         <View style={styles.content}>
-          {activeTab === "Overview" && <SpaOverviewContent spa={spa} />}
-          {activeTab === "Services" && <SpaServicesContent items={serviceItems} />}
-          {activeTab === "Menu" && <SpaMenuContent items={menuItems} />}
+          {activeTab === "Overview" && <SpaOverviewContent spa={spa} offers={offers} />}
+          {activeTab === "Menu" && (
+            <MenuContent
+              dishes={serviceItems}
+              emptyTitle="Treatments coming soon"
+              emptyText="This spa hasn't added its treatments yet."
+            />
+          )}
           {activeTab === "Gallery" && <SpaGalleryContent items={galleryItems} />}
           {activeTab === "Reviews" && spaId ? <ReviewsContent restaurantId={spaId} providerType="spa" /> : null}
         </View>

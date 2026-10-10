@@ -121,7 +121,15 @@ def set_plan_preferences(session_id: str, payload: PlanForMeStepRequest, current
 async def reveal_plan(session_id: str, current_user: dict = Depends(get_current_user), customer_service: CustomerService = Depends(get_customer_service), ai_service: AIPlannerService = Depends(get_ai_service)) -> dict:
     session = customer_service.repo.update_plan_session(current_user["id"], session_id, "revealed", True)
     values = (session or {}).get("values", {})
-    user_context, candidates = customer_service.repo.get_personalized_plan_context(current_user["id"])
+    user_context, candidates = customer_service.repo.get_personalized_plan_context(current_user["id"], values.get("preferences"))
+    if not any(candidates.values()):
+        filters = user_context.get("plan_filters") or {}
+        where = "" if filters.get("area") in (None, "Anywhere") else f" in {filters['area']}"
+        what = "places with offers" if filters.get("vouchers_only") else "places"
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"We couldn't find any {what}{where}. Try another area or turn off Vouchers only.",
+        )
     user_context["plan_preferences"] = values
     plans = [plan.model_dump(mode="json") for plan in await ai_service.create_plan_options_from_context(user_context, candidates)]
     updated_session = customer_service.repo.update_plan_session(current_user["id"], session_id, "generated_plans", plans)
@@ -168,19 +176,6 @@ def get_restaurant_details(
     customer_service: CustomerService = Depends(get_customer_service),
 ) -> dict:
     return customer_service.get_restaurant_or_404(current_user["id"], restaurant_id)
-
-
-@router.get("/restaurants/{restaurant_id}/menu", tags=["Customer - Restaurants"])
-def get_restaurant_menu(
-    restaurant_id: str,
-    current_user: dict = Depends(get_current_user),
-    customer_service: CustomerService = Depends(get_customer_service),
-) -> dict:
-    try:
-        items = customer_service.repo.list_restaurant_assets(restaurant_id, "menu")
-    except InvalidId as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Restaurant not found.") from exc
-    return {"items": items}
 
 
 @router.get("/restaurants/{restaurant_id}/gallery", tags=["Customer - Restaurants"])
@@ -238,11 +233,6 @@ def get_spa_details(spa_id: str, current_user: dict = Depends(get_current_user),
     except InvalidId as exc: raise HTTPException(status_code=404, detail="Spa not found.") from exc
     if not row: raise HTTPException(status_code=404, detail="Spa not found.")
     return row
-
-
-@router.get("/spas/{spa_id}/menu", tags=["Customer - Spa"])
-def get_spa_menu(spa_id: str, customer_service: CustomerService = Depends(get_customer_service)) -> dict:
-    return {"items": customer_service.repo.list_spa_assets(spa_id, "menu")}
 
 
 @router.get("/spas/{spa_id}/gallery", tags=["Customer - Spa"])

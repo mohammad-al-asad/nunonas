@@ -46,6 +46,7 @@ const SERVICE_FILTERS: Array<{ key: ServiceFilter; label: string }> = [
   { key: "event", label: "Events" },
   { key: "happy_hour", label: "Happy Hours" },
 ];
+const VENUE_LABELS: Record<string, string> = { restaurant: "Restaurant", hotel: "Hotel", spa: "Spa" };
 type BookingState = { loading: boolean; code: string; status: string };
 type CloudConfig = {
   id: number;
@@ -426,13 +427,20 @@ export default function MapScreen() {
     (typeof cardEvent?.distanceKm === "number" ? `${cardEvent.distanceKm.toFixed(1)} km away` : cardEvent?.distance ?? "Nearby");
   const routeDurationText = routeInfo?.durationText ?? "Tap Directions";
   const routeLocationText = cardEvent?.address ?? cardEvent?.locationLabel ?? cardEvent?.location ?? "Location available";
-  const primaryActionLabel = resolvedBookingCode
-    ? "View Booking"
-    : cardEvent?.isSoldOut
-      ? "Sold Out"
-      : canShowInlineBooking
-        ? "Book Now"
-        : "Open Details";
+  const cardKind = cardEvent?.entityType === "event" ? "event" : cardEvent?.entityType === "happy_hour" ? "happy_hour" : "venue";
+  const venueTypeLabel = cardEvent ? (VENUE_LABELS[cardEvent.entityType] ?? "Place") : "";
+  const happyHourStatus = cardEvent?.isOpenNow ? "Live now" : "Not running right now";
+  const primaryActionLabel = cardKind === "venue"
+    ? `View ${venueTypeLabel.toLowerCase()}`
+    : cardKind === "happy_hour"
+      ? "Open venue"
+      : resolvedBookingCode
+        ? "View Booking"
+        : cardEvent?.isSoldOut
+          ? "Sold Out"
+          : canShowInlineBooking
+            ? "Book Now"
+            : "Open Details";
   const visibleEvents = useMemo(() => {
     const normalizedSearch = searchQuery.trim().toLowerCase();
     const matchingEvents = nearbyEvents.filter((event) => {
@@ -696,7 +704,7 @@ export default function MapScreen() {
               <Image source={{ uri: cardEvent.imageUrl }} style={styles.heroImage} />
             ) : (
               <View style={styles.heroImageFallback}>
-                <Ionicons name="calendar" size={28} color={theme.COLORS.white} />
+                <Ionicons name={cardKind === "venue" ? "storefront-outline" : cardKind === "happy_hour" ? "pricetag" : "calendar"} size={28} color={theme.COLORS.white} />
               </View>
             )}
 
@@ -705,7 +713,7 @@ export default function MapScreen() {
                 {cardEvent.title}
               </Text>
               <Text style={styles.offerSubtitle} numberOfLines={1}>
-                {cardEvent.tag ?? "Active event"}
+                {cardKind === "venue" ? cardEvent.offerText || venueTypeLabel : cardEvent.tag || "Event"}
               </Text>
             </View>
 
@@ -713,7 +721,7 @@ export default function MapScreen() {
               <View style={styles.routeSummaryHeader}>
                 <Ionicons name="location-outline" size={18} color={theme.COLORS.primary} />
                 <Text style={styles.routeSummaryTitle} numberOfLines={1}>
-                  {cardEvent.venue ?? "Event location"}
+                  {cardKind === "venue" ? cardEvent.title : cardEvent.venue || "Event location"}
                 </Text>
               </View>
               <Text style={styles.routeSummaryAddress} numberOfLines={2}>
@@ -731,36 +739,75 @@ export default function MapScreen() {
               </View>
             </View>
 
-            <View style={styles.infoGrid}>
-              <View style={styles.infoTile}>
-                <Text style={styles.infoLabel}>Date</Text>
-                <Text style={styles.infoValue}>{cardEvent.date ?? "Date TBA"}</Text>
+            {cardKind === "venue" ? (
+              <View style={styles.infoGrid}>
+                <View style={styles.infoTile}>
+                  <Text style={styles.infoLabel}>Rating</Text>
+                  <Text style={styles.infoValue}>
+                    {cardEvent.rating ? `★ ${cardEvent.rating.toFixed(1)}` : "No reviews yet"}
+                  </Text>
+                </View>
+                <View style={styles.infoTile}>
+                  <Text style={styles.infoLabel}>Type</Text>
+                  <Text style={styles.infoValue}>{venueTypeLabel}</Text>
+                </View>
               </View>
-              <View style={styles.infoTile}>
-                <Text style={styles.infoLabel}>Booking</Text>
-                <Text style={styles.infoValue} numberOfLines={1}>
-                  {resolvedBookingStatusText}
-                </Text>
+            ) : cardKind === "happy_hour" ? (
+              <View style={styles.infoGrid}>
+                <View style={styles.infoTile}>
+                  <Text style={styles.infoLabel}>Status</Text>
+                  <Text style={[styles.infoValue, cardEvent.isOpenNow ? styles.liveNowText : null]}>{happyHourStatus}</Text>
+                </View>
+                <View style={styles.infoTile}>
+                  <Text style={styles.infoLabel}>Hours</Text>
+                  <Text style={styles.infoValue}>{cardEvent.time}</Text>
+                </View>
+                <View style={styles.infoTile}>
+                  <Text style={styles.infoLabel}>Runs</Text>
+                  <Text style={styles.infoValue} numberOfLines={1}>{cardEvent.date}</Text>
+                </View>
+                <View style={styles.infoTile}>
+                  <Text style={styles.infoLabel}>Offer price</Text>
+                  <Text style={styles.infoValue}>
+                    {cardEvent.ticketPrice != null ? cardEvent.ticketPrice : "See offer"}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.infoTile}>
-                <Text style={styles.infoLabel}>Venue</Text>
-                <Text style={styles.infoValue} numberOfLines={1}>
-                  {cardEvent.venue ?? "Venue available"}
-                </Text>
+            ) : (
+              <View style={styles.infoGrid}>
+                <View style={styles.infoTile}>
+                  <Text style={styles.infoLabel}>Date</Text>
+                  <Text style={styles.infoValue}>{cardEvent.date ?? "Date TBA"}</Text>
+                </View>
+                <View style={styles.infoTile}>
+                  <Text style={styles.infoLabel}>Booking</Text>
+                  <Text style={styles.infoValue} numberOfLines={1}>
+                    {resolvedBookingStatusText}
+                  </Text>
+                </View>
+                <View style={styles.infoTile}>
+                  <Text style={styles.infoLabel}>Venue</Text>
+                  <Text style={styles.infoValue} numberOfLines={1}>
+                    {cardEvent.venue ?? "Venue available"}
+                  </Text>
+                </View>
+                <View style={styles.infoTile}>
+                  <Text style={styles.infoLabel}>Ticket</Text>
+                  <Text style={styles.infoValue}>
+                    {cardEvent.ticketPrice != null ? cardEvent.ticketPrice : "Check details"}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.infoTile}>
-                <Text style={styles.infoLabel}>
-                  {cardEvent.entityType === "happy_hour" ? "Offer price" : "Ticket"}
-                </Text>
-                <Text style={styles.infoValue}>
-                  {cardEvent.ticketPrice != null ? cardEvent.ticketPrice : "Check details"}
-                </Text>
-              </View>
-            </View>
+            )}
 
-            {cardEvent.description ? (
+            {cardKind !== "venue" && cardEvent.description ? (
               <Text style={styles.descriptionText} numberOfLines={3}>
                 {cardEvent.description}
+              </Text>
+            ) : null}
+            {cardKind === "happy_hour" && cardEvent.terms ? (
+              <Text style={styles.descriptionText} numberOfLines={3}>
+                Terms: {cardEvent.terms}
               </Text>
             ) : null}
 
@@ -1294,6 +1341,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     color: theme.COLORS.textPrimary,
+  },
+  liveNowText: {
+    color: "#15803d",
   },
   descriptionText: {
     fontSize: 13,

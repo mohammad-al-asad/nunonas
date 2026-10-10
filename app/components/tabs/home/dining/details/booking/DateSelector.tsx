@@ -13,19 +13,26 @@ function getBookingDays(startDate) {
   });
 }
 
-const DateSelector = ({ selectedDate, onDateSelect, title = "Select Date", startDate = undefined }) => {
+// isDateDisabled marks days the venue takes no bookings (closed weekdays, blocked dates).
+const DateSelector = ({ selectedDate, onDateSelect, title = "Select Date", startDate = undefined, isDateDisabled = undefined }) => {
   const days = getBookingDays(startDate);
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateList}>
-        {days.map((item) => (
+        {days.map((item) => {
+          const disabled = Boolean(isDateDisabled?.(item.date));
+          return (
           <TouchableOpacity
             key={item.date}
             style={[
               styles.dateItem,
               selectedDate === item.date && styles.selectedDateItem,
+              disabled && styles.disabledDateItem,
             ]}
+            disabled={disabled}
+            accessibilityState={{ disabled, selected: selectedDate === item.date }}
+            accessibilityLabel={disabled ? `${item.day} ${item.dateNumber} ${item.month}, closed` : undefined}
             onPress={() => onDateSelect(item.date)}
           >
             <Text style={[styles.dateDay, selectedDate === item.date && styles.selectedDateText]}>
@@ -35,16 +42,20 @@ const DateSelector = ({ selectedDate, onDateSelect, title = "Select Date", start
               {item.dateNumber}
             </Text>
             <Text style={[styles.dateMonth, selectedDate === item.date && styles.selectedDateText]}>
-              {item.month}
+              {disabled ? "Closed" : item.month}
             </Text>
           </TouchableOpacity>
-        ))}
+          );
+        })}
       </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  disabledDateItem: {
+    opacity: 0.4,
+  },
   section: {
     marginBottom: 25,
   },

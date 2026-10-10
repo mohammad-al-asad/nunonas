@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import theme from "../../../../../constants/theme";
 import { useGridColumns } from "../../../../../lib/use-grid-columns";
 import type { NormalizedRestaurant } from "../../../../../lib/provider-types";
+import ProviderOffers, { type ProviderOffer } from "../../../../ui/ProviderOffers";
 
 const AMENITY_COLOR = "#3b82f6";
 
@@ -31,17 +32,28 @@ function amenityIcon(name: string) {
 
 type OverviewContentProps = {
   restaurant: NormalizedRestaurant;
+  offers?: ProviderOffer[];
 };
 
-export default function OverviewContent({ restaurant }: OverviewContentProps) {
+// Short weekday names in the order the week reads.
+const WEEKDAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+export default function OverviewContent({ restaurant, offers = [] }: OverviewContentProps) {
   const grid = useGridColumns();
+  const hours = restaurant.openingHours?.open_time && restaurant.openingHours?.close_time
+    ? `${restaurant.openingHours.open_time} - ${restaurant.openingHours.close_time}`
+    : "Not provided";
+  const closedDays = WEEKDAY_ORDER.filter((day) => restaurant.bookingRules.closedDays.includes(day));
+  const seating = restaurant.seatingPreferences.filter((option) => option.trim().toLowerCase() !== "no preference");
   return (
     <View style={styles.container}>
+      <ProviderOffers offers={offers} />
+
       {/* About Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>About</Text>
         <Text style={styles.aboutText}>
-          {restaurant.description || "No description available."}
+          {restaurant.description || "This restaurant hasn't added a description yet."}
         </Text>
       </View>
 
@@ -49,18 +61,35 @@ export default function OverviewContent({ restaurant }: OverviewContentProps) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Opening Hours</Text>
         <View style={styles.hoursRow}>
-          <Text style={styles.dayText}>Monday - Friday</Text>
-          <Text style={styles.timeText}>{restaurant.openingHours?.open_time && restaurant.openingHours?.close_time ? `${restaurant.openingHours.open_time} - ${restaurant.openingHours.close_time}` : "Not provided"}</Text>
+          <Text style={styles.dayText}>{closedDays.length ? "Open days" : "Every day"}</Text>
+          <Text style={styles.timeText}>{hours}</Text>
         </View>
-        <View style={styles.hoursRow}>
-          <Text style={styles.dayText}>Saturday - Sunday</Text>
-          <Text style={styles.timeText}>{restaurant.openingHours?.open_time && restaurant.openingHours?.close_time ? `${restaurant.openingHours.open_time} - ${restaurant.openingHours.close_time}` : "Not provided"}</Text>
-        </View>
+        {closedDays.length ? (
+          <View style={styles.hoursRow}>
+            <Text style={styles.dayText}>Closed</Text>
+            <Text style={styles.timeText}>{closedDays.map((day) => day.slice(0, 3)).join(", ")}</Text>
+          </View>
+        ) : null}
         <View style={styles.statusBadge}>
           <View style={styles.statusDot} />
           <Text style={styles.statusText}>{restaurant.openingHours?.is_open_now === false ? "Closed" : "Open Now"}</Text>
         </View>
       </View>
+
+      {/* Seating Section */}
+      {seating.length ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Seating</Text>
+          <View style={styles.chipRow}>
+            {seating.map((option) => (
+              <View key={option} style={styles.chip}>
+                <Ionicons name={amenityIcon(option) === "checkmark-circle" ? "restaurant-outline" : amenityIcon(option)} size={16} color={AMENITY_COLOR} />
+                <Text style={styles.chipText}>{option}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
 
       {/* Amenities Section */}
       <View style={styles.section}>
@@ -85,6 +114,25 @@ export default function OverviewContent({ restaurant }: OverviewContentProps) {
 }
 
 const styles = StyleSheet.create({
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    backgroundColor: "#eff6ff",
+  },
+  chipText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: theme.COLORS.textPrimary,
+  },
   container: {
     paddingHorizontal: 20,
     paddingVertical: 20,

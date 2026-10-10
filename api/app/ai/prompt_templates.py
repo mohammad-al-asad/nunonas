@@ -12,7 +12,8 @@ def build_plan_options_prompt(user_context: dict, candidates: dict[str, list[dic
     return (
         f"Create {count} different personalized plans for this customer using only the CANDIDATES. "
         "Base them on USER_CONTEXT.plan_preferences (companions, mood, budget, preferences.area) "
-        "and the customer's history. Make the plans clearly different from each other "
+        "and the customer's history. CANDIDATES are already filtered to USER_CONTEXT.plan_filters "
+        "(area and vouchers_only), so use them as given. Make the plans clearly different from each other "
         "(different places and a different feel), and prefer nearer places (lower distance_km).\n"
         "Return a JSON object with exactly this shape:\n"
         '{"plans": [{"title": "short catchy name, max 5 words", '

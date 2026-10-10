@@ -40,8 +40,8 @@ export function Sidebar({
   const dispatch = useAppDispatch();
   const navItems = getSidebarItemsForCategories(categories);
   const directGroups = [
-    { label: "Overview", hrefs: ["/dashboard", "/analytics"] },
-    { label: "Operations", hrefs: ["/operations", "/customers"] },
+    { label: "Overview", hrefs: ["/dashboard"] },
+    { label: "Operations", hrefs: ["/customers"] },
     { label: "Engagement", hrefs: ["/promotions", "/loyalty", "/reviews"] },
     { label: "Account", hrefs: ["/settings", "/profile", "/notifications"] },
   ];
@@ -171,7 +171,7 @@ export function Sidebar({
         </button>
       </div>
 
-      <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-5 md:px-4" aria-label="Portal sections">
+      <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-5 md:px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Portal sections">
         {groupedItems.map((group) => (
           <div key={group.label} className="mb-6 last:mb-0">
             <p className="mb-2 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400/80">
@@ -191,7 +191,7 @@ export function Sidebar({
                     className={cn(
                       "group flex min-h-11 items-center rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300",
                       isActive
-                        ? "bg-sky-400 text-[#12204f] shadow-lg shadow-sky-950/20"
+                        ? "bg-sky-400 text-white shadow-lg shadow-sky-950/20"
                         : "text-slate-300 hover:bg-white/10 hover:text-white",
                     )}
                     title={item.name}
@@ -282,7 +282,7 @@ export function Sidebar({
                                   className={cn(
                                     "group flex min-h-10 items-center rounded-xl px-3 py-2 text-[13px] font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300",
                                     childActive
-                                      ? "bg-sky-400 text-[#12204f] shadow-md shadow-sky-950/20"
+                                      ? "bg-sky-400 text-white shadow-md shadow-sky-950/20"
                                       : "text-slate-300 hover:bg-white/10 hover:text-white",
                                   )}
                                   title={`${serviceGroup.name} ${label}`}

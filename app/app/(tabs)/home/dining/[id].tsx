@@ -15,6 +15,7 @@ import type { ProviderCollectionResponse, ProviderPayload, NormalizedRestaurant 
 
 // Import Details Components
 import ImageHeader from "../../../../components/tabs/home/dining/details/ImageHeader";
+import type { ProviderOffer } from "../../../../components/ui/ProviderOffers";
 import DetailsInfo from "../../../../components/tabs/home/dining/details/DetailsInfo";
 import DetailsActions from "../../../../components/tabs/home/dining/details/DetailsActions";
 import DetailsTabs from "../../../../components/tabs/home/dining/details/DetailsTabs";
@@ -25,7 +26,7 @@ import ReviewsContent from "../../../../components/tabs/home/reviews/ReviewsCont
 
 import {
   getRestaurant,
-  getRestaurantMenu,
+  getRestaurantServices,
   getRestaurantGallery,
   getRestaurantOffers,
 } from "../../../../lib/customer-api";
@@ -36,7 +37,7 @@ export default function RestaurantDetailsScreen() {
   const [activeTab, setActiveTab] = useState("Overview");
 
   const [restaurant, setRestaurant] = useState<NormalizedRestaurant | null>(null);
-  const [menuItems, setMenuItems] = useState<ProviderPayload[]>([]);
+  const [dishes, setDishes] = useState<ProviderPayload[]>([]);
   const [galleryItems, setGalleryItems] = useState<ProviderPayload[]>([]);
   const [offers, setOffers] = useState<ProviderPayload[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,19 +53,19 @@ export default function RestaurantDetailsScreen() {
     setLoading(true);
     setError(null);
     try {
-      const [detail, menu, gallery, offerData] = await Promise.allSettled([
+      const [detail, gallery, offerData, menuDishes] = await Promise.allSettled([
         getRestaurant<ProviderPayload>(restaurantId),
-        getRestaurantMenu<ProviderCollectionResponse>(restaurantId),
         getRestaurantGallery<ProviderCollectionResponse>(restaurantId),
         getRestaurantOffers<ProviderCollectionResponse>(restaurantId),
+        getRestaurantServices<ProviderCollectionResponse>(restaurantId),
       ]);
 
       if (detail.status === "fulfilled") setRestaurant(normalizeRestaurant(detail.value));
       else setError("Restaurant not found.");
 
-      if (menu.status === "fulfilled") setMenuItems(menu.value?.items ?? []);
       if (gallery.status === "fulfilled") setGalleryItems(gallery.value?.items ?? []);
       if (offerData.status === "fulfilled") setOffers(offerData.value?.items ?? []);
+      if (menuDishes.status === "fulfilled") setDishes(menuDishes.value?.items ?? []);
     } catch (error: unknown) {
       setError(getErrorMessage(error, "Failed to load restaurant."));
     } finally {
@@ -119,7 +120,7 @@ export default function RestaurantDetailsScreen() {
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
       <ScrollView showsVerticalScrollIndicator={false} stickyHeaderIndices={[3]}>
         <ImageHeader image={coverImage} images={headerImages} entityId={restaurantId} />
-        <DetailsInfo restaurant={restaurant} offers={offers} />
+        <DetailsInfo restaurant={restaurant} />
         <DetailsActions
           restaurantId={restaurantId}
           phone={restaurant.phone}
@@ -132,8 +133,8 @@ export default function RestaurantDetailsScreen() {
 
         {/* Tab Content */}
         <View style={styles.content}>
-          {activeTab === "Overview" && <OverviewContent restaurant={restaurant} />}
-          {activeTab === "Menu" && <MenuContent items={menuItems} />}
+          {activeTab === "Overview" && <OverviewContent restaurant={restaurant} offers={offers as ProviderOffer[]} />}
+          {activeTab === "Menu" && <MenuContent dishes={dishes} />}
           {activeTab === "Gallery" && <GalleryContent items={galleryItems} />}
           {activeTab === "Reviews" && restaurantId ? <ReviewsContent restaurantId={restaurantId} providerType="restaurant" /> : null}
         </View>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Search, ChevronDown, Calendar as CalendarIcon } from "lucide-react";
+import { Search, ChevronDown, Calendar as CalendarIcon, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { DatePicker } from "./DatePicker";
 
@@ -15,6 +15,8 @@ interface BookingsHeaderProps {
   onStatusChange: (status: string) => void;
   dateRange: { start: Date | null; end: Date | null };
   onDateRangeChange: (range: { start: Date | null; end: Date | null }) => void;
+  /** Shows a "New booking" button for walk-in or phone bookings. */
+  onAddBooking?: () => void;
 }
 
 export function BookingsHeader({
@@ -27,6 +29,7 @@ export function BookingsHeader({
   onStatusChange,
   dateRange,
   onDateRangeChange,
+  onAddBooking,
 }: BookingsHeaderProps) {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
@@ -122,6 +125,17 @@ export function BookingsHeader({
               />
             )}
           </div>
+
+          {onAddBooking ? (
+            <button
+              type="button"
+              onClick={onAddBooking}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#1e2a5e] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#1a234d] sm:py-3"
+            >
+              <Plus className="h-4 w-4" />
+              New booking
+            </button>
+          ) : null}
         </div>
       </div>
     </div>

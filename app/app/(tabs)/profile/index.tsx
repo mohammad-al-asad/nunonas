@@ -20,6 +20,7 @@ import { getMe, getPointsSummary, updateNotificationPreferences } from "../../..
 import ProfileMenuItem from "../../../components/tabs/profile/ProfileMenuItem";
 import ProfileHeader from "../../../components/tabs/profile/ProfileHeader";
 import BonusPointsCard from "../../../components/tabs/profile/BonusPointsCard";
+import { LOYALTY_POINTS_ENABLED } from "../../../lib/features";
 
 // Helper Components
 const ProfileHeaderSection = ({ title }) => (
@@ -62,7 +63,7 @@ export default function ProfileScreen() {
             previousPointsRef.current = currentPoints;
             setNearbyEvents(data.notification_preferences.nearby_events);
             setBookingReminders(data.notification_preferences.booking_reminders);
-            if (previousPoints != null && currentPoints > previousPoints) {
+            if (LOYALTY_POINTS_ENABLED && previousPoints != null && currentPoints > previousPoints) {
               showToast(`${currentPoints - previousPoints} bonus points added.`, { type: "success" });
             }
           }
@@ -126,7 +127,7 @@ export default function ProfileScreen() {
         />
 
         {/* Bonus Points Card section */}
-        <BonusPointsCard points={String(profile?.points_balance ?? 0)} />
+        {LOYALTY_POINTS_ENABLED ? <BonusPointsCard points={String(profile?.points_balance ?? 0)} /> : null}
 
         {/* Menu Sections */}
         <View style={styles.menuContainer}>
