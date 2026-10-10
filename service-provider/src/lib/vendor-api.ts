@@ -322,6 +322,27 @@ export async function vendorDeleteHappyHour(happyHourId: string) {
 // ─── Booking Management ────────────────────────────────────────────────────────
 
 /** GET /vendor/booking-management/bookings */
+export type ManualBookingPayload = {
+  provider_type: "restaurant" | "hotel" | "spa";
+  customer_name: string;
+  customer_phone?: string;
+  customer_email?: string;
+  date: string;
+  time?: string;
+  guests: number;
+  total_amount?: number;
+  room_id?: string;
+  check_out_date?: string;
+  service_id?: string;
+  seating_preference?: string;
+  special_requests?: string;
+};
+
+/** POST /vendor/booking-management/bookings: a walk-in or phone booking (no commission). */
+export async function vendorCreateManualBooking(payload: ManualBookingPayload) {
+  return vendorRequest<Record<string, unknown>>(`/vendor/booking-management/bookings`, "POST", payload);
+}
+
 export async function vendorListBookings(
   params: {
     limit?: number;
@@ -396,15 +417,6 @@ export async function vendorListAssets(
       asset_type: assetType,
       service_type: serviceType,
     })}`,
-  );
-}
-
-/** GET /vendor/menu-services/overview */
-export async function vendorGetMenuServicesOverview(
-  serviceType: "restaurant" | "hotel" | "spa" = "restaurant",
-) {
-  return vendorRequest<Record<string, unknown>>(
-    `/vendor/menu-services/overview${q({ service_type: serviceType })}`,
   );
 }
 
@@ -587,70 +599,66 @@ export async function vendorDeletePromotion(promotionId: string) {
   return vendorRequest(`/vendor/promotions/${promotionId}`, "DELETE");
 }
 
-/** PATCH /vendor/promotions/platform-campaigns/:id/join */
-export async function vendorJoinPlatformCampaign(
-  campaignId: string,
-  join: boolean,
-) {
-  return vendorRequest<Record<string, unknown>>(
-    `/vendor/promotions/platform-campaigns/${campaignId}/join`,
-    "PATCH",
-    { join },
-  );
-}
+export type VendorPlatformOffer = {
+  id: string;
+  name: string;
+  purpose: string;
+  discount_type: "percentage" | "fixed_amount";
+  discount_value: number;
+  discount_label: string;
+  start_date: string;
+  end_date: string;
+  state: "upcoming" | "live" | "ended";
+  response: "pending" | "accepted" | "rejected";
+  responded_at: string | null;
+  can_respond: boolean;
+};
 
-// ─── Analytics ────────────────────────────────────────────────────────────────
-
-/** GET /vendor/analytics/overview */
-export async function vendorGetAnalyticsOverview(
-  params: { date_from?: string; date_to?: string } = {},
-  signal?: AbortSignal,
-) {
-  return vendorRequest<Record<string, unknown>>(`/vendor/analytics/overview${q(params)}`, "GET", undefined, { signal });
-}
-
-/** GET /vendor/analytics/demographics */
-export async function vendorGetDemographics() {
-  return vendorRequest<Record<string, unknown>>(
-    `/vendor/analytics/demographics`,
-  );
-}
-
-/** GET /vendor/analytics/occupancy */
-export async function vendorGetOccupancy() {
-  return vendorRequest<Record<string, unknown>>(`/vendor/analytics/occupancy`);
-}
-
-/** GET /vendor/analytics/reviews-summary */
-export async function vendorGetReviewsSummary() {
-  return vendorRequest<Record<string, unknown>>(
-    `/vendor/analytics/reviews-summary`,
-  );
-}
-
-/** GET /vendor/analytics/export */
-export async function vendorExportAnalytics(params: { date_from?: string; date_to?: string } = {}) {
-  return vendorRequest<{ filename?: string; content_type?: string; content?: string; download_url?: string }>(
-    `/vendor/analytics/export${q(params)}`,
+/** POST /vendor/promotions/platform-offers/:id/respond (final; cannot be changed) */
+export async function vendorRespondToPlatformOffer(offerId: string, accept: boolean) {
+  return vendorRequest<VendorPlatformOffer>(
+    `/vendor/promotions/platform-offers/${offerId}/respond`,
+    "POST",
+    { accept },
   );
 }
 
 // ─── Loyalty ──────────────────────────────────────────────────────────────────
 
-/** GET /vendor/loyalty/settings */
-export async function vendorGetLoyaltySettings(signal?: AbortSignal) {
-  return vendorRequest<Record<string, unknown>>(`/vendor/loyalty/settings`, "GET", undefined, { signal });
+export type LoyaltyProgramStatus = "off" | "pending" | "active" | "rejected";
+
+export type VendorLoyaltyOverview = {
+  program: {
+    status: LoyaltyProgramStatus;
+    requested_at: string | null;
+    approved_at: string | null;
+    rejection_reason: string | null;
+    can_turn_off_at: string | null;
+    min_active_days: number;
+  };
+  rules: {
+    points_rule_type: "points_per_currency" | "percentage_based";
+    points_earned: number;
+    currency_unit: number;
+    percentage_value: number;
+    first_booking_bonus: number;
+    review_bonus_points: number;
+    points_expiry_policy: string;
+  };
+  total_points_issued: number;
+  active_members: number;
+  repeat_booking_rate: number;
+  recent_activity: { type?: string; customer_name?: string; reference?: string; points?: number; created_at?: string }[];
+};
+
+/** GET /vendor/loyalty: program status, the platform's rules and analytics. */
+export async function vendorGetLoyalty(signal?: AbortSignal) {
+  return vendorRequest<VendorLoyaltyOverview>(`/vendor/loyalty`, "GET", undefined, { signal });
 }
 
-/** PATCH /vendor/loyalty/settings */
-export async function vendorUpdateLoyaltySettings(
-  payload: Record<string, unknown>,
-) {
-  return vendorRequest<Record<string, unknown>>(
-    `/vendor/loyalty/settings`,
-    "PATCH",
-    payload,
-  );
+/** POST /vendor/loyalty/enrollment: turning on asks the admin for approval. */
+export async function vendorSetLoyaltyEnrollment(enabled: boolean) {
+  return vendorRequest<VendorLoyaltyOverview>(`/vendor/loyalty/enrollment`, "POST", { enabled });
 }
 
 // ─── Reviews ──────────────────────────────────────────────────────────────────

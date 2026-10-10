@@ -8,17 +8,9 @@ const EXACT_HEADERS: Record<string, DashboardHeader> = {
     title: "Business Overview",
     description: "Live activity and performance across your enabled services.",
   },
-  "/analytics": {
-    title: "Business Analytics",
-    description: "Live metrics from the vendor analytics endpoints.",
-  },
   "/customers": {
     title: "Customers",
     description: "Search and manage guests who have interacted with your business.",
-  },
-  "/operations": {
-    title: "Operations",
-    description: "Manage the day-to-day work for your enabled business categories.",
   },
   "/events": {
     title: "Event Management",
@@ -53,8 +45,8 @@ const EXACT_HEADERS: Record<string, DashboardHeader> = {
     description: "Create a guest-facing service for your hotel.",
   },
   "/loyalty": {
-    title: "Loyalty Points Settings",
-    description: "Configure how customers earn and spend rewards.",
+    title: "Loyalty Program",
+    description: "Turn the platform loyalty program on or off and track points issued.",
   },
   "/notifications": {
     title: "Notifications",
@@ -78,7 +70,7 @@ const EXACT_HEADERS: Record<string, DashboardHeader> = {
   },
   "/restaurant-bookings": {
     title: "Restaurant Bookings",
-    description: "Manage reservations, guest requests, payments, and booking status.",
+    description: "Manage reservations, guest requests, and booking status.",
   },
   "/reviews": {
     title: "Review Management",
@@ -98,7 +90,7 @@ const EXACT_HEADERS: Record<string, DashboardHeader> = {
   },
   "/spa-bookings": {
     title: "Spa Booking Management",
-    description: "Manage appointments, guest requests, payments, and booking status.",
+    description: "Manage appointments, guest requests, and booking status.",
   },
   "/spa-services": {
     title: "Spa Services",

@@ -31,6 +31,8 @@ type PendingVendorRegistration = {
   venue_capacity?: number | null;
   ticket_pricing_type?: string | null;
   business_location_label?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   equipment_availability?: string[] | null;
 };
 

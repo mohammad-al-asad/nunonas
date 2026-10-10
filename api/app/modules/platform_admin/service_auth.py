@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, datetime
 from typing import Any
 
@@ -30,6 +31,9 @@ from app.modules.platform_admin.schemas_auth import (
     AdminVerifyResetCodeRequest,
 )
 from app.providers.email_sender import EmailSender
+
+logger = logging.getLogger(__name__)
+RESET_CODE_SENT = "If the account exists, a validation code has been sent."
 
 
 class PlatformAdminAuthService:
@@ -67,7 +71,7 @@ class PlatformAdminAuthService:
             code_length=self.settings.signup_verification_code_length,
             expires_in_minutes=self.settings.signup_verification_code_expire_minutes,
         )
-        self.email_sender.send_validation_code(
+        self.email_sender.send_signup_verification_code(
             recipient_email=email,
             full_name="admin",
             code=code,
@@ -199,24 +203,32 @@ class PlatformAdminAuthService:
         return AdminMessageResponse(message="Logged out successfully.")
 
     def request_forgot_password_code(self, payload: AdminForgotPasswordRequest) -> AdminCodeResponse:
+        # Every outcome (unknown account, resend cooldown, lockout, email failure) gets the
+        # same reply so the response never reveals which emails belong to an admin.
         admin = self._get_by_contact(payload.email_or_phone)
         if not admin or not admin.get("email"):
-            return AdminCodeResponse(message="If the account exists, a validation code has been sent.")
+            return AdminCodeResponse(message=RESET_CODE_SENT)
 
         code = self.password_reset_repo.create_validation_code(
             admin_id=admin["id"],
             code_length=self.settings.password_reset_code_length,
             expires_in_minutes=self.settings.password_reset_code_expire_minutes,
         )
-        self.email_sender.send_validation_code(
-            recipient_email=admin["email"],
-            full_name=admin.get("full_name", "admin"),
-            code=code,
-            expires_in=self.settings.password_reset_code_expire_minutes,
-        )
+        if code is None:
+            return AdminCodeResponse(message=RESET_CODE_SENT)
+        try:
+            self.email_sender.send_password_reset_code(
+                recipient_email=admin["email"],
+                full_name=admin.get("full_name") or "admin",
+                code=code,
+                expires_in=self.settings.password_reset_code_expire_minutes,
+            )
+        except Exception:
+            logger.exception("Failed to send platform admin password reset code to admin %s", admin["id"])
+            return AdminCodeResponse(message=RESET_CODE_SENT)
         if self.settings.debug_return_reset_code:
             return AdminCodeResponse(message="Validation code sent (debug mode includes code).", validation_code=code)
-        return AdminCodeResponse(message="If the account exists, a validation code has been sent.")
+        return AdminCodeResponse(message=RESET_CODE_SENT)
 
     def verify_forgot_password_code(self, payload: AdminVerifyResetCodeRequest) -> AdminVerifyCodeResponse:
         admin = self._get_by_contact(payload.email_or_phone)
@@ -238,8 +250,14 @@ class PlatformAdminAuthService:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired reset token.")
 
         admin_id = str(token_doc["admin_id"])
-        self.admin_repo.update_password_hash(admin_id, hash_password(payload.new_password))
         self.password_reset_repo.mark_reset_token_used(payload.reset_token)
+        self.admin_repo.update_password_hash(admin_id, hash_password(payload.new_password))
+        # Sign out every existing session; the admin logs in again with the new password.
+        now = datetime.now(UTC)
+        self.session_collection.update_many(
+            {"subject_id": admin_id, "audience": "platform_admin", "revoked_at": None},
+            {"$set": {"revoked_at": now, "last_used_at": now}},
+        )
         return AdminMessageResponse(message="Password has been reset successfully.")
 
     def get_current_admin_from_token(self, token: str) -> dict[str, Any]:

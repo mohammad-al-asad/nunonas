@@ -16,6 +16,10 @@ class EmailSender(ABC):
     def send_password_reset_code(self, recipient_email: str, full_name: str, code: str, expires_in: int) -> None:
         raise NotImplementedError
 
+    @abstractmethod
+    def send_message(self, recipient_email: str, full_name: str, subject: str, lines: list[str]) -> None:
+        raise NotImplementedError
+
 
 class SMTPEmailSender(EmailSender):
     """Strategy implementation for sending emails over SMTP."""
@@ -45,6 +49,14 @@ class SMTPEmailSender(EmailSender):
             failure_detail="Failed to send reset code email.",
         )
 
+    def send_message(self, recipient_email: str, full_name: str, subject: str, lines: list[str]) -> None:
+        self._deliver(
+            recipient_email=recipient_email,
+            subject=subject,
+            body="\n".join([f"Hi {full_name},", "", *lines]),
+            failure_detail="Failed to send email.",
+        )
+
     def _send_code_email(
         self,
         *,
@@ -56,6 +68,24 @@ class SMTPEmailSender(EmailSender):
         action_line: str,
         failure_detail: str,
     ) -> None:
+        self._deliver(
+            recipient_email=recipient_email,
+            subject=subject,
+            body="\n".join(
+                [
+                    f"Hi {full_name},",
+                    "",
+                    action_line,
+                    f"{code}",
+                    "",
+                    f"This code expires in {expires_in} minutes.",
+                    "If you did not request this, ignore this email.",
+                ]
+            ),
+            failure_detail=failure_detail,
+        )
+
+    def _deliver(self, *, recipient_email: str, subject: str, body: str, failure_detail: str) -> None:
         if not self.settings.smtp_host or not self.settings.smtp_from_email:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -66,19 +96,7 @@ class SMTPEmailSender(EmailSender):
         message["Subject"] = subject
         message["From"] = f'{self.settings.smtp_from_name} <{self.settings.smtp_from_email}>'
         message["To"] = recipient_email
-        message.set_content(
-            "\n".join(
-                [
-                    f"Hi {full_name},",
-                    "",
-                    action_line,
-                    f"{code}",
-                    "",
-                    f"This code expires in {expires_in} minutes.",
-                    "If you did not request this, ignore this email.",
-                ]
-            )
-        )
+        message.set_content(body)
 
         try:
             if self.settings.smtp_use_ssl:

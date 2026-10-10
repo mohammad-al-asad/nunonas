@@ -6,6 +6,7 @@ import theme from "../../../../../constants/theme";
 import { useGridColumns } from "../../../../../lib/use-grid-columns";
 import { forwardGeocode } from "../../../../../lib/google-maps";
 import HotelOverviewMap from "./HotelOverviewMap";
+import ProviderOffers from "../../../../ui/ProviderOffers";
 
 const amenityIcon = (name) => {
   const value = String(name).toLowerCase();
@@ -89,21 +90,7 @@ const HotelOverviewContent = ({ hotel }) => {
         </View>
       </View>
 
-      {/* Special Offers */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Special Offers</Text>
-        {(hotel?.offers ?? []).length ? hotel.offers.map((offer, index) => <View key={offer.id ?? index} style={styles.offerCard}>
-          <View style={styles.offerIcon}>
-            <MaterialCommunityIcons name="percent" size={24} color="#1e3a8a" />
-          </View>
-          <View>
-            <Text style={styles.offerTitle}>{offer.promotion_name ?? offer.title ?? "Special offer"}</Text>
-            <Text style={styles.offerDesc}>
-              {offer.description ?? offer.internal_description ?? offer.offer_text ?? "Available for a limited time."}
-            </Text>
-          </View>
-        </View>) : <Text style={styles.emptyText}>No special offers available.</Text>}
-      </View>
+      <ProviderOffers offers={hotel?.offers ?? []} title="Special Offers" />
 
       {/* Location Section */}
       <View style={styles.section}>
@@ -162,32 +149,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.COLORS.textSecondary,
     textAlign: "center",
-  },
-  offerCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f0f9ff",
-    padding: 16,
-    borderRadius: 12,
-    gap: 12,
-  },
-  offerIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
-    backgroundColor: "#dbeafe",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  offerTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.COLORS.textPrimary,
-  },
-  offerDesc: {
-    fontSize: 12,
-    color: theme.COLORS.textSecondary,
-    marginTop: 2,
   },
   address: {
     fontSize: 14,

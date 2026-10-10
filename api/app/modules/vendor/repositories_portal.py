@@ -1,8 +1,6 @@
-import csv
-import html
+import base64
 import re
-from datetime import UTC, datetime, timedelta
-from io import StringIO
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from bson import ObjectId
@@ -13,9 +11,10 @@ from pymongo.database import Database
 
 from app.domain.event_categories import normalize_event_category
 from app.domain.service_listings import SERVICE_SETTINGS_TYPES, SERVICE_TYPES, collection_name_for, normalize_service_setting_type, normalize_service_type
-from app.domain import support_tickets
+from app.domain import demographics, loyalty, promotion_types, support_tickets
 from app.domain.vendor_categories import normalize_account_categories
 from app.modules.platform_admin import billing
+from app.modules.vendor.receipt_pdf import render_receipt_pdf
 
 
 class VendorPortalRepository:
@@ -28,7 +27,6 @@ class VendorPortalRepository:
         self.events: Collection = db["vendor_events"]
         self.happy_hours: Collection = db["vendor_happy_hours"]
         self.promotions: Collection = db["vendor_promotions"]
-        self.platform_campaigns: Collection = db["platform_campaigns"]
         self.loyalty_settings: Collection = db["vendor_loyalty_settings"]
         self.reviews: Collection = db["vendor_reviews"]
         self.settings: Collection = db["vendor_portal_settings"]
@@ -133,13 +131,13 @@ class VendorPortalRepository:
     @staticmethod
     def _promotion_type_label(offer_type: str) -> str:
         normalized = offer_type.strip().lower()
-        if normalized == "fixed_amount":
-            return "FIXED"
-        if normalized == "happy_hour":
-            return "HAPPY HOUR"
-        if normalized == "custom_deal":
-            return "CUSTOM DEAL"
-        return normalized.replace("_", " ").upper() or "PERCENTAGE"
+        return {
+            "fixed_amount": "FIXED",
+            "bogo": "BUY 1 GET 1",
+            "food_percentage": "FOOD",
+            "menu_percentage": "MENU",
+            "custom": "CUSTOM",
+        }.get(normalized, normalized.replace("_", " ").upper() or "PERCENTAGE")
 
     def _allowed_vendor_categories(self, vendor_id: str) -> list[str]:
         settings_doc = self.get_settings(vendor_id)
@@ -241,8 +239,14 @@ class VendorPortalRepository:
             return f"{discount_value:g}% Off"
         if offer_type == "fixed_amount":
             return f"${discount_value:,.2f} Off"
-        if offer_type == "happy_hour":
-            return f"${discount_value:,.2f} Happy Hour"
+        if offer_type == "food_percentage":
+            return f"{discount_value:g}% Off Food"
+        if offer_type == "menu_percentage":
+            return f"{discount_value:g}% Off Menu"
+        if offer_type == "bogo":
+            return "Buy 1 Get 1"
+        if offer_type == "custom":
+            return "See terms"
         if discount_value > 0:
             return f"${discount_value:,.2f}"
         return str(row.get("value") or "").strip()
@@ -476,6 +480,70 @@ class VendorPortalRepository:
         booking = self.bookings.find_one({"_id": ObjectId(booking_id), "vendor_id": ObjectId(vendor_id)})
         return self._enrich_booking_customer(booking) if booking else None
 
+    def create_manual_booking(self, vendor_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Record a walk-in or phone booking. It takes up capacity like any booking, but it is
+        marked source "manual", so it is not billed and not copied to the platform's bookings."""
+        vendor_object_id = ObjectId(vendor_id)
+        provider_type = payload["provider_type"]
+        now = datetime.now(UTC)
+        booking_code = f"#MB{now.strftime('%Y%m')}-{str(ObjectId())[-4:].upper()}"
+        details: dict[str, Any] = {"service": {"restaurant": "Table Booking", "spa": "Spa Appointment"}.get(provider_type, "Room Booking")}
+        scheduled_time = payload.get("time") or ""
+
+        if provider_type == "hotel":
+            room = self.rooms.find_one({"_id": ObjectId(payload["room_id"]), "vendor_id": vendor_object_id})
+            if not room:
+                raise ValueError("Room type not found.")
+            nights = (date.fromisoformat(payload["check_out_date"]) - date.fromisoformat(payload["date"])).days
+            details = {
+                "service": "Room Booking",
+                "room_id": room["_id"],
+                "room_type": room.get("name"),
+                "check_in_date": payload["date"],
+                "check_out_date": payload["check_out_date"],
+                "nights": nights,
+                "rate_per_night": self._to_float(room.get("base_price")),
+            }
+            scheduled_time = scheduled_time or "02:00 PM"
+        elif provider_type == "spa" and payload.get("service_id"):
+            service = self.services.find_one({"_id": ObjectId(payload["service_id"]), "vendor_id": vendor_object_id})
+            if not service:
+                raise ValueError("Treatment not found.")
+            details = {"service": service.get("name") or "Spa Appointment", "service_id": service["_id"]}
+
+        amount = round(float(payload.get("total_amount") or 0), 2)
+        document = {
+            "vendor_id": vendor_object_id,
+            "customer_id": None,
+            "booking_code": booking_code,
+            "customer_name": payload["customer_name"],
+            "customer_phone": payload.get("customer_phone") or None,
+            "customer_email": payload.get("customer_email") or None,
+            "scheduled_date": payload["date"],
+            "scheduled_time": scheduled_time,
+            "provider_type": provider_type,
+            "guests": payload.get("guests") or 1,
+            "status": "confirmed",
+            "payment_status": "unpaid",
+            "seating_preference": payload.get("seating_preference") or None,
+            "special_requests": payload.get("special_requests") or None,
+            "total_amount": amount,
+            "subtotal": amount,
+            "original_subtotal": amount,
+            "discount_amount": 0.0,
+            "source": "manual",
+            "requested_at": now,
+            "accepted_at": now,
+            "status_history": [
+                {"status": "confirmed", "at": now, "actor": "service_provider", "label": "Manual booking added by service provider"}
+            ],
+            "created_at": now,
+            "updated_at": now,
+            **details,
+        }
+        document["_id"] = self.bookings.insert_one(document).inserted_id
+        return self._enrich_booking_customer(document)
+
     def update_booking_status(self, vendor_id: str, booking_id: str, status: str, note: str | None = None) -> dict[str, Any] | None:
         status_normalized = status.lower().strip()
         if status_normalized == "cancelled":
@@ -486,7 +554,9 @@ class VendorPortalRepository:
         if not booking:
             return None
         now = datetime.now(UTC)
-        payload: dict[str, Any] = {"status": status_normalized, "updated_at": now}
+        # There is no online payment: customers pay at the venue, so a completed booking is paid.
+        payment_status = "paid" if status_normalized == "complete" else "unpaid"
+        payload: dict[str, Any] = {"status": status_normalized, "payment_status": payment_status, "updated_at": now}
         if note:
             payload["status_note"] = note
         if status_normalized == "confirmed" and not booking.get("accepted_at"):
@@ -500,14 +570,8 @@ class VendorPortalRepository:
             points_awarded = self._calculate_booking_points(vendor_id, booking)
             payload["points_awarded"] = points_awarded
             payload["loyalty_awarded_at"] = now
-            settings = self.loyalty_settings.find_one({"vendor_id": ObjectId(vendor_id)}) or {}
-            expiry_policy = str(settings.get("points_expiry_policy") or "1 Year")
-            if expiry_policy != "No Expiry":
-                years = 2 if expiry_policy == "2 Years" else 1
-                try:
-                    payload["points_expires_at"] = now.replace(year=now.year + years)
-                except ValueError:
-                    payload["points_expires_at"] = now.replace(month=2, day=28, year=now.year + years)
+            if points_awarded:
+                payload["points_expires_at"] = loyalty.points_expiry(loyalty.get_config(self.loyalty_settings.database), now)
             if points_awarded > 0 and booking.get("customer_id"):
                 self.users.update_one(
                     {"_id": booking["customer_id"]},
@@ -541,22 +605,23 @@ class VendorPortalRepository:
         )
         self.bookings.database["bookings"].update_many(
             {"booking_id": ObjectId(booking_id)},
-            {"$set": {"status": status_normalized, "updated_at": payload["updated_at"], "points_awarded": points_awarded}},
+            {
+                "$set": {
+                    "status": status_normalized,
+                    "payment_status": payment_status,
+                    "updated_at": payload["updated_at"],
+                    "points_awarded": points_awarded,
+                }
+            },
         )
         return self.get_booking(vendor_id, booking_id)
 
     def _calculate_booking_points(self, vendor_id: str, booking: dict[str, Any]) -> int:
-        settings = self.loyalty_settings.find_one({"vendor_id": ObjectId(vendor_id)}) or {}
-        if not settings or settings.get("enable_loyalty_program") is not True:
+        """Points under the platform's loyalty rules; zero unless the provider's program is active."""
+        rules = loyalty.rules_for_vendor(self.loyalty_settings.database, vendor_id)
+        if not rules:
             return 0
-        amount = max(float(booking.get("total_amount") or 0), 0)
-        rule = str(settings.get("points_rule_type") or "points_per_currency")
-        if rule == "percentage_based":
-            points = max(int(amount * float(settings.get("percentage_value") or 0) / 100), 0)
-        else:
-            points_per_currency = float(settings.get("points_earned") or 0)
-            currency_unit = float(settings.get("currency_unit") or 1)
-            points = max(int((amount / currency_unit) * points_per_currency), 0) if currency_unit > 0 else 0
+        first_booking = False
         customer_id = booking.get("customer_id")
         if customer_id:
             prior_query: dict[str, Any] = {
@@ -566,9 +631,8 @@ class VendorPortalRepository:
             }
             if booking.get("_id"):
                 prior_query["_id"] = {"$ne": booking["_id"]}
-            if self.bookings.count_documents(prior_query) == 0:
-                points += max(int(settings.get("first_booking_bonus") or 0), 0)
-        return points
+            first_booking = self.bookings.count_documents(prior_query) == 0
+        return loyalty.booking_points(rules, self._to_float(booking.get("total_amount")), first_booking)
 
     def reschedule_booking(self, vendor_id: str, booking_id: str, date: str, time: str, note: str | None = None) -> dict[str, Any] | None:
         object_id = ObjectId(booking_id)
@@ -593,38 +657,60 @@ class VendorPortalRepository:
         booking = self.get_booking(vendor_id, booking_id)
         if not booking:
             return None
-        subtotal = float(booking.get("total_amount", 0))
-        taxes = round(subtotal * 0.05, 2)
+        # The total is the booking total; the only adjustment shown is the promotion discount.
+        total = round(self._to_float(booking.get("total_amount")), 2)
+        subtotal = round(self._to_float(booking.get("subtotal") or booking.get("original_subtotal")) or total, 2)
+        charges = [
+            ("Discount", -self._to_float(booking.get("discount_amount"))),
+        ]
+        line_items = [{"label": label, "amount": round(amount, 2)} for label, amount in charges if amount]
         receipt = {
             "booking_id": booking.get("id"),
             "booking_code": booking.get("booking_code"),
             "customer_name": booking.get("customer_name"),
             "service": booking.get("service"),
             "subtotal": subtotal,
-            "taxes": taxes,
-            "total": round(subtotal + taxes, 2),
+            "line_items": line_items,
+            "total": total,
+            "payment_status": booking.get("payment_status") or "unpaid",
             "generated_at": datetime.now(UTC).isoformat(),
         }
         raw_code = str(receipt.get("booking_code") or receipt["booking_id"] or "booking")
         safe_code = "".join(char for char in raw_code if char.isalnum() or char in {"-", "_"})[:80] or "booking"
-        customer_label = html.escape(str(receipt.get("customer_name") or ""))
-        service_label = html.escape(str(receipt.get("service") or ""))
-        booking_label = html.escape(raw_code)
-        receipt["filename"] = f"receipt-{safe_code}.html"
-        receipt["content_type"] = "text/html;charset=utf-8"
-        receipt["content"] = (
-            "<!doctype html><html><head><meta charset='utf-8'><title>Booking receipt</title>"
-            "<style>body{font-family:Arial,sans-serif;max-width:640px;margin:40px auto;color:#1e293b}"
-            "h1{margin-bottom:24px}.row{display:flex;justify-content:space-between;padding:10px 0;"
-            "border-bottom:1px solid #e2e8f0}.total{font-size:20px;font-weight:700}</style></head><body>"
-            f"<h1>Booking Receipt</h1><div class='row'><span>Booking</span><span>{booking_label}</span></div>"
-            f"<div class='row'><span>Customer</span><span>{customer_label}</span></div>"
-            f"<div class='row'><span>Service</span><span>{service_label}</span></div>"
-            f"<div class='row'><span>Subtotal</span><span>${receipt['subtotal']:.2f}</span></div>"
-            f"<div class='row'><span>Taxes</span><span>${receipt['taxes']:.2f}</span></div>"
-            f"<div class='row total'><span>Total</span><span>${receipt['total']:.2f}</span></div>"
-            "</body></html>"
+        vendor, profile, business, _ = self._get_vendor_records(vendor_id)
+        address = ", ".join(
+            part for part in (str(business.get("address") or "").strip(), str(business.get("city") or "").strip()) if part
         )
+        contact = " | ".join(
+            part
+            for part in (
+                str(profile.get("phone") or vendor.get("phone") or "").strip(),
+                str(profile.get("email") or vendor.get("email") or "").strip(),
+            )
+            if part
+        )
+        pdf = render_receipt_pdf(
+            {
+                **receipt,
+                "scheduled_date": booking.get("scheduled_date"),
+                "scheduled_time": booking.get("scheduled_time"),
+                "guests": booking.get("guests") or booking.get("quantity"),
+                "room_type": booking.get("room_type"),
+                "check_in_date": booking.get("check_in_date"),
+                "check_out_date": booking.get("check_out_date"),
+                "nights": booking.get("nights"),
+                "rate_per_night": booking.get("rate_per_night"),
+            },
+            {
+                "name": str(profile.get("business_name") or vendor.get("business_name") or ""),
+                "address": address,
+                "contact": contact,
+            },
+            datetime.now(UTC),
+        )
+        receipt["filename"] = f"receipt-{safe_code}.pdf"
+        receipt["content_type"] = "application/pdf"
+        receipt["content_base64"] = base64.b64encode(pdf).decode("ascii")
         return receipt
 
     def get_dashboard_overview(self, vendor_id: str) -> dict[str, Any]:
@@ -687,7 +773,41 @@ class VendorPortalRepository:
             "calendar_preview": self.get_calendar_preview(vendor_id),
             "upcoming_bookings": self.list_bookings(vendor_id, limit=10, skip=0, status="upcoming").get("items", []),
             "recent_reviews": self.list_reviews(vendor_id, limit=5, skip=0).get("items", []),
+            "customer_demographics": self.get_customer_demographics(vendor_id),
         }
+
+    def get_customer_demographics(self, vendor_id: str) -> dict[str, Any]:
+        """Gender and age mix of app customers who booked this provider (manual bookings excluded)."""
+        booking_counts: dict[ObjectId, int] = {}
+        booking_genders: dict[ObjectId, Any] = {}
+        for booking in self.bookings.find(
+            {"vendor_id": ObjectId(vendor_id), "source": {"$ne": "manual"}},
+            {"customer_id": 1, "customer_gender": 1},
+        ):
+            try:
+                customer_id = ObjectId(str(booking.get("customer_id")))
+            except (InvalidId, TypeError, ValueError):
+                continue
+            booking_counts[customer_id] = booking_counts.get(customer_id, 0) + 1
+            booking_genders.setdefault(customer_id, booking.get("customer_gender"))
+        users = {
+            user["_id"]: user
+            for user in self.users.find(
+                {"_id": {"$in": list(booking_counts)}}, {"gender": 1, "date_of_birth": 1}
+            )
+        }
+        customers = [
+            {
+                "gender": users.get(customer_id, {}).get("gender") or booking_genders.get(customer_id),
+                "date_of_birth": users.get(customer_id, {}).get("date_of_birth"),
+            }
+            for customer_id in booking_counts
+        ]
+        summary = demographics.summarize(customers, datetime.now(UTC).date())
+        returning = sum(1 for count in booking_counts.values() if count > 1)
+        summary["new_customers"] = len(booking_counts) - returning
+        summary["returning_customers"] = returning
+        return summary
 
     def get_booking_trends(self, vendor_id: str) -> list[dict[str, Any]]:
         now = datetime.now(UTC)
@@ -1174,6 +1294,7 @@ class VendorPortalRepository:
     def create_promotion(self, vendor_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         now = datetime.now(UTC)
         sanitized = self._sanitize_payload(payload)
+        sanitized.update(self._checked_offer_fields(vendor_id, sanitized))
         promo_code = str(sanitized.get("promo_code") or "").strip().upper()
         if promo_code and self.promotions.find_one(
             {
@@ -1223,12 +1344,7 @@ class VendorPortalRepository:
         end_date = str(sanitized.get("end_date") or existing.get("end_date") or "")
         if start_date and end_date and end_date[:10] < start_date[:10]:
             raise ValueError("Promotion end date must be on or after its start date.")
-        offer_type = str(sanitized.get("offer_type") or existing.get("offer_type") or "")
-        discount_value = self._to_float(
-            sanitized.get("discount_value", existing.get("discount_value"))
-        )
-        if offer_type == "percentage" and discount_value > 100:
-            raise ValueError("Percentage discounts cannot exceed 100%.")
+        sanitized.update(self._checked_offer_fields(vendor_id, {**existing, **sanitized}))
         requires_code = bool(
             sanitized.get("require_promo_code", existing.get("require_promo_code", False))
         )
@@ -1241,65 +1357,21 @@ class VendorPortalRepository:
         )
         return self.get_promotion(vendor_id, promotion_id)
 
+    def _checked_offer_fields(self, vendor_id: str, promotion: dict[str, Any]) -> dict[str, Any]:
+        fields = promotion_types.normalize(promotion)
+        if fields["offer_type"] in promotion_types.VENUE_TYPES:
+            vendor = self.promotions.database["vendors"].find_one({"_id": ObjectId(vendor_id)}, {"category": 1, "categories": 1}) or {}
+            categories = normalize_account_categories(vendor.get("categories") or vendor.get("category"))
+            if "Restaurant" not in categories:
+                raise ValueError("In-venue offers are only available for restaurants.")
+        return fields
+
     def update_promotion_status(self, vendor_id: str, promotion_id: str, active: bool) -> dict[str, Any] | None:
         return self.update_promotion(vendor_id, promotion_id, {"active": active})
 
     def delete_promotion(self, vendor_id: str, promotion_id: str) -> bool:
         result = self.promotions.delete_one({"_id": ObjectId(promotion_id), "vendor_id": ObjectId(vendor_id)})
         return result.deleted_count > 0
-
-    def list_platform_campaigns(self, vendor_id: str) -> list[dict[str, Any]]:
-        campaigns = [self._serialize(doc) for doc in self.platform_campaigns.find({"active": True})]
-        joined_ids = {
-            str(row.get("source_campaign_id"))
-            for row in self.promotions.find(
-                {"vendor_id": ObjectId(vendor_id), "source": "platform", "active": True},
-                {"source_campaign_id": 1},
-            )
-            if row.get("source_campaign_id")
-        }
-        for campaign in campaigns:
-            campaign["joined"] = campaign.get("id") in joined_ids
-            campaign["title"] = campaign.get("title") or campaign.get("campaign_name") or campaign.get("name") or ""
-            campaign["is_active"] = bool(campaign.get("joined"))
-        return campaigns
-
-    def set_platform_campaign_join(self, vendor_id: str, campaign_id: str, join: bool) -> dict[str, Any]:
-        campaign = self.platform_campaigns.find_one({"_id": ObjectId(campaign_id)})
-        if not campaign:
-            raise ValueError("Campaign not found.")
-        if join:
-            self.promotions.update_one(
-                {
-                    "vendor_id": ObjectId(vendor_id),
-                    "source": "platform",
-                    "source_campaign_id": ObjectId(campaign_id),
-                },
-                {
-                    "$set": {
-                        "active": True,
-                        "updated_at": datetime.now(UTC),
-                        "promotion_name": campaign.get("campaign_name"),
-                    },
-                    "$setOnInsert": {
-                        "vendor_id": ObjectId(vendor_id),
-                        "source": "platform",
-                        "source_campaign_id": ObjectId(campaign_id),
-                        "created_at": datetime.now(UTC),
-                    },
-                },
-                upsert=True,
-            )
-        else:
-            self.promotions.update_many(
-                {
-                    "vendor_id": ObjectId(vendor_id),
-                    "source": "platform",
-                    "source_campaign_id": ObjectId(campaign_id),
-                },
-                {"$set": {"active": False, "updated_at": datetime.now(UTC)}},
-            )
-        return {"campaign_id": campaign_id, "joined": join}
 
     def get_occupancy_metrics(self, vendor_id: str, on_date: str | None = None) -> dict[str, Any]:
         target_date = on_date or datetime.now(UTC).date().isoformat()
@@ -1357,179 +1429,9 @@ class VendorPortalRepository:
                 breakdown[star] += 1
         return {"average_rating": average, "total_reviews": total, "breakdown": breakdown}
 
-    def get_analytics_overview(
-        self,
-        vendor_id: str,
-        date_from: str | None = None,
-        date_to: str | None = None,
-    ) -> dict[str, Any]:
-        now = datetime.now(UTC)
-        start = date_from or now.strftime("%Y-%m-01")
-        end = date_to or now.date().isoformat()
-        if start > end:
-            raise ValueError("date_from must be on or before date_to.")
-        all_bookings = list(self.bookings.find({"vendor_id": ObjectId(vendor_id)}))
-
-        def is_in_range(value: Any) -> bool:
-            if isinstance(value, datetime):
-                value = value.date().isoformat()
-            else:
-                value = str(value or "")[:10]
-            return bool(value) and start <= value <= end
-
-        bookings = [
-            row for row in all_bookings
-            if is_in_range(row.get("scheduled_date")) or is_in_range(row.get("created_at"))
-        ]
-        total_bookings = len(bookings)
-        revenue = sum(
-            self._to_float(row.get("total_amount"))
-            for row in bookings
-            if str(row.get("status") or "").strip().lower() in {"complete", "completed"}
-        )
-        status_counts = {"completed": 0, "cancelled": 0, "pending": 0, "confirmed": 0}
-        service_counts: dict[str, int] = {}
-        for row in bookings:
-            raw_status = str(row.get("status") or "pending").strip().lower()
-            status_key = "cancelled" if raw_status in {"cancelled", "canceled"} else "completed" if raw_status in {"complete", "completed"} else raw_status
-            if status_key in status_counts:
-                status_counts[status_key] += 1
-            provider_type = str(row.get("provider_type") or row.get("booking_type") or row.get("service") or "other").strip().lower()
-            if any(token in provider_type for token in ("restaurant", "dining", "table")):
-                provider_type = "restaurant"
-            elif any(token in provider_type for token in ("hotel", "room")):
-                provider_type = "hotel"
-            elif "spa" in provider_type:
-                provider_type = "spa"
-            elif "event" in provider_type:
-                provider_type = "event"
-            else:
-                provider_type = provider_type.replace("_room", "")
-            service_counts[provider_type] = service_counts.get(provider_type, 0) + 1
-        review_summary = self.get_reviews_summary(vendor_id, start, end)
-        return {
-            "date_from": start,
-            "date_to": end,
-            "total_bookings": total_bookings,
-            "total_bookings_month": total_bookings,
-            "booking_breakdown": {
-                **status_counts,
-                "by_service": service_counts,
-            },
-            "todays_bookings": sum(1 for row in bookings if str(row.get("scheduled_date") or "")[:10] == end),
-            "monthly_revenue": round(revenue, 2),
-            "occupancy_rate": self.get_occupancy_metrics(vendor_id, end)["occupancy_rate"],
-            "average_rating": review_summary["average_rating"],
-            "demographics": self.get_demographics(vendor_id, start, end),
-            "occupancy_tracking": self.get_occupancy_metrics(vendor_id, end),
-            "reviews_summary": review_summary,
-        }
-
-    def get_demographics(
-        self,
-        vendor_id: str,
-        date_from: str | None = None,
-        date_to: str | None = None,
-    ) -> dict[str, Any]:
-        all_bookings = list(self.bookings.find({"vendor_id": ObjectId(vendor_id)}))
-
-        def is_in_range(value: Any) -> bool:
-            if not (date_from or date_to):
-                return True
-            if isinstance(value, datetime):
-                value = value.date().isoformat()
-            else:
-                value = str(value or "")[:10]
-            return bool(value) and (not date_from or value >= date_from) and (not date_to or value <= date_to)
-
-        bookings = [
-            booking for booking in all_bookings
-            if is_in_range(booking.get("scheduled_date")) or is_in_range(booking.get("created_at"))
-        ]
-        gender_counts = {"female": 0, "male": 0, "other": 0}
-        age_counts = {"under_18": 0, "18-25": 0, "26-40": 0, "41-60": 0, "60+": 0}
-        known_gender = 0
-        known_age = 0
-        today = datetime.now(UTC).date()
-        for booking in bookings:
-            customer = {}
-            customer_id = booking.get("customer_id")
-            if customer_id:
-                try:
-                    customer = self.users.find_one(
-                        {"_id": customer_id if isinstance(customer_id, ObjectId) else ObjectId(str(customer_id))},
-                        {"gender": 1, "date_of_birth": 1},
-                    ) or {}
-                except (InvalidId, TypeError, ValueError):
-                    customer = {}
-
-            gender = str(booking.get("customer_gender") or customer.get("gender") or "").strip().lower()
-            if gender:
-                gender_counts[gender if gender in {"female", "male"} else "other"] += 1
-                known_gender += 1
-            age = self._to_int(booking.get("customer_age"), -1)
-            date_of_birth = customer.get("date_of_birth")
-            if age < 0 and date_of_birth:
-                try:
-                    birth_date = date_of_birth if hasattr(date_of_birth, "year") else datetime.fromisoformat(str(date_of_birth)[:10]).date()
-                    age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
-                except (TypeError, ValueError):
-                    age = -1
-            if age >= 0:
-                bucket = "under_18" if age < 18 else "18-25" if age <= 25 else "26-40" if age <= 40 else "41-60" if age <= 60 else "60+"
-                age_counts[bucket] += 1
-                known_age += 1
-
-        def percentages(values: dict[str, int], total: int) -> dict[str, int]:
-            return {key: round(value * 100 / total) if total else 0 for key, value in values.items()}
-
-        return {
-            "available": bool(known_gender or known_age),
-            "gender_distribution": percentages(gender_counts, known_gender),
-            "age_groups": percentages(age_counts, known_age),
-            "sample_size": max(known_gender, known_age),
-        }
-
-    def export_analytics(
-        self,
-        vendor_id: str,
-        date_from: str | None = None,
-        date_to: str | None = None,
-    ) -> dict[str, Any]:
-        analytics = self.get_analytics_overview(vendor_id, date_from, date_to)
-        output = StringIO()
-        writer = csv.writer(output)
-        writer.writerow(["Metric", "Value"])
-        writer.writerows(
-            [
-                ["Date from", analytics["date_from"]],
-                ["Date to", analytics["date_to"]],
-                ["Total bookings", analytics["total_bookings"]],
-                ["Revenue", analytics["monthly_revenue"]],
-                ["Occupancy rate", analytics["occupancy_rate"]],
-                ["Average rating", analytics["average_rating"]],
-            ]
-        )
-        return {
-            "message": "Analytics export prepared.",
-            "filename": f"vendor-analytics-{analytics['date_from']}-{analytics['date_to']}.csv",
-            "content_type": "text/csv;charset=utf-8",
-            "content": output.getvalue(),
-        }
-
-    def get_loyalty_settings(self, vendor_id: str) -> dict[str, Any]:
+    def get_loyalty_overview(self, vendor_id: str) -> dict[str, Any]:
+        """The provider's program status, the platform's rules (read-only) and its points analytics."""
         vendor_obj_id = ObjectId(vendor_id)
-        settings = self._serialize(self.loyalty_settings.find_one({"vendor_id": vendor_obj_id})) or {}
-        defaults = {
-            "enable_loyalty_program": False,
-            "points_rule_type": "points_per_currency",
-            "points_earned": 1,
-            "currency_unit": 1,
-            "percentage_value": 0,
-            "first_booking_bonus": 0,
-            "review_bonus_points": 0,
-            "points_expiry_policy": "1 Year",
-        }
         completed = list(
             self.bookings.find(
                 {"vendor_id": vendor_obj_id, "status": {"$in": ["complete", "completed"]}},
@@ -1586,22 +1488,13 @@ class VendorPortalRepository:
                 row["created_at"] = row["created_at"].isoformat()
         activity.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
         return {
-            **defaults,
-            **settings,
+            "program": loyalty.enrollment(self.loyalty_settings.database, vendor_obj_id),
+            "rules": loyalty.get_config(self.loyalty_settings.database),
             "total_points_issued": total_points,
             "active_members": len(active_members),
             "repeat_booking_rate": round((repeat_members / member_count) * 100, 1) if member_count else 0.0,
             "recent_activity": activity[:10],
         }
-
-    def update_loyalty_settings(self, vendor_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        sanitized = self._sanitize_payload(payload)
-        self.loyalty_settings.update_one(
-            {"vendor_id": ObjectId(vendor_id)},
-            {"$set": {**sanitized, "updated_at": datetime.now(UTC)}},
-            upsert=True,
-        )
-        return self.get_loyalty_settings(vendor_id)
 
     def list_reviews(
         self,

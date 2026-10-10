@@ -24,9 +24,7 @@ def _booking(db, vendor_id, provider_type, subtotal, *, created, completed, stat
             "vendor_id": vendor_id,
             "provider_type": provider_type,
             "subtotal": subtotal,
-            "service_fee": round(subtotal * 0.08, 2),
-            "taxes": round(subtotal * 0.05, 2),
-            "total_amount": round(subtotal * 1.13, 2),
+            "total_amount": subtotal,
             "status": status,
             "created_at": created,
             "completed_at": completed,
@@ -49,7 +47,7 @@ def test_only_completed_bookings_are_billed_on_subtotal(db):
     [invoice] = billing.build_invoices(db, period="2026-03")
 
     assert invoice["bookings"] == 1
-    assert invoice["bookingValue"] == 1000  # subtotal, not the customer's total with fee + tax
+    assert invoice["bookingValue"] == 1000
     assert invoice["amountDue"] == 100  # legacy global rate (10%) is the initial version
 
 

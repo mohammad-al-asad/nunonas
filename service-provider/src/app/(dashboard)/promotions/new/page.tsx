@@ -3,25 +3,52 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import {
+  BookOpen,
   Info,
+  Gift,
   Percent,
-  Wallet,
-  GlassWater,
   Sparkles,
+  UtensilsCrossed,
+  Wallet,
   Calendar,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { vendorCreatePromotion } from "@/lib/vendor-api";
+import { extractVendorCategories } from "@/lib/vendor-access";
+import { vendorProfileQuery } from "@/lib/vendor-queries";
+import {
+  applicableOptionsFor,
+  offerTypeOption,
+  offerTypesFor,
+  validateOfferFields,
+  type OfferTypeValue,
+} from "@/lib/promotion-types";
 
-type OfferType = "percentage" | "fixed" | "happy_hour" | "custom";
+const OFFER_ICONS: Record<OfferTypeValue, React.ElementType> = {
+  percentage: Percent,
+  fixed_amount: Wallet,
+  bogo: Gift,
+  food_percentage: UtensilsCrossed,
+  menu_percentage: BookOpen,
+  custom: Sparkles,
+};
 
 export default function AddPromotionPage() {
   const router = useRouter();
-  const [selectedOffer, setSelectedOffer] = useState<OfferType>("percentage");
+  const profileQuery = useQuery(vendorProfileQuery());
+  const categories = extractVendorCategories(
+    (profileQuery.data as Record<string, unknown> | undefined)?.categories ??
+      (profileQuery.data as Record<string, unknown> | undefined)?.category,
+  );
+  const offerTypes = offerTypesFor(categories);
+  const applicableOptions = applicableOptionsFor(categories);
+  const [selectedOffer, setSelectedOffer] = useState<OfferTypeValue>("percentage");
+  const offerType = offerTypeOption(selectedOffer);
   const [recurringDays, setRecurringDays] = useState<string[]>([
     "0",
     "1",
@@ -34,6 +61,7 @@ export default function AddPromotionPage() {
   const [formData, setFormData] = useState({
     promotionName: "",
     internalDescription: "",
+    terms: "",
     discountValue: "",
     applicableTo: "All Services",
     startDate: "",
@@ -58,20 +86,17 @@ export default function AddPromotionPage() {
       setError("End date must be on or after the start date.");
       return;
     }
-    if (requirePromoCode && !formData.promoCode.trim()) {
+    if (!offerType.inVenue && requirePromoCode && !formData.promoCode.trim()) {
       setError("Enter the promo code customers must use.");
       return;
     }
-    const discountValue = Number(formData.discountValue);
-    if (!Number.isFinite(discountValue) || discountValue < 0) {
-      setError("Enter a valid discount value.");
+    const offerError = validateOfferFields(offerType, formData.discountValue, formData.terms);
+    if (offerError) {
+      setError(offerError);
       return;
     }
-    if (selectedOffer === "percentage" && discountValue > 100) {
-      setError("Percentage discount cannot exceed 100%.");
-      return;
-    }
-    if (formData.minimumSpend.trim() && (!Number.isFinite(Number(formData.minimumSpend)) || Number(formData.minimumSpend) < 0)) {
+    const discountValue = offerType.valueKind ? Number(formData.discountValue) : 0;
+    if (!offerType.inVenue && formData.minimumSpend.trim() && (!Number.isFinite(Number(formData.minimumSpend)) || Number(formData.minimumSpend) < 0)) {
       setError("Enter a valid minimum spend.");
       return;
     }
@@ -81,21 +106,17 @@ export default function AddPromotionPage() {
       await vendorCreatePromotion({
         promotion_name: formData.promotionName.trim(),
         internal_description: formData.internalDescription.trim(),
-        offer_type: {
-          percentage: "percentage",
-          fixed: "fixed_amount",
-          happy_hour: "happy_hour",
-          custom: "custom_deal",
-        }[selectedOffer],
+        offer_type: selectedOffer,
         discount_value: discountValue,
-        applicable_to: formData.applicableTo,
+        terms: formData.terms.trim(),
+        applicable_to: offerType.inVenue ? "Dining Only" : formData.applicableTo,
         start_date: formData.startDate,
         end_date: formData.endDate,
         recurring_days: recurringDays,
-        require_promo_code: requirePromoCode,
-        promo_code: requirePromoCode ? formData.promoCode.trim() || null : null,
-        first_time_customers_only: firstTimeOnly,
-        minimum_spend: formData.minimumSpend.trim() ? Number(formData.minimumSpend) : null,
+        require_promo_code: !offerType.inVenue && requirePromoCode,
+        promo_code: !offerType.inVenue && requirePromoCode ? formData.promoCode.trim() || null : null,
+        first_time_customers_only: !offerType.inVenue && firstTimeOnly,
+        minimum_spend: !offerType.inVenue && formData.minimumSpend.trim() ? Number(formData.minimumSpend) : null,
         active: true,
       });
       router.push("/promotions");
@@ -118,11 +139,14 @@ export default function AddPromotionPage() {
   const days = ["M", "T", "W", "T", "F", "S", "S"];
 
   const renderOfferCard = (
-    id: OfferType,
+    id: OfferTypeValue,
     icon: React.ElementType,
     label: string,
   ) => (
-    <div
+    <button
+      type="button"
+      key={id}
+      aria-pressed={selectedOffer === id}
       onClick={() => setSelectedOffer(id)}
       className={cn(
         "relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all cursor-pointer group",
@@ -154,7 +178,7 @@ export default function AddPromotionPage() {
           <div className="h-1.5 w-1.5 bg-white rounded-full" />
         </div>
       )}
-    </div>
+    </button>
   );
 
   return (
@@ -213,45 +237,69 @@ export default function AddPromotionPage() {
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                   Select Offer Type
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  {renderOfferCard("percentage", Percent, "Percentage")}
-                  {renderOfferCard("fixed", Wallet, "Fixed Amount")}
-                  {renderOfferCard("happy_hour", GlassWater, "Happy Hour")}
-                  {renderOfferCard("custom", Sparkles, "Custom Deal")}
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                  {offerTypes.map((type) => renderOfferCard(type.value, OFFER_ICONS[type.value], type.label))}
                 </div>
+                <p className="text-xs text-slate-400">{offerType.help}</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    Discount Value (%)
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      placeholder="0"
-                      value={formData.discountValue}
-                      onChange={(event) => updateField("discountValue", event.target.value)}
-                      className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all font-medium"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 font-bold">
-                      %
-                    </span>
+                {offerType.valueKind ? (
+                  <div className="space-y-2">
+                    <label htmlFor="discount-value" className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {offerType.valueKind === "%" ? "Discount (%)" : "Discount amount"}
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="discount-value"
+                        type="number"
+                        min="0"
+                        max={offerType.valueKind === "%" ? 100 : undefined}
+                        placeholder="0"
+                        value={formData.discountValue}
+                        onChange={(event) => updateField("discountValue", event.target.value)}
+                        className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all font-medium"
+                      />
+                      {offerType.valueKind === "%" ? (
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 font-bold">%</span>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
+                ) : null}
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  <label htmlFor="applicable-to" className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                     Applicable To
                   </label>
-                  <div className="relative">
-                    <select value={formData.applicableTo} onChange={(event) => updateField("applicableTo", event.target.value)} className="appearance-none w-full bg-slate-50 border border-slate-100 rounded-xl py-3 px-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all cursor-pointer font-medium text-slate-600">
-                      <option>All Services</option>
-                      <option>Spa Only</option>
-                      <option>Dining Only</option>
-                    </select>
-                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                  </div>
+                  {offerType.inVenue ? (
+                    <p className="rounded-xl border border-slate-100 bg-slate-50 py-3 px-4 text-sm font-medium text-slate-600">Dining only</p>
+                  ) : (
+                    <div className="relative">
+                      <select id="applicable-to" value={formData.applicableTo} onChange={(event) => updateField("applicableTo", event.target.value)} className="appearance-none w-full bg-slate-50 border border-slate-100 rounded-xl py-3 px-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all cursor-pointer font-medium text-slate-600">
+                        {applicableOptions.map((option) => <option key={option}>{option}</option>)}
+                      </select>
+                      <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                    </div>
+                  )}
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="offer-terms" className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  Offer terms {offerType.termsRequired ? "" : "(optional)"}
+                </label>
+                <textarea
+                  id="offer-terms"
+                  rows={3}
+                  maxLength={500}
+                  placeholder={
+                    selectedOffer === "bogo"
+                      ? "e.g. Buy any main course and get a second one free. Dine-in only."
+                      : "Shown to customers in the app, e.g. Not valid with other offers."
+                  }
+                  value={formData.terms}
+                  onChange={(event) => updateField("terms", event.target.value)}
+                  className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all font-medium resize-none"
+                />
               </div>
             </div>
           </div>
@@ -320,7 +368,8 @@ export default function AddPromotionPage() {
             </div>
           </div>
 
-          {/* Usage & Conditions */}
+          {/* Usage & Conditions (booking discounts only) */}
+          {offerType.inVenue ? null : (
           <div className="bg-white rounded-[32px] p-8 shadow-sm border border-slate-100">
             <h2 className="text-lg font-bold text-slate-800 mb-8">
               Usage & Conditions
@@ -402,6 +451,7 @@ export default function AddPromotionPage() {
               </div>
             </div>
           </div>
+          )}
         </div>
       </main>
 

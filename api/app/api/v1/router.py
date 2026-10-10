@@ -22,6 +22,10 @@ from app.modules.customer.routes_service_aliases import router as customer_servi
 from app.modules.platform_admin.router import router as platform_admin_router
 from app.modules.platform_admin.routes_auth import router as platform_admin_auth_router
 from app.modules.platform_admin.routes_billing import router as platform_admin_billing_router
+from app.modules.platform_admin.routes_loyalty import (
+    notifications_router as platform_admin_notifications_router,
+    router as platform_admin_loyalty_router,
+)
 from app.modules.platform_admin.routes_offers import router as platform_admin_offers_router
 from app.modules.platform_admin.routes_settings import router as platform_admin_settings_router
 from app.modules.platform_admin.routes_support import router as platform_admin_support_router
@@ -63,6 +67,8 @@ api_router.include_router(platform_admin_offers_router)
 api_router.include_router(platform_admin_settings_router)
 api_router.include_router(platform_admin_support_router)
 api_router.include_router(platform_admin_billing_router)
+api_router.include_router(platform_admin_loyalty_router)
+api_router.include_router(platform_admin_notifications_router)
 
 # ── Platform admin planned stubs (dashboard, offers, billing, support…) ───
 api_router.include_router(platform_admin_router)

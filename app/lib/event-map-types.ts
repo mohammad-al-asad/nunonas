@@ -50,12 +50,13 @@ export type CustomerMapEventPayload = {
   imageUrl?: string | null;
   profile_image_url?: string | null;
   description?: string;
+  terms_and_conditions?: string | null;
   capacity?: number | string | null;
   ticket_price?: number | string | null;
   ticketPrice?: number | string | null;
   distance_km?: number | string | null;
   distanceKm?: number | null;
-  rating?: number | null;
+  rating?: number | string | null;
   reviews_count?: number | null;
   reviewsCount?: number | null;
   latitude?: number | string | null;
@@ -103,6 +104,7 @@ export type NormalizedMapEvent = {
   imageUrl: string;
   profileImageUrl: string;
   description: string;
+  terms: string;
   capacity: number | null;
   ticketPrice: string | null;
   distance: string;

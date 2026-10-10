@@ -2,7 +2,6 @@ import { queryOptions } from "@tanstack/react-query";
 import {
   vendorGetProfileSettings,
   vendorListNotifications,
-  vendorGetAnalyticsOverview,
   vendorGetUser,
   vendorGetPromotion,
 } from "@/lib/vendor-api";
@@ -27,7 +26,6 @@ export const vendorQueryKeys = {
   notifications: (limit: number, skip: number) => ["vendor", "notifications", limit, skip] as const,
   customer: (id: string) => ["vendor", "customer", id] as const,
   promotion: (id: string) => ["vendor", "promotion", id] as const,
-  analytics: (dateFrom?: string, dateTo?: string) => ["vendor", "analytics", "overview", dateFrom ?? null, dateTo ?? null] as const,
   bookings: (filters: Record<string, unknown> = {}) => ["vendor", "bookings", filters] as const,
   reviews: (filters: Record<string, unknown> = {}) => ["vendor", "reviews", filters] as const,
   promotions: (filters: Record<string, unknown> = {}) => ["vendor", "promotions", filters] as const,
@@ -88,16 +86,6 @@ export const notificationsQuery = (limit = 20, skip = 0) =>
     staleTime: 5_000,
     refetchInterval: 15_000,
     refetchOnWindowFocus: "always",
-  });
-
-export const analyticsOverviewQuery = (dateFrom?: string, dateTo?: string) =>
-  queryOptions({
-    queryKey: vendorQueryKeys.analytics(dateFrom, dateTo),
-    queryFn: ({ signal }) => vendorGetAnalyticsOverview({ date_from: dateFrom, date_to: dateTo }, signal),
-    staleTime: 0,
-    refetchInterval: 10_000,
-    refetchOnWindowFocus: "always",
-    refetchOnReconnect: "always",
   });
 
 export const customerQuery = (id: string) =>

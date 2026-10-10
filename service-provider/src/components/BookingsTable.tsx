@@ -23,7 +23,6 @@ export interface Booking {
   guests: number;
   service: string;
   status: string;
-  payment: string;
   phone?: string;
   email?: string;
   specialRequests?: string;
@@ -35,6 +34,8 @@ export interface Booking {
   statusNote?: string;
   statusHistory?: Array<{ status?: string; at?: string; actor?: string; label?: string; note?: string }>;
   pointsAwarded?: number;
+  /** Added by the provider for a walk-in or phone guest. */
+  manual?: boolean;
 }
 
 interface BookingsTableProps {
@@ -68,9 +69,6 @@ export function BookingsTable({ bookings, onViewDetails, onUpdateStatus }: Booki
               <th className="pb-6 text-xs font-semibold uppercase tracking-wider text-slate-400 text-center">
                 Status
               </th>
-              <th className="pb-6 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Payment
-              </th>
               <th className="w-[150px] pb-6 text-center text-xs font-semibold uppercase tracking-wider text-slate-400">
                 Actions
               </th>
@@ -84,6 +82,7 @@ export function BookingsTable({ bookings, onViewDetails, onUpdateStatus }: Booki
               >
                 <td className="py-5 font-bold text-sky-500 text-sm whitespace-nowrap">
                   {booking.id}
+                  {booking.manual ? <span className="ml-2 rounded-md bg-violet-50 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-violet-600" title="Added by you. No commission.">Manual</span> : null}
                 </td>
                 <td className="py-5">
                   <div className="flex items-center gap-3">
@@ -127,18 +126,6 @@ export function BookingsTable({ bookings, onViewDetails, onUpdateStatus }: Booki
                       {booking.status}
                     </span>
                   </div>
-                </td>
-                <td className="py-5">
-                  <span
-                    className={cn(
-                      "text-sm font-bold",
-                      booking.payment === "Paid"
-                        ? "text-emerald-500"
-                        : "text-slate-300",
-                    )}
-                  >
-                    {booking.payment}
-                  </span>
                 </td>
                 <td className="w-[150px] py-5 text-center">
                   <div className="flex justify-center gap-2">

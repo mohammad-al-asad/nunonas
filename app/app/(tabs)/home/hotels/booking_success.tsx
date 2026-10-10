@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import theme from "../../../../constants/theme";
+import { LOYALTY_POINTS_ENABLED } from "../../../../lib/features";
 
 export default function HotelBookingSuccessScreen() {
   const router = useRouter();
@@ -121,7 +122,7 @@ export default function HotelBookingSuccessScreen() {
             <Text style={styles.detailValue}>${Number(totalAmount || 0).toFixed(2)}</Text>
           </View>
           {promotionName ? <Text style={styles.promotionText}>{promotionName} applied</Text> : null}
-          {Number(estimatedPoints || 0) > 0 ? (
+          {LOYALTY_POINTS_ENABLED && Number(estimatedPoints || 0) > 0 ? (
             <Text style={styles.pointsText}>Earn approximately {estimatedPoints} points after completion</Text>
           ) : null}
         </View>

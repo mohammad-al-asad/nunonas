@@ -41,7 +41,6 @@ const INITIAL_ROOM_FORM = {
   basePrice: "",
   weekendPrice: "",
   discount: "0",
-  taxIncluded: true,
   activeStatus: true,
   totalInventory: "1",
   minStay: "1",
@@ -148,7 +147,6 @@ export default function AddRoomPage() {
         base_price: parseFloat(formData.basePrice) || 0,
         weekend_price: parseFloat(formData.weekendPrice) || 0,
         default_discount_percent: parseFloat(formData.discount) || 0,
-        tax_included: formData.taxIncluded,
         amenities: selectedAmenities,
         images: images,
         inventory_count: parseInt(formData.totalInventory) || 1,
@@ -331,30 +329,6 @@ export default function AddRoomPage() {
                 <h2 className="text-lg font-black text-slate-800 uppercase tracking-wider">
                   Pricing
                 </h2>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                  Tax Included
-                </span>
-                <button
-                  onClick={() =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      taxIncluded: !prev.taxIncluded,
-                    }))
-                  }
-                  className={cn(
-                    "relative inline-flex h-6 w-11 items-center rounded-full focus:outline-none transition-colors",
-                    formData.taxIncluded ? "bg-[#1e2a5e]" : "bg-slate-200",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
-                      formData.taxIncluded ? "translate-x-6" : "translate-x-1",
-                    )}
-                  />
-                </button>
               </div>
             </div>
             <div className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">

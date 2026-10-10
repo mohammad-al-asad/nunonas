@@ -42,14 +42,14 @@ DEMO_LOCATION = (23.7925, 90.4078)
 ACTIVITY_COLLECTIONS = ("users", "vendor_bookings", "bookings", "vendor_reviews", "notifications", "customer_saved_items")
 
 OTHER_CUSTOMERS = [
-    ("Ayesha Siddiqua", "female"),
-    ("Imran Hossain", "male"),
-    ("Sadia Islam", "female"),
-    ("Rafiq Ahmed", "male"),
-    ("Tasnim Rahman", "female"),
-    ("Nayeem Khan", "male"),
-    ("Mitu Begum", "female"),
-    ("Shakil Mahmud", "male"),
+    ("Ayesha Siddiqua", "female", "1999-06-14"),
+    ("Imran Hossain", "male", "1991-02-03"),
+    ("Sadia Islam", "female", "2002-11-27"),
+    ("Rafiq Ahmed", "male", "1983-08-09"),
+    ("Tasnim Rahman", "female", "1996-04-18"),
+    ("Nayeem Khan", "male", "2006-01-30"),
+    ("Mitu Begum", "female", "1975-12-05"),
+    ("Shakil Mahmud", "male", "1962-07-22"),
 ]
 
 REVIEW_TEXTS = {
@@ -116,11 +116,12 @@ def seed_admin(db, now: datetime) -> None:
     )
 
 
-def seed_customer(db, full_name: str, email: str, phone: str, gender: str, location: tuple[float, float], created_at: datetime, password: str) -> dict:
+def seed_customer(db, full_name: str, email: str, phone: str, gender: str, location: tuple[float, float], created_at: datetime, password: str, date_of_birth: str | None = None) -> dict:
     doc = {
         "seed_tag": SEED_TAG,
         "full_name": full_name,
         "gender": gender,
+        "date_of_birth": date_of_birth,
         "email": email,
         "phone": phone,
         "password_hash": hash_password(password),
@@ -177,12 +178,12 @@ def insert_booking(db, *, customer: dict, vendor: dict, provider_type: str, sche
         "original_subtotal": float(amount),
         "subtotal": float(amount),
         "discount_amount": 0.0,
-        "service_fee": 0.0,
-        "taxes": 0.0,
         "estimated_points": int(amount // 100),
         "source": "customer_app",
         "requested_at": created_at,
         "accepted_at": created_at + timedelta(hours=1) if status in {"confirmed", "complete"} else None,
+        "completed_at": scheduled + timedelta(hours=3) if status == "complete" else None,
+        "canceled_at": created_at + timedelta(hours=2) if status == "canceled" else None,
         "status_history": history,
         "created_at": created_at,
         "updated_at": created_at,
@@ -257,8 +258,8 @@ def main() -> None:
     # Reuse a real app account with the demo email (e.g. created via Google sign-in) instead of clashing with it.
     demo = db.users.find_one({"email": DEMO_EMAIL}) or seed_customer(db, DEMO_NAME, DEMO_EMAIL, "01700000000", "male", DEMO_LOCATION, now - timedelta(days=170), DEMO_PASSWORD)
     others = [
-        seed_customer(db, name, f"demo.customer{index}@nununas.test", f"0171200000{index}", gender, DEMO_LOCATION, now - timedelta(days=160 - index * 15), DEMO_PASSWORD)
-        for index, (name, gender) in enumerate(OTHER_CUSTOMERS, start=1)
+        seed_customer(db, name, f"demo.customer{index}@nununas.test", f"0171200000{index}", gender, DEMO_LOCATION, now - timedelta(days=160 - index * 15), DEMO_PASSWORD, date_of_birth)
+        for index, (name, gender, date_of_birth) in enumerate(OTHER_CUSTOMERS, start=1)
     ]
 
     def booking_extras(vendor: dict, provider_type: str) -> dict:
@@ -304,7 +305,7 @@ def main() -> None:
 
     db.notifications.insert_many([
         {"seed_tag": SEED_TAG, "user_id": demo["_id"], "title": "Booking confirmed", "body": "Spice Garden confirmed your table for 4.", "type": "booking", "read": False, "created_at": now - timedelta(hours=3)},
-        {"seed_tag": SEED_TAG, "user_id": demo["_id"], "title": "New offer nearby", "body": "Lotus Wellness Spa: 20% off couple massage this week.", "type": "offer", "read": False, "created_at": now - timedelta(days=1)},
+        {"seed_tag": SEED_TAG, "user_id": demo["_id"], "title": "New offer nearby", "body": "Lotus Wellness Spa: 20% off weekday treatments.", "type": "offer", "read": False, "created_at": now - timedelta(days=1)},
         {"seed_tag": SEED_TAG, "user_id": demo["_id"], "title": "How was Lakeview Café?", "body": "Thanks for your review!", "type": "review", "read": True, "created_at": now - timedelta(days=5)},
     ])
     db.customer_saved_items.insert_many([

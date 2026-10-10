@@ -189,27 +189,6 @@ export async function adminRefreshSession(refreshToken: string) {
   return result;
 }
 
-export async function adminForgotPasswordRequest(payload: {
-  email_or_phone: string;
-}) {
-  return adminRequest(`${PA}/auth/forgot-password/request`, "POST", payload, false);
-}
-
-export async function adminForgotPasswordVerifyCode(payload: {
-  email_or_phone: string;
-  validation_code: string;
-}) {
-  return adminRequest(`${PA}/auth/forgot-password/verify-code`, "POST", payload, false);
-}
-
-export async function adminResetPassword(payload: {
-  reset_token: string;
-  new_password: string;
-  confirm_password: string;
-}) {
-  return adminRequest(`${PA}/auth/forgot-password/reset`, "POST", payload, false);
-}
-
 export async function adminGetMe() {
   return adminRequest<Record<string, unknown>>(`${PA}/auth/me`);
 }

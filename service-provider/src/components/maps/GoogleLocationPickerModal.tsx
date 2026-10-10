@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  cityFromGeocoderResult,
   loadGoogleMaps,
   toGoogleLatLngLiteral,
   type GoogleAdvancedMarkerInstance,
@@ -31,9 +32,15 @@ type Props = {
   onClose: () => void;
   onConfirm: (location: {
     address: string;
+    city: string;
     latitude: number;
     longitude: number;
   }) => void;
+};
+
+type GeocodedPlace = {
+  address: string;
+  city: string;
 };
 
 function validCoordinates(
@@ -71,7 +78,7 @@ function browserLocation(): Promise<GoogleLatLngLiteral | null> {
 function geocodeAddress(
   geocoder: GeocoderInstance,
   address: string,
-): Promise<{ address: string; coordinates: GoogleLatLngLiteral } | null> {
+): Promise<(GeocodedPlace & { coordinates: GoogleLatLngLiteral }) | null> {
   return new Promise((resolve) => {
     geocoder.geocode(
       { address },
@@ -84,6 +91,7 @@ function geocodeAddress(
           status === "OK" && coordinates
             ? {
                 address: result?.formatted_address || address,
+                city: cityFromGeocoderResult(result),
                 coordinates,
               }
             : null,
@@ -96,16 +104,18 @@ function geocodeAddress(
 function reverseGeocode(
   geocoder: GeocoderInstance,
   coordinates: GoogleLatLngLiteral,
-): Promise<string> {
+): Promise<GeocodedPlace> {
   return new Promise((resolve) => {
     geocoder.geocode(
       { location: coordinates },
       (results: GoogleGeocoderResult[] | null, status: string) => {
-        resolve(
-          status === "OK" && results?.[0]?.formatted_address
-            ? results[0].formatted_address
-            : `Coordinates (${coordinates.lat.toFixed(5)}, ${coordinates.lng.toFixed(5)})`,
-        );
+        const result = status === "OK" ? results?.[0] : undefined;
+        resolve({
+          address:
+            result?.formatted_address
+            || `Coordinates (${coordinates.lat.toFixed(5)}, ${coordinates.lng.toFixed(5)})`,
+          city: cityFromGeocoderResult(result),
+        });
       },
     );
   });
@@ -127,6 +137,7 @@ export function GoogleLocationPickerModal({
   const [coordinates, setCoordinates] =
     useState<GoogleLatLngLiteral | null>(null);
   const [address, setAddress] = useState(initialAddress);
+  const [city, setCity] = useState("");
   const [searchText, setSearchText] = useState(initialAddress);
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -140,9 +151,10 @@ export function GoogleLocationPickerModal({
       mapRef.current?.setCenter(next);
       setCoordinates(next);
       if (shouldReverseGeocode && geocoderRef.current) {
-        const nextAddress = await reverseGeocode(geocoderRef.current, next);
-        setAddress(nextAddress);
-        setSearchText(nextAddress);
+        const place = await reverseGeocode(geocoderRef.current, next);
+        setAddress(place.address);
+        setCity(place.city);
+        setSearchText(place.address);
       }
     },
     [],
@@ -156,6 +168,7 @@ export function GoogleLocationPickerModal({
     setLoading(true);
     setError("");
     setAddress(initialAddress);
+    setCity("");
     setSearchText(initialAddress);
     setCoordinates(null);
 
@@ -172,6 +185,7 @@ export function GoogleLocationPickerModal({
         geocoderRef.current = geocoder;
 
         let resolvedAddress = initialAddress.trim();
+        let resolvedCity = "";
         let initialPosition = validCoordinates(
           initialLatitude,
           initialLongitude,
@@ -181,6 +195,7 @@ export function GoogleLocationPickerModal({
           if (geocoded) {
             initialPosition = geocoded.coordinates;
             resolvedAddress = geocoded.address;
+            resolvedCity = geocoded.city;
           }
         }
         if (!initialPosition) {
@@ -207,11 +222,14 @@ export function GoogleLocationPickerModal({
         markerRef.current = marker;
         setCoordinates(initialPosition);
 
-        if (!resolvedAddress) {
-          resolvedAddress = await reverseGeocode(geocoder, initialPosition);
+        if (!resolvedAddress || !resolvedCity) {
+          const place = await reverseGeocode(geocoder, initialPosition);
+          resolvedAddress ||= place.address;
+          resolvedCity = place.city;
         }
         if (!cancelled) {
           setAddress(resolvedAddress);
+          setCity(resolvedCity);
           setSearchText(resolvedAddress);
         }
 
@@ -273,6 +291,7 @@ export function GoogleLocationPickerModal({
         return;
       }
       setAddress(result.address);
+      setCity(result.city);
       setSearchText(result.address);
       await updatePosition(result.coordinates, false);
     } finally {
@@ -375,6 +394,7 @@ export function GoogleLocationPickerModal({
                   address:
                     address ||
                     `Coordinates (${coordinates.lat.toFixed(5)}, ${coordinates.lng.toFixed(5)})`,
+                  city,
                   latitude: coordinates.lat,
                   longitude: coordinates.lng,
                 });

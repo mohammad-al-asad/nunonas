@@ -7,7 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, Body, Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.api.deps import get_db
-from app.modules.schemas import GenericPatchRequest, PlannedEndpointResponse, StatusUpdateRequest
+from app.domain import demographics
+from app.modules.schemas import GenericPatchRequest, PlannedEndpointResponse
 from app.modules.platform_admin.deps_auth import get_current_platform_admin
 
 router = APIRouter(
@@ -76,7 +77,8 @@ async def get_platform_dashboard_overview(
     total_users = await db["users"].count_documents({})
     total_vendors = await db["vendors"].count_documents({})
     total_bookings = await db["bookings"].count_documents({})
-    active_offers = await db["offers"].count_documents({"is_active": True})
+    today_key = now.date().isoformat()
+    active_offers = await db["platform_offers"].count_documents({"start_date": {"$lte": today_key}, "end_date": {"$gte": today_key}})
 
     # Revenue approximation from bookings
     revenue_pipeline = [{"$group": {"_id": None, "total": {"$sum": "$total_amount"}}}]
@@ -172,8 +174,8 @@ async def get_platform_dashboard_overview(
     active_vendor_count = await db["vendors"].count_documents({"status": {"$in": ["active", "approved"]}})
     pending_vendor_count = await db["vendors"].count_documents({"status": {"$in": ["pending", "pending_review", "pending_approval"]}})
     blocked_vendor_count = await db["vendors"].count_documents({"status": {"$in": ["blocked", "suspended"]}} )
-    total_offers = await db["offers"].count_documents({})
-    expired_offers = await db["offers"].count_documents({"is_active": {"$ne": True}})
+    total_offers = await db["platform_offers"].count_documents({})
+    expired_offers = total_offers - active_offers
 
     # Booking insights by type
     type_pipeline = [{"$group": {"_id": "$provider_type", "count": {"$sum": 1}}}]
@@ -324,7 +326,26 @@ async def get_platform_dashboard_overview(
             "offers": {"total": total_offers, "active": active_offers, "inactive": expired_offers},
         },
         "recentBookings": recent_bookings,
+        "demographics": await _platform_customer_demographics(db, now),
     }
+
+
+async def _platform_customer_demographics(db: AsyncIOMotorDatabase, now: datetime) -> dict:
+    """Gender and age mix of all app customers, plus how many have booked once or more."""
+    customers = await db["users"].find(
+        {"role": {"$in": ["customer", None]}}, {"gender": 1, "date_of_birth": 1}
+    ).to_list(None)
+    summary = demographics.summarize(customers, now.date())
+    counts = await db["bookings"].aggregate([
+        {"$group": {"_id": {"$ifNull": ["$customer_id", "$user_id"]}, "count": {"$sum": 1}}},
+    ]).to_list(None)
+    customer_ids = {str(row["_id"]) for row in customers}
+    booked = {str(row["_id"]): row["count"] for row in counts if str(row["_id"]) in customer_ids}
+    returning = sum(1 for count in booked.values() if count > 1)
+    summary["new_customers"] = len(booked) - returning
+    summary["returning_customers"] = returning
+    summary["never_booked"] = len(customer_ids) - len(booked)
+    return summary
 
 
 @router.get("/dashboard/revenue-growth", tags=["Platform Admin - Dashboard"])
@@ -576,63 +597,6 @@ async def decide_moderation_submission(
             "state": decision
         }
     }
-
-
-@router.get("/offers", tags=["Platform Admin - Offers"], response_model=PlannedEndpointResponse)
-def list_platform_offers() -> PlannedEndpointResponse:
-    return _planned("/platform-admin/offers", "Offer list page.", ["Offers dashboard"])
-
-
-@router.post("/offers", tags=["Platform Admin - Offers"], response_model=PlannedEndpointResponse)
-def create_platform_offer(payload: GenericPatchRequest) -> PlannedEndpointResponse:
-    _ = payload
-    return _planned("/platform-admin/offers", "Create a platform offer.", ["Create new offer modal"])
-
-
-@router.get("/offers/{offer_id}", tags=["Platform Admin - Offers"], response_model=PlannedEndpointResponse)
-def get_platform_offer(offer_id: str) -> PlannedEndpointResponse:
-    _ = offer_id
-    return _planned("/platform-admin/offers/{offer_id}", "Offer details page.", ["Offer details"])
-
-
-@router.patch("/offers/{offer_id}", tags=["Platform Admin - Offers"], response_model=PlannedEndpointResponse)
-def update_platform_offer(offer_id: str, payload: GenericPatchRequest) -> PlannedEndpointResponse:
-    _ = (offer_id, payload)
-    return _planned("/platform-admin/offers/{offer_id}", "Update offer details.", ["Offer details"])
-
-
-@router.patch("/offers/{offer_id}/status", tags=["Platform Admin - Offers"], response_model=PlannedEndpointResponse)
-def update_platform_offer_status(offer_id: str, payload: StatusUpdateRequest) -> PlannedEndpointResponse:
-    _ = (offer_id, payload)
-    return _planned("/platform-admin/offers/{offer_id}/status", "Pause/resume offer.", ["Offer actions menu"])
-
-
-@router.delete("/offers/{offer_id}", tags=["Platform Admin - Offers"], response_model=PlannedEndpointResponse)
-def delete_platform_offer(offer_id: str) -> PlannedEndpointResponse:
-    _ = offer_id
-    return _planned("/platform-admin/offers/{offer_id}", "Delete offer.", ["Offer actions menu"])
-
-
-@router.get("/offers/{offer_id}/providers", tags=["Platform Admin - Offers"], response_model=PlannedEndpointResponse)
-def list_platform_offer_providers(offer_id: str) -> PlannedEndpointResponse:
-    _ = offer_id
-    return _planned("/platform-admin/offers/{offer_id}/providers", "Providers impacted by offer.", ["Offer details"])
-
-
-@router.patch(
-    "/offers/{offer_id}/providers/{provider_id}",
-    tags=["Platform Admin - Offers"],
-    response_model=PlannedEndpointResponse,
-)
-def update_platform_offer_provider_state(
-    offer_id: str, provider_id: str, payload: StatusUpdateRequest
-) -> PlannedEndpointResponse:
-    _ = (offer_id, provider_id, payload)
-    return _planned(
-        "/platform-admin/offers/{offer_id}/providers/{provider_id}",
-        "Enable/disable offer for a provider row.",
-        ["Offer details provider table"],
-    )
 
 
 @router.get("/settings/general", tags=["Platform Admin - Settings"], response_model=PlannedEndpointResponse)

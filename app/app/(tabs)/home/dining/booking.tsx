@@ -7,7 +7,7 @@ import Button from "../../../../components/ui/Button";
 import { getBookingAvailability, getRestaurant } from "../../../../lib/customer-api";
 import { getFirstQueryParam } from "../../../../lib/event-map-utils";
 import { getErrorMessage, normalizeRestaurant } from "../../../../lib/provider-utils";
-import type { NormalizedRestaurant, ProviderPayload } from "../../../../lib/provider-types";
+import type { NormalizedRestaurant, ProviderPayload, RestaurantBookingRules } from "../../../../lib/provider-types";
 
 // Import Modular Components
 import PageHeader from "../../../../components/ui/PageHeader";
@@ -19,6 +19,26 @@ import SeatingPreference from "../../../../components/tabs/home/dining/details/b
 import SpecialNotes from "../../../../components/tabs/home/dining/details/booking/SpecialNotes";
 import BookingPolicy from "../../../../components/tabs/home/dining/details/booking/BookingPolicy";
 
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function isClosedOn(rules: RestaurantBookingRules, date: string) {
+  if (rules.blockedDates.includes(date)) return true;
+  const weekday = WEEKDAYS[new Date(`${date}T12:00:00`).getDay()];
+  return rules.closedDays.includes(weekday);
+}
+
+function firstOpenDate(rules: RestaurantBookingRules, from: string) {
+  const start = new Date(`${from}T12:00:00`);
+  // Same 7-day window as the date picker.
+  for (let offset = 0; offset < 7; offset += 1) {
+    const day = new Date(start);
+    day.setDate(start.getDate() + offset);
+    const value = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+    if (!isClosedOn(rules, value)) return value;
+  }
+  return from;
+}
+
 export default function BookingScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
@@ -28,6 +48,7 @@ export default function BookingScreen() {
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedTime, setSelectedTime] = useState("");
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
+  const [closedReason, setClosedReason] = useState("");
   const [seatingPreferences, setSeatingPreferences] = useState<string[]>(["Indoor", "Outdoor", "No preference"]);
   const [guests, setGuests] = useState(2);
   const [seating, setSeating] = useState("Outdoor");
@@ -53,6 +74,8 @@ export default function BookingScreen() {
           setRestaurant(normalized);
           setSeatingPreferences(normalized.seatingPreferences);
           setSeating(normalized.seatingPreferences[0] ?? "No preference");
+          setSelectedDate(firstOpenDate(normalized.bookingRules, today));
+          setGuests((current) => Math.min(current, normalized.bookingRules.maxGuests));
         }
       } catch (error: unknown) {
         if (!cancelled) {
@@ -75,9 +98,10 @@ export default function BookingScreen() {
   useEffect(() => {
     if (!restaurantId || !selectedDate) return;
     let cancelled = false;
-    getBookingAvailability<{ slots?: { time?: string; available?: boolean }[] }>(restaurantId, selectedDate)
+    getBookingAvailability<{ closed?: boolean; closed_reason?: string | null; slots?: { time?: string; available?: boolean }[] }>(restaurantId, selectedDate)
       .then((payload) => {
         if (cancelled) return;
+        setClosedReason(payload?.closed ? payload.closed_reason || "The restaurant is closed on this date." : "");
         const times = (payload?.slots ?? [])
           .filter((slot) => slot.available !== false && slot.time)
           .map((slot) => String(slot.time));
@@ -85,7 +109,7 @@ export default function BookingScreen() {
         setSelectedTime((current) => times.includes(current) ? current : (times[0] ?? ""));
       })
       .catch(() => {
-        if (!cancelled) { setAvailableTimes([]); setSelectedTime(""); }
+        if (!cancelled) { setAvailableTimes([]); setSelectedTime(""); setClosedReason(""); }
       });
     return () => { cancelled = true; };
   }, [restaurantId, selectedDate]);
@@ -122,34 +146,37 @@ export default function BookingScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <RestaurantSummary restaurant={restaurant} />
-        
-        <DateSelector 
-          selectedDate={selectedDate} 
-          onDateSelect={setSelectedDate} 
+
+        <DateSelector
+          selectedDate={selectedDate}
+          onDateSelect={setSelectedDate}
+          isDateDisabled={(date: string) => isClosedOn(restaurant.bookingRules, date)}
         />
-        
-        <TimeSelector 
-          selectedTime={selectedTime} 
-          onTimeSelect={setSelectedTime} 
+
+        <TimeSelector
+          selectedTime={selectedTime}
+          onTimeSelect={setSelectedTime}
           times={availableTimes}
+          emptyMessage={closedReason || undefined}
         />
-        
-        <GuestCounter 
-          guests={guests} 
-          onGuestsChange={setGuests} 
+
+        <GuestCounter
+          guests={guests}
+          onGuestsChange={setGuests}
+          max={restaurant.bookingRules.maxGuests}
         />
-        
-        <SeatingPreference 
-          seating={seating} 
-          onSeatingChange={setSeating} 
+
+        <SeatingPreference
+          seating={seating}
+          onSeatingChange={setSeating}
           preferences={seatingPreferences}
         />
-        
-        <SpecialNotes 
-          notes={notes} 
-          onNotesChange={setNotes} 
+
+        <SpecialNotes
+          notes={notes}
+          onNotesChange={setNotes}
         />
-        
+
         <BookingPolicy policy={restaurant.bookingPolicy} />
 
         <Button

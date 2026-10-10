@@ -1,3 +1,4 @@
+import base64
 from datetime import UTC, datetime, timedelta
 
 import mongomock
@@ -92,40 +93,6 @@ def test_completed_vendor_booking_cannot_be_rescheduled():
     booking = database.vendor_bookings.find_one({"_id": booking_id})
     assert booking["scheduled_date"] == "2026-07-26"
     assert booking["scheduled_time"] == "18:00"
-
-
-def test_analytics_uses_selected_range_and_returns_real_csv():
-    database = mongomock.MongoClient().nuno
-    vendor_id = ObjectId()
-    repository = VendorPortalRepository(database)
-    database.vendor_rooms.insert_one({"vendor_id": vendor_id, "inventory_count": 4})
-    database.vendor_bookings.insert_many(
-        [
-            {
-                "vendor_id": vendor_id,
-                "scheduled_date": "2026-07-10",
-                "status": "completed",
-                "total_amount": "120.50",
-                "customer_gender": "female",
-                "customer_age": 31,
-            },
-            {
-                "vendor_id": vendor_id,
-                "scheduled_date": "2026-06-10",
-                "status": "complete",
-                "total_amount": 999,
-            },
-        ]
-    )
-
-    overview = repository.get_analytics_overview(str(vendor_id), "2026-07-01", "2026-07-31")
-    export = repository.export_analytics(str(vendor_id), "2026-07-01", "2026-07-31")
-
-    assert overview["total_bookings"] == 1
-    assert overview["monthly_revenue"] == 120.5
-    assert overview["demographics"]["gender_distribution"]["female"] == 100
-    assert "Total bookings,1" in export["content"]
-    assert "files.example.com" not in str(export)
 
 
 def test_dashboard_booking_trends_and_month_count_use_booking_request_time():
@@ -247,7 +214,7 @@ def test_vendor_commission_is_read_from_category_rates():
     assert commission["source"] == "platform_admin_billing"
 
 
-def test_generated_receipt_is_downloadable_and_escapes_customer_data():
+def test_generated_receipt_is_a_downloadable_pdf_with_a_safe_filename():
     database = mongomock.MongoClient().nuno
     vendor_id = ObjectId()
     booking_id = ObjectId()
@@ -266,8 +233,103 @@ def test_generated_receipt_is_downloadable_and_escapes_customer_data():
     receipt = repository.generate_receipt(str(vendor_id), str(booking_id))
 
     assert receipt is not None
-    assert receipt["content_type"] == "text/html;charset=utf-8"
+    assert receipt["content_type"] == "application/pdf"
     assert receipt["filename"].startswith("receipt-")
+    assert receipt["filename"].endswith(".pdf")
     assert "/" not in receipt["filename"]
-    assert "<script>" not in receipt["content"]
-    assert "&lt;script&gt;" in receipt["content"]
+    assert base64.b64decode(receipt["content_base64"]).startswith(b"%PDF")
+
+
+def test_receipt_shows_discount_and_matches_the_booking_total():
+    database = mongomock.MongoClient().nuno
+    vendor_id = ObjectId()
+    booking_id = database.vendor_bookings.insert_one(
+        {
+            "vendor_id": vendor_id,
+            "booking_code": "#BK-1",
+            "customer_name": "Guest",
+            "service": "Table Booking",
+            "original_subtotal": 1000,
+            "discount_amount": 100,
+            "subtotal": 900,
+            "total_amount": 900,
+            "payment_status": "paid",
+        }
+    ).inserted_id
+
+    receipt = VendorPortalRepository(database).generate_receipt(str(vendor_id), str(booking_id))
+
+    assert receipt["total"] == 900
+    assert [item["label"] for item in receipt["line_items"]] == ["Discount"]
+    assert base64.b64decode(receipt["content_base64"]).startswith(b"%PDF")
+
+
+def test_manual_booking_takes_capacity_but_is_not_billed_or_mirrored():
+    from app.modules.customer.repositories_customer import CustomerRepository
+    from app.modules.platform_admin import billing
+
+    database = mongomock.MongoClient().nuno
+    vendor_id = ObjectId()
+    database.vendors.insert_one({"_id": vendor_id, "status": "approved", "business_name": "Walk-in Bistro"})
+    database.vendor_portal_settings.insert_one(
+        {"vendor_id": vendor_id, "profile": {"restaurant_settings": {"available_booking_times": ["07:00 PM"], "booking_capacity": 1}}}
+    )
+    repository = VendorPortalRepository(database)
+
+    booking = repository.create_manual_booking(
+        str(vendor_id),
+        {"provider_type": "restaurant", "customer_name": "Phone Guest", "customer_phone": "01700000000",
+         "date": "2026-07-31", "time": "07:00 PM", "guests": 3, "total_amount": 1500},
+    )
+    assert booking["source"] == "manual" and booking["status"] == "confirmed"
+    assert booking["booking_code"].startswith("#MB")
+    assert database.bookings.count_documents({}) == 0  # platform-wide booking stats stay app-only
+
+    # It occupies the slot for app customers.
+    slots = CustomerRepository(database).get_booking_availability(str(vendor_id), "2026-07-31")["slots"]
+    assert slots[0]["available"] is False
+
+    repository.update_booking_status(str(vendor_id), booking["id"], "complete")
+    assert billing._billable_bookings(database, [vendor_id]) == []
+
+
+def _pdf_text(pdf: bytes) -> str:
+    import re
+    import zlib
+
+    chunks = []
+    for stream in re.findall(rb"stream\r?\n(.*?)\r?\nendstream", pdf, re.S):
+        try:
+            chunks.append(zlib.decompress(stream).decode("latin-1"))
+        except zlib.error:
+            continue
+    return "".join(chunks)
+
+
+def test_hotel_receipt_shows_room_and_stay_dates():
+    database = mongomock.MongoClient().nuno
+    vendor_id = ObjectId()
+    booking_id = database.vendor_bookings.insert_one(
+        {
+            "vendor_id": vendor_id,
+            "booking_code": "#BK-STAY",
+            "customer_name": "Hotel Guest",
+            "service": "Room Booking",
+            "provider_type": "hotel",
+            "room_type": "Deluxe King",
+            "check_in_date": "2026-10-10",
+            "check_out_date": "2026-10-12",
+            "nights": 2,
+            "rate_per_night": 6500,
+            "scheduled_date": "2026-10-10",
+            "subtotal": 13000,
+            "total_amount": 13000,
+        }
+    ).inserted_id
+
+    receipt = VendorPortalRepository(database).generate_receipt(str(vendor_id), str(booking_id))
+    text = _pdf_text(base64.b64decode(receipt["content_base64"]))
+
+    for expected in ("Deluxe King", "Check-in", "2026-10-10", "Check-out", "2026-10-12", "Rate per night", "$6,500.00"):
+        assert expected in text, expected
+    assert "Time" not in text

@@ -177,10 +177,6 @@ const RoomDetailsScreen = () => {
               <Text style={styles.priceLabel}>Room rate (2 nights)</Text>
               <Text style={styles.priceValue}>${roomData.price.rate}</Text>
             </View>
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Taxes & fees</Text>
-              <Text style={styles.priceValue}>${roomData.price.taxes}</Text>
-            </View>
             <View style={[styles.priceRow, styles.totalRow]}>
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalValue}>${roomData.price.total}</Text>

@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import theme from "../../../../../constants/theme";
 
-const TABS = ["Overview", "Services", "Menu", "Gallery", "Reviews"];
+const TABS = ["Overview", "Menu", "Gallery", "Reviews"];
 
 const SpaDetailsTabs = ({ activeTab, onTabPress }) => {
   return (

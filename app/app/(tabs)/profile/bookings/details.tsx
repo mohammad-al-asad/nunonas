@@ -19,6 +19,7 @@ import ReviewModal from "../../../../components/ui/ReviewModal";
 import { cancelBooking, createBookingReview, getBooking } from "../../../../lib/customer-api";
 import { showToast } from "../../../../lib/toast";
 import { BookingDetailsSkeleton } from "../../../../components/skeleton";
+import { LOYALTY_POINTS_ENABLED } from "../../../../lib/features";
 
 const InfoRow = ({ label, value, valueStyle }) => (
   <View style={styles.infoRow}>
@@ -113,8 +114,6 @@ export default function BookingDetailsScreen() {
     roomType: liveBooking?.room_type || liveBooking?.service || routeParams.roomType,
     pricePerNight: liveBooking?.rate_per_night,
     originalSubtotal: liveBooking?.original_subtotal,
-    serviceFee: liveBooking?.service_fee,
-    taxes: liveBooking?.taxes,
     discountAmount: liveBooking?.discount_amount,
     promotionName: liveBooking?.promotion_name,
     estimatedPoints: liveBooking?.estimated_points,
@@ -188,7 +187,7 @@ export default function BookingDetailsScreen() {
         </View>
       ))}
       {!params.statusHistory?.length ? <Text style={styles.notesValue}>No status updates available.</Text> : null}
-      {Number(params.pointsAwarded || params.estimatedPoints || 0) > 0 ? (
+      {LOYALTY_POINTS_ENABLED && Number(params.pointsAwarded || params.estimatedPoints || 0) > 0 ? (
         <Text style={styles.pointsNote}>
           {Number(params.pointsAwarded || 0) > 0 ? `${params.pointsAwarded} points awarded` : `Approximately ${params.estimatedPoints} points after completion`}
         </Text>
@@ -266,8 +265,6 @@ export default function BookingDetailsScreen() {
             value={params.originalSubtotal != null ? `$${Number(params.originalSubtotal).toFixed(2)}` : "Not available"}
           />
           {Number(params.discountAmount || 0) > 0 ? <InfoRow label={params.promotionName || "Promotion"} value={`-$${Number(params.discountAmount).toFixed(2)}`} /> : null}
-          <InfoRow label="Service fee" value={`$${Number(params.serviceFee || 0).toFixed(2)}`} />
-          <InfoRow label="Taxes" value={`$${Number(params.taxes || 0).toFixed(2)}`} />
           <View style={styles.divider} />
           <InfoRow
             label="Total amount"

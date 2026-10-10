@@ -46,9 +46,9 @@ export function BookingDetailsModal({
       />
 
       {/* Modal Content */}
-      <div role="dialog" aria-modal="true" aria-labelledby="booking-details-title" className="relative flex w-full max-w-[920px] flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.2)] animate-in zoom-in-95 fade-in duration-300">
+      <div role="dialog" aria-modal="true" aria-labelledby="booking-details-title" className="relative flex max-h-[calc(100dvh-2rem)] w-full max-w-[920px] flex-col overflow-hidden rounded-[28px] sm:max-h-[calc(100dvh-3rem)] border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.2)] animate-in zoom-in-95 fade-in duration-300">
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-slate-100 bg-gradient-to-br from-sky-50/80 via-white to-white px-6 py-6 sm:px-8">
+        <div className="flex shrink-0 items-start justify-between border-b border-slate-100 bg-gradient-to-br from-sky-50/80 via-white to-white px-6 py-6 sm:px-8">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-500 mb-1 block">
               Booking Details
@@ -56,6 +56,7 @@ export function BookingDetailsModal({
             <h2 id="booking-details-title" className="mt-1 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
               {booking.id}
             </h2>
+            {booking.manual ? <p className="mt-1 text-xs font-bold text-violet-600">Manual booking · added by you, no commission</p> : null}
           </div>
           <button
             type="button"
@@ -67,7 +68,7 @@ export function BookingDetailsModal({
           </button>
         </div>
 
-        <div className="grid gap-6 px-6 py-6 sm:px-8 sm:py-7 md:grid-cols-2 md:gap-x-8 md:gap-y-6">
+        <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto px-6 py-6 sm:px-8 sm:py-7 md:grid-cols-2 md:gap-x-8 md:gap-y-6">
           {/* Status & Time Info */}
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3 md:col-span-2">
             <span

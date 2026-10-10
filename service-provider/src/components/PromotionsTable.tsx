@@ -7,7 +7,7 @@ export interface Promotion {
   id: string;
   name: string;
   description: string;
-  type: "PERCENTAGE" | "HAPPY HOUR" | "FIXED" | string;
+  type: "PERCENTAGE" | "FIXED" | "BUY 1 GET 1" | "FOOD" | "MENU" | "CUSTOM" | string;
   value: string;
   schedule: string;
   usageCount: number;
@@ -75,8 +75,11 @@ export function PromotionsTable({ promotions, onToggleStatus }: PromotionsTableP
             <select aria-label="Filter promotions by type" value={type} onChange={(event) => { setType(event.target.value); setPage(1); }} className="appearance-none w-full bg-slate-50 border border-slate-100 rounded-xl py-2.5 px-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all cursor-pointer font-medium text-slate-600">
               <option value="ALL">All Types</option>
               <option value="PERCENTAGE">Percentage</option>
-              <option value="HAPPY HOUR">Happy Hour</option>
               <option value="FIXED">Fixed</option>
+              <option value="BUY 1 GET 1">Buy 1 Get 1</option>
+              <option value="FOOD">% Off Food</option>
+              <option value="MENU">% Off Menu</option>
+              <option value="CUSTOM">Custom</option>
             </select>
             <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
           </div>
@@ -115,9 +118,11 @@ export function PromotionsTable({ promotions, onToggleStatus }: PromotionsTableP
               );
               const typeStyles = {
                 PERCENTAGE: "bg-blue-50 text-blue-600 border-blue-100/50",
-                "HAPPY HOUR":
-                  "bg-purple-50 text-purple-600 border-purple-100/50",
                 FIXED: "bg-amber-50 text-amber-600 border-amber-100/50",
+                "BUY 1 GET 1": "bg-purple-50 text-purple-600 border-purple-100/50",
+                FOOD: "bg-emerald-50 text-emerald-600 border-emerald-100/50",
+                MENU: "bg-emerald-50 text-emerald-600 border-emerald-100/50",
+                CUSTOM: "bg-slate-100 text-slate-600 border-slate-200",
               }[promo.type];
 
               return (
@@ -248,6 +253,56 @@ export function PromotionsTable({ promotions, onToggleStatus }: PromotionsTableP
           <span className="text-[11px] font-bold text-slate-500">Page {safePage} of {pageCount}</span>
           <button type="button" disabled={safePage === pageCount} onClick={() => setPage((current) => current + 1)} className="px-4 py-2 text-[11px] font-bold text-slate-500 hover:text-slate-700 transition-colors disabled:cursor-not-allowed disabled:opacity-40">Next</button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** Same layout as PromotionsTable, shown while promotions load. */
+export function PromotionsTableSkeleton({ rows = 4 }: { rows?: number }) {
+  const bar = "animate-pulse rounded-lg bg-slate-100";
+  return (
+    <div aria-busy="true" aria-label="Loading promotions" className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-col justify-between gap-5 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:p-6">
+        <div className="flex items-center gap-3">
+          <div className={cn(bar, "h-10 w-10 rounded-xl")} />
+          <div className={cn(bar, "h-5 w-44")} />
+        </div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className={cn(bar, "h-10 w-full rounded-xl sm:w-[260px]")} />
+          <div className={cn(bar, "h-10 w-full rounded-xl sm:w-[140px]")} />
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-left">
+          <thead>
+            <tr className="bg-slate-50/50">
+              {["w-24", "w-12", "w-12", "w-16", "w-20", "w-14"].map((width, index) => (
+                <th key={index} className="px-8 py-5">
+                  <div className={cn(bar, "h-3", width, index >= 3 && index < 5 && "mx-auto", index === 5 && "ml-auto")} />
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50">
+            {Array.from({ length: rows }, (_, row) => (
+              <tr key={row}>
+                <td className="px-8 py-6">
+                  <div className={cn(bar, "h-4 w-40")} />
+                  <div className={cn(bar, "mt-2 h-3 w-28")} />
+                </td>
+                <td className="px-8 py-6"><div className={cn(bar, "h-6 w-20 rounded-full")} /></td>
+                <td className="px-8 py-6"><div className={cn(bar, "h-4 w-16")} /></td>
+                <td className="px-8 py-6"><div className={cn(bar, "mx-auto h-4 w-28")} /></td>
+                <td className="px-8 py-6 min-w-[180px]">
+                  <div className={cn(bar, "h-3 w-24")} />
+                  <div className={cn(bar, "mt-2 h-2 w-full rounded-full")} />
+                </td>
+                <td className="px-8 py-6"><div className={cn(bar, "ml-auto h-6 w-11 rounded-full")} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

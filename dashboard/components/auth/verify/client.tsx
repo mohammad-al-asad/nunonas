@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { verifyCode, requestReset } from "@/components/auth/auth-client";
 
 const codeLength = 6;
+// Matches the backend resend cooldown.
+const resendCooldownSeconds = 60;
 
 export function VerifyCodeView() {
   const router = useRouter();
@@ -13,6 +15,10 @@ export function VerifyCodeView() {
   const [values, setValues] = useState<string[]>(Array(codeLength).fill(""));
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [resending, setResending] = useState(false);
+  // A code was just sent from the previous page, so start on cooldown.
+  const [cooldown, setCooldown] = useState(resendCooldownSeconds);
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
 
   const code = useMemo(() => values.join(""), [values]);
@@ -20,6 +26,12 @@ export function VerifyCodeView() {
   useEffect(() => {
     inputsRef.current[0]?.focus();
   }, []);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = window.setTimeout(() => setCooldown((value) => value - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [cooldown]);
 
   const handleChange = (index: number, value: string) => {
     if (!/^\d?$/.test(value)) return;
@@ -55,7 +67,20 @@ export function VerifyCodeView() {
   };
 
   const resend = async () => {
-    await requestReset(email);
+    if (cooldown > 0 || resending) return;
+    setError("");
+    setNotice("");
+    setResending(true);
+    const result = await requestReset(email);
+    setResending(false);
+    if (!result.ok) {
+      setError(result.message ?? "Unable to resend code.");
+      return;
+    }
+    setValues(Array(codeLength).fill(""));
+    inputsRef.current[0]?.focus();
+    setNotice("A new code has been sent if the account exists.");
+    setCooldown(resendCooldownSeconds);
   };
 
   return (
@@ -86,6 +111,7 @@ export function VerifyCodeView() {
       </div>
 
       {error && <p className="m-0 mt-3 text-[11px] text-[#dc2626]">{error}</p>}
+      {notice && !error && <p className="m-0 mt-3 text-[11px] text-[#15803d]">{notice}</p>}
 
       <button
         type="submit"
@@ -97,8 +123,13 @@ export function VerifyCodeView() {
 
       <p className="m-0 mt-3 text-[10px] text-[#8b96ad]">
         Don&apos;t receive OTP?{" "}
-        <button type="button" onClick={resend} className="text-[#d64545]">
-          Resend again
+        <button
+          type="button"
+          onClick={resend}
+          disabled={cooldown > 0 || resending}
+          className="font-semibold text-[#d64545] disabled:cursor-not-allowed disabled:font-normal disabled:text-[#8b96ad]"
+        >
+          {resending ? "Sending..." : cooldown > 0 ? `Resend in ${cooldown}s` : "Resend again"}
         </button>
       </p>
 

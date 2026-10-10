@@ -87,7 +87,8 @@ export default function DiningScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    // The tab bar is hidden here, so the map runs under the phone's navigation bar instead of leaving a gap.
+    <SafeAreaView style={styles.container} edges={view === "map" ? ["top", "left", "right"] : undefined}>
       <DiningSearch
         value={searchQuery}
         onSearch={setSearchQuery}
@@ -170,7 +171,6 @@ const styles = StyleSheet.create({
   },
   mapContainer: {
     flex: 1,
-    minHeight: 420,
     marginTop: 14,
     overflow: "hidden",
     borderTopWidth: 1,

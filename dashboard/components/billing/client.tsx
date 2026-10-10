@@ -508,7 +508,7 @@ export function BillingManagementView({ data }: { data: BillingOverview }) {
                       </table>
                     </div>
                     <p className="m-0 mt-2 text-[10px] text-[#94a3b8]">
-                      Percentages apply to the booking subtotal after discounts (not the app&apos;s service fee or taxes). Each booking
+                      Percentages apply to the booking total after discounts. Each booking
                       uses the rate that was active when it was made.
                       {selected.status === "PAID" ? " This invoice was locked when it was marked paid." : ""}
                     </p>

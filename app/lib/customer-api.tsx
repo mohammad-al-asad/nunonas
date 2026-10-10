@@ -78,9 +78,6 @@ export type BookingQuote = {
   promotion_name?: string | null;
   promo_code?: string | null;
   subtotal?: number;
-  service_fee?: number;
-  taxes?: number;
-  tax_included?: boolean;
   total?: number;
   estimated_points?: number;
 };
@@ -209,10 +206,6 @@ export async function getRestaurant<TResponse = unknown>(restaurantId: string): 
   return apiGetAuth<TResponse>(`${SERVICES}/restaurants/${restaurantId}`);
 }
 
-export async function getRestaurantMenu<TResponse = unknown>(restaurantId: string): Promise<TResponse> {
-  return apiGetAuth<TResponse>(`${SERVICES}/restaurants/${restaurantId}/menu`);
-}
-
 export async function getRestaurantGallery<TResponse = unknown>(restaurantId: string): Promise<TResponse> {
   return apiGetAuth<TResponse>(`${SERVICES}/restaurants/${restaurantId}/gallery`);
 }
@@ -239,10 +232,6 @@ export async function listSpas<TResponse = unknown>(params: QueryParams = {}): P
 
 export async function getSpa<TResponse = unknown>(spaId: string): Promise<TResponse> {
   return apiGetAuth<TResponse>(`${SERVICES}/spas/${spaId}`);
-}
-
-export async function getSpaMenu<TResponse = unknown>(spaId: string): Promise<TResponse> {
-  return apiGetAuth<TResponse>(`${SERVICES}/spas/${spaId}/menu`);
 }
 
 export async function getSpaGallery<TResponse = unknown>(spaId: string): Promise<TResponse> {

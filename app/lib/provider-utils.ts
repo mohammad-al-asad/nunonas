@@ -6,6 +6,12 @@ import type {
   ProviderPayload,
 } from "./provider-types";
 
+export const MAX_TABLE_GUESTS = 20;
+
+function titleCase(value: string) {
+  return value.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 function toNumber(value: number | string | null | undefined): number | null {
   if (typeof value === "number") {
     return Number.isFinite(value) ? value : null;
@@ -52,17 +58,22 @@ export function normalizeRestaurant(payload: ProviderPayload = {}): NormalizedRe
     ratingText: getRatingText(payload),
     reviewsText: String(reviewsCount),
     reviewsCount,
-    category: payload.cuisine ?? payload.category ?? "Dining",
-    priceRange: payload.price_range ?? payload.priceRange ?? "$$$",
+    category: titleCase(payload.cuisine ?? payload.category ?? "Dining"),
+    priceRange: payload.price_range ?? payload.priceRange ?? "",
     distanceText: getDistanceText(toNumber(payload.distance_km) ?? payload.distance),
     locationText: getLocationText(payload),
     profileImageUrl: payload.profile_image_url ?? "",
     imageUrl: payload.cover_image_url ?? payload.image_url ?? payload.image ?? payload.asset_url ?? payload.url ?? "",
-    description:
-      payload.description ??
-      "Discover venue details, opening times, menus, and booking options from the app.",
+    // The API sends the restaurant's own text as `about`.
+    description: payload.about ?? payload.description ?? "",
     amenities: payload.amenities ?? ["Free WiFi", "Parking", "Outdoor", "Cards", "Accessible", "Bar"],
     seatingPreferences: payload.seating_preferences ?? ["Indoor", "Outdoor", "No preference"],
+    bookingRules: {
+      closedDays: payload.booking_rules?.closed_days ?? [],
+      blockedDates: payload.booking_rules?.blocked_dates ?? [],
+      // The booking API accepts at most 20 guests per table.
+      maxGuests: Math.min(payload.booking_rules?.max_guests || MAX_TABLE_GUESTS, MAX_TABLE_GUESTS),
+    },
     phone: payload.phone ?? payload.contact?.phone ?? "",
     latitude: toNumber(payload.latitude),
     longitude: toNumber(payload.longitude),
@@ -86,7 +97,7 @@ export function normalizeHotel(payload: ProviderPayload = {}): NormalizedHotel {
     reviewsText: String(reviewsCount),
     reviewsCount,
     priceText: price != null ? `${price}` : "0",
-    priceRange: payload.price_range ?? payload.priceRange ?? "$$$",
+    priceRange: payload.price_range ?? payload.priceRange ?? "",
     locationText,
     profileImageUrl: payload.profile_image_url ?? "",
     imageUrl: payload.cover_image_url ?? payload.image_url ?? payload.image ?? payload.asset_url ?? payload.url ?? "",

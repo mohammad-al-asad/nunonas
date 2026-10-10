@@ -6,6 +6,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import theme from "../../../../constants/theme";
 import Button from "../../../../components/ui/Button";
 import { Ionicons } from "@expo/vector-icons";
+import { LOYALTY_POINTS_ENABLED } from "../../../../lib/features";
 
 export default function SpaBookingSuccessScreen() {
   const router = useRouter();
@@ -58,7 +59,7 @@ export default function SpaBookingSuccessScreen() {
             <Text style={styles.detailValue}>${Number(totalAmount || 0).toFixed(2)}</Text>
           </View>
           {promotionName ? <Text style={styles.promotionText}>{promotionName} applied</Text> : null}
-          {Number(estimatedPoints || 0) > 0 ? <Text style={styles.pointsText}>Earn approximately {estimatedPoints} points after completion</Text> : null}
+          {LOYALTY_POINTS_ENABLED && Number(estimatedPoints || 0) > 0 ? <Text style={styles.pointsText}>Earn approximately {estimatedPoints} points after completion</Text> : null}
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Guests</Text>
             <Text style={styles.detailValue}>{guests || "4"} People</Text>

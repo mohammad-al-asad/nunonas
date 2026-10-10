@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ ok: true, message: "OTP sent to email." }, { status: 200 });
+    return NextResponse.json({ ok: true, message: "If the account exists, a code has been sent." }, { status: 200 });
   } catch {
     return NextResponse.json({ ok: false, message: "Unable to start reset flow." }, { status: 500 });
   }

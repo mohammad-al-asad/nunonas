@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import SuccessHeader from "../../../../components/tabs/home/dining/details/booking/confirm_booking/confirmed/SuccessHeader";
 import ConfirmedDetailsCard from "../../../../components/tabs/home/dining/details/booking/confirm_booking/confirmed/ConfirmedDetailsCard";
 import PointsBanner from "../../../../components/tabs/home/dining/details/booking/confirm_booking/confirmed/PointsBanner";
+import { LOYALTY_POINTS_ENABLED } from "../../../../lib/features";
 
 export default function BookingSuccessScreen() {
   const router = useRouter();
@@ -58,7 +59,7 @@ export default function BookingSuccessScreen() {
         
         <ConfirmedDetailsCard details={details} />
         
-        {Number(estimatedPoints || 0) > 0 ? (
+        {LOYALTY_POINTS_ENABLED && Number(estimatedPoints || 0) > 0 ? (
           <PointsBanner points={Number(estimatedPoints)} />
         ) : null}
 

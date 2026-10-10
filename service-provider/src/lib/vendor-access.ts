@@ -1,13 +1,11 @@
 "use client";
 
 import {
-  BarChart3,
   BadgePercent,
   CalendarRange,
   CalendarPlus2,
   Hotel,
   LayoutDashboard,
-  BriefcaseBusiness,
   Settings,
   Star,
   Tag,
@@ -44,9 +42,7 @@ const CATEGORY_VALUES: VendorCategory[] = [
 const ALWAYS_VISIBLE_NAV_ITEMS: SidebarNavItem[] = [
   { name: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { name: "Customers", icon: UserCircle2, href: "/customers" },
-  { name: "Operations", icon: BriefcaseBusiness, href: "/operations" },
   { name: "Promotions", icon: Tag, href: "/promotions" },
-  { name: "Analytics", icon: BarChart3, href: "/analytics" },
   { name: "Loyalty Program", icon: UserCircle2, href: "/loyalty" },
   { name: "Reviews", icon: Star, href: "/reviews" },
   { name: "Settings", icon: Settings, href: "/settings" },
@@ -97,13 +93,11 @@ const CATEGORY_ROUTE_PREFIXES: Record<VendorCategory, string[]> = {
 const SHARED_ALLOWED_PREFIXES = [
   "/dashboard",
   "/promotions",
-  "/analytics",
   "/loyalty",
   "/reviews",
   "/settings",
   "/profile",
   "/customers",
-  "/operations",
   "/notifications",
 ];
 

@@ -120,7 +120,7 @@ export default function CustomerDetailPage() {
                       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                         <Detail label="When" value={`${text(booking.scheduled_date ?? booking.date)}${booking.scheduled_time ?? booking.time ? ` at ${text(booking.scheduled_time ?? booking.time)}` : ""}`} />
                         <Detail label="Guests" value={booking.guests ?? booking.quantity ?? booking.guest_count} />
-                        <Detail label="Payment" value={text(booking.payment_status, "Unknown").toUpperCase()} />
+                        
                         <Detail label="Amount" value={booking.total_amount ?? booking.amount} />
                         <Detail label="Assigned staff" value={booking.staff_name ?? booking.assigned_staff ?? booking.staff} />
                         <Detail label="Seating" value={booking.seating_preference} />

@@ -11,7 +11,9 @@ import {
   vendorDeletePromotion,
   vendorUpdatePromotion,
 } from "@/lib/vendor-api";
-import { promotionQuery, vendorQueryKeys } from "@/lib/vendor-queries";
+import { promotionQuery, vendorProfileQuery, vendorQueryKeys } from "@/lib/vendor-queries";
+import { extractVendorCategories } from "@/lib/vendor-access";
+import { applicableOptionsFor, offerTypeOption, offerTypesFor, validateOfferFields } from "@/lib/promotion-types";
 
 export default function PromotionDetailPage({
 }) {
@@ -22,6 +24,7 @@ export default function PromotionDetailPage({
   const [form, setForm] = useState({
     name: "",
     description: "",
+    terms: "",
     offerType: "percentage",
     value: "",
     applicableTo: "All Services",
@@ -34,6 +37,17 @@ export default function PromotionDetailPage({
     active: true,
   });
   const { data: promotion, isLoading: loading, error: queryError } = useQuery(promotionQuery(promotionId));
+  const profileQuery = useQuery(vendorProfileQuery());
+  const profile = profileQuery.data as Record<string, unknown> | undefined;
+  const categories = extractVendorCategories(profile?.categories ?? profile?.category);
+  const offerType = offerTypeOption(form.offerType);
+  // Keep the saved type selectable even if the provider's categories changed since.
+  const offerTypes = offerTypesFor(categories).some((type) => type.value === offerType.value)
+    ? offerTypesFor(categories)
+    : [...offerTypesFor(categories), offerType];
+  const applicableOptions = applicableOptionsFor(categories).includes(form.applicableTo)
+    ? applicableOptionsFor(categories)
+    : [...applicableOptionsFor(categories), form.applicableTo];
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -44,6 +58,7 @@ export default function PromotionDetailPage({
         setForm({
           name: String(promotion.promotion_name ?? promotion.name ?? promotion.title ?? ""),
           description: String(promotion.internal_description ?? promotion.description ?? ""),
+          terms: String(promotion.terms ?? ""),
           offerType: String(promotion.offer_type ?? "percentage"),
           value: String(promotion.discount_value ?? promotion.value ?? ""),
           applicableTo: String(promotion.applicable_to ?? "All Services"),
@@ -74,8 +89,13 @@ export default function PromotionDetailPage({
       setError("End date must be on or after the start date.");
       return;
     }
-    if (form.requirePromoCode && !form.promoCode.trim()) {
+    if (!offerType.inVenue && form.requirePromoCode && !form.promoCode.trim()) {
       setError("Enter the promo code customers must use.");
+      return;
+    }
+    const offerError = validateOfferFields(offerType, form.value, form.terms);
+    if (offerError) {
+      setError(offerError);
       return;
     }
     setSaving(true);
@@ -85,14 +105,15 @@ export default function PromotionDetailPage({
         promotion_name: form.name.trim(),
         internal_description: form.description.trim(),
         offer_type: form.offerType,
-        discount_value: Number(form.value),
-        applicable_to: form.applicableTo,
+        discount_value: offerType.valueKind ? Number(form.value) : 0,
+        terms: form.terms.trim(),
+        applicable_to: offerType.inVenue ? "Dining Only" : form.applicableTo,
         start_date: form.startDate,
         end_date: form.endDate,
-        require_promo_code: form.requirePromoCode,
-        promo_code: form.requirePromoCode ? form.promoCode.trim() : null,
-        first_time_customers_only: form.firstTimeOnly,
-        minimum_spend: form.minimumSpend ? Number(form.minimumSpend) : null,
+        require_promo_code: !offerType.inVenue && form.requirePromoCode,
+        promo_code: !offerType.inVenue && form.requirePromoCode ? form.promoCode.trim() : null,
+        first_time_customers_only: !offerType.inVenue && form.firstTimeOnly,
+        minimum_spend: !offerType.inVenue && form.minimumSpend ? Number(form.minimumSpend) : null,
         active: form.active,
       });
       await queryClient.invalidateQueries({ queryKey: vendorQueryKeys.promotion(promotionId) });
@@ -132,15 +153,17 @@ export default function PromotionDetailPage({
           <div><label className="text-xs font-black uppercase tracking-widest text-slate-400">Promotion Name</label><input value={form.name} onChange={(event) => update("name", event.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-bold outline-none focus:border-sky-500" /></div>
           <div><label className="text-xs font-black uppercase tracking-widest text-slate-400">Description</label><textarea value={form.description} onChange={(event) => update("description", event.target.value)} rows={4} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm outline-none focus:border-sky-500" /></div>
           <div className="grid gap-4 md:grid-cols-3">
-            <div><label className="text-xs font-black uppercase tracking-widest text-slate-400">Offer type</label><select value={form.offerType} onChange={(event) => update("offerType", event.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm outline-none focus:border-sky-500"><option value="percentage">Percentage</option><option value="fixed_amount">Fixed amount</option><option value="happy_hour">Happy hour</option><option value="custom_deal">Custom deal</option></select></div>
-            <div><label className="text-xs font-black uppercase tracking-widest text-slate-400">Discount value</label><input type="number" min="0" max={form.offerType === "percentage" ? 100 : undefined} value={form.value} onChange={(event) => update("value", event.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm outline-none focus:border-sky-500" /></div>
-            <div><label className="text-xs font-black uppercase tracking-widest text-slate-400">Applicable service</label><select value={form.applicableTo} onChange={(event) => update("applicableTo", event.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm outline-none focus:border-sky-500"><option>All Services</option><option>Restaurant</option><option>Hotel</option><option>Spa</option><option>Event</option></select></div>
+            <div><label className="text-xs font-black uppercase tracking-widest text-slate-400">Offer type</label><select value={form.offerType} onChange={(event) => update("offerType", event.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm outline-none focus:border-sky-500">{offerTypes.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}</select></div>
+            {offerType.valueKind ? <div><label className="text-xs font-black uppercase tracking-widest text-slate-400">{offerType.valueKind === "%" ? "Discount (%)" : "Discount amount"}</label><input type="number" min="0" max={offerType.valueKind === "%" ? 100 : undefined} value={form.value} onChange={(event) => update("value", event.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm outline-none focus:border-sky-500" /></div> : null}
+            <div><label className="text-xs font-black uppercase tracking-widest text-slate-400">Applicable service</label>{offerType.inVenue ? <p className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">Dining only</p> : <select value={form.applicableTo} onChange={(event) => update("applicableTo", event.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm outline-none focus:border-sky-500">{applicableOptions.map((option) => <option key={option}>{option}</option>)}</select>}</div>
           </div>
-          <div className="grid gap-4 md:grid-cols-3"><div><label className="text-xs font-black uppercase tracking-widest text-slate-400">Start</label><input type="date" value={form.startDate} onChange={(event) => update("startDate", event.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm outline-none focus:border-sky-500" /></div><div><label className="text-xs font-black uppercase tracking-widest text-slate-400">End</label><input type="date" value={form.endDate} onChange={(event) => update("endDate", event.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm outline-none focus:border-sky-500" /></div><div><label className="text-xs font-black uppercase tracking-widest text-slate-400">Minimum spend</label><input type="number" min="0" value={form.minimumSpend} onChange={(event) => update("minimumSpend", event.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm outline-none focus:border-sky-500" /></div></div>
-          {form.requirePromoCode ? <div><label className="text-xs font-black uppercase tracking-widest text-slate-400">Promo code</label><input value={form.promoCode} onChange={(event) => update("promoCode", event.target.value.toUpperCase())} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-bold uppercase outline-none focus:border-sky-500" /></div> : null}
+          <p className="-mt-3 text-xs text-slate-400">{offerType.help}</p>
+          <div><label className="text-xs font-black uppercase tracking-widest text-slate-400">Offer terms {offerType.termsRequired ? "" : "(optional)"}</label><textarea value={form.terms} maxLength={500} onChange={(event) => update("terms", event.target.value)} rows={3} placeholder="Shown to customers in the app" className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm outline-none focus:border-sky-500" /></div>
+          <div className="grid gap-4 md:grid-cols-3"><div><label className="text-xs font-black uppercase tracking-widest text-slate-400">Start</label><input type="date" value={form.startDate} onChange={(event) => update("startDate", event.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm outline-none focus:border-sky-500" /></div><div><label className="text-xs font-black uppercase tracking-widest text-slate-400">End</label><input type="date" value={form.endDate} onChange={(event) => update("endDate", event.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm outline-none focus:border-sky-500" /></div>{offerType.inVenue ? null : <div><label className="text-xs font-black uppercase tracking-widest text-slate-400">Minimum spend</label><input type="number" min="0" value={form.minimumSpend} onChange={(event) => update("minimumSpend", event.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm outline-none focus:border-sky-500" /></div>}</div>
+          {!offerType.inVenue && form.requirePromoCode ? <div><label className="text-xs font-black uppercase tracking-widest text-slate-400">Promo code</label><input value={form.promoCode} onChange={(event) => update("promoCode", event.target.value.toUpperCase())} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-bold uppercase outline-none focus:border-sky-500" /></div> : null}
           <div className="flex flex-wrap gap-6">
-            <label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={form.requirePromoCode} onChange={(event) => update("requirePromoCode", event.target.checked)} /> Require promo code</label>
-            <label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={form.firstTimeOnly} onChange={(event) => update("firstTimeOnly", event.target.checked)} /> First-time customers only</label>
+            {offerType.inVenue ? null : <label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={form.requirePromoCode} onChange={(event) => update("requirePromoCode", event.target.checked)} /> Require promo code</label>}
+            {offerType.inVenue ? null : <label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={form.firstTimeOnly} onChange={(event) => update("firstTimeOnly", event.target.checked)} /> First-time customers only</label>}
             <label className="flex items-center gap-3 text-sm font-bold text-slate-700"><input type="checkbox" checked={form.active} onChange={(event) => update("active", event.target.checked)} /> Active promotion</label>
           </div>
           <div className="flex flex-wrap justify-between gap-3 pt-3"><button type="button" onClick={remove} disabled={saving} className="inline-flex items-center gap-2 rounded-2xl border border-red-100 px-5 py-3 text-sm font-black text-red-600 disabled:opacity-50"><Trash2 className="h-4 w-4" /> Delete</button><button type="button" onClick={save} disabled={saving} className="inline-flex items-center gap-2 rounded-2xl bg-[#1e2a5e] px-6 py-3 text-sm font-black text-white disabled:opacity-50"><Save className="h-4 w-4" /> {saving ? "Saving..." : "Save Changes"}</button></div>

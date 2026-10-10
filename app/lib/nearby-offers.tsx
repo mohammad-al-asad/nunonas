@@ -83,6 +83,8 @@ export type NearbyMapPin = {
   imageUrl: string;
   offerText: string;
   detailRoute: string;
+  /** Everything the API sent for this pin (times, price, terms...). */
+  payload: CustomerMapEventPayload;
 };
 
 export async function listNearbyMapPins(limit = 50): Promise<NearbyMapPin[]> {
@@ -95,18 +97,18 @@ export async function listNearbyMapPins(limit = 50): Promise<NearbyMapPin[]> {
       const latitude = Number(row.latitude ?? row.lat);
       const longitude = Number(row.longitude ?? row.lng);
       const venueType = String(row.venue_type ?? "restaurant").trim().toLowerCase();
-      const vendorId = String(row.vendor_id ?? id);
-      const detailRoute = entityType === "hotel"
-        ? `/home/hotels/${id}`
-        : entityType === "spa"
-          ? `/home/spa/${id}`
-          : entityType === "event"
-            ? `/home/events/${id}`
-            : entityType === "happy_hour" && venueType === "hotel"
-              ? `/home/hotels/${vendorId}`
-              : entityType === "happy_hour" && venueType === "spa"
-                ? `/home/spa/${vendorId}`
-                : `/home/dining/${id}`;
+      // A happy hour opens its venue's page, so it needs the provider id, not its own.
+      const pageId = entityType === "happy_hour" ? String(row.vendor_id ?? id) : id;
+      const pageType = entityType === "happy_hour" ? venueType : entityType;
+      const detailRoute = typeof row.detail_route === "string" && row.detail_route
+        ? row.detail_route
+        : pageType === "hotel"
+          ? `/home/hotels/${pageId}`
+          : pageType === "spa"
+            ? `/home/spa/${pageId}`
+            : pageType === "event"
+              ? `/home/events/${pageId}`
+              : `/home/dining/${pageId}`;
       return {
         id,
         title: String(row.title ?? row.name ?? row.venue ?? "Nearby place"),
@@ -118,6 +120,7 @@ export async function listNearbyMapPins(limit = 50): Promise<NearbyMapPin[]> {
         imageUrl: String(row.profile_image_url ?? row.cover_image_url ?? row.image_url ?? row.image ?? ""),
         offerText: String(row.offer_text ?? row.promotion_name ?? (entityType === "event" ? "Event" : entityType === "happy_hour" ? "Happy Hour" : entityType)),
         detailRoute,
+        payload: row as CustomerMapEventPayload,
       };
     })
     .filter((item) => {
@@ -131,6 +134,7 @@ export async function listNearbyMapPins(limit = 50): Promise<NearbyMapPin[]> {
 
 export function normalizeNearbyMapPins(pins: NearbyMapPin[]): NormalizedMapEvent[] {
   return pins.map((pin) => normalizeMapEvent({
+    ...pin.payload,
     id: pin.id,
     title: pin.title,
     name: pin.title,
@@ -143,7 +147,7 @@ export function normalizeNearbyMapPins(pins: NearbyMapPin[]): NormalizedMapEvent
     profile_image_url: pin.imageUrl,
     image_url: pin.imageUrl,
     offer_text: pin.offerText,
-    location: "Nearby",
+    location: String(pin.payload.location ?? pin.payload.address ?? pin.payload.venue ?? "Nearby"),
     detail_route: pin.detailRoute,
   }));
 }

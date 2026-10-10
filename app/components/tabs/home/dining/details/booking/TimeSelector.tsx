@@ -3,7 +3,7 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import theme from "../../../../../../constants/theme";
 
-const TimeSelector = ({ selectedTime, onTimeSelect, times = [] }) => {
+const TimeSelector = ({ selectedTime, onTimeSelect, times = [], emptyMessage = "No available times for this date." }) => {
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Select Time</Text>
@@ -25,7 +25,7 @@ const TimeSelector = ({ selectedTime, onTimeSelect, times = [] }) => {
             </Text>
           </TouchableOpacity>
         ))}
-        {!times.length ? <Text style={styles.emptyText}>No available times for this date.</Text> : null}
+        {!times.length ? <Text style={styles.emptyText}>{emptyMessage}</Text> : null}
       </View>
     </View>
   );

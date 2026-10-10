@@ -230,18 +230,19 @@ def _completed_at(booking: dict) -> datetime | None:
 
 
 def _booking_value(booking: dict) -> float:
-    """What the provider earned: subtotal after discounts, before the app's service fee and taxes."""
+    """What the provider earned: the booking subtotal after discounts."""
     if booking.get("subtotal") is not None:
         return max(_number(booking.get("subtotal")), 0)
-    return max(_number(booking.get("total_amount")) - _number(booking.get("service_fee")) - _number(booking.get("taxes")), 0)
+    return max(_number(booking.get("total_amount")), 0)
 
 
 def _billable_bookings(db: Database, vendor_ids: list[ObjectId] | None = None) -> list[dict]:
-    query: dict[str, Any] = {"status": {"$in": COMPLETED_STATUSES}}
+    # Manual bookings are walk-in or phone guests the provider recorded; no commission applies.
+    query: dict[str, Any] = {"status": {"$in": COMPLETED_STATUSES}, "source": {"$ne": "manual"}}
     if vendor_ids is not None:
         query["vendor_id"] = {"$in": vendor_ids}
     projection = {
-        "vendor_id": 1, "provider_type": 1, "subtotal": 1, "total_amount": 1, "service_fee": 1, "taxes": 1,
+        "vendor_id": 1, "provider_type": 1, "subtotal": 1, "total_amount": 1,
         "created_at": 1, "requested_at": 1, "completed_at": 1, "updated_at": 1, "status_history": 1, "booking_code": 1,
     }
     rows = []

@@ -1,67 +1,86 @@
 import React, { useState } from "react";
-import {
-  View,
-  StyleSheet,
-  Image,
-  Dimensions,
-  TouchableOpacity,
-} from "react-native";
+import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import theme from "../../../../../constants/theme";
 import ImageViewer from "../../../../ui/ImageViewer";
 import type { ProviderPayload } from "../../../../../lib/provider-types";
 
-const { width } = Dimensions.get("window");
-const COLUMN_WIDTH = (width - 60) / 2;
-
-const MENU_IMAGES = [
-  {
-    uri: "https://images.unsplash.com/photo-1590846406792-0adc7f938f1d?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    uri: "https://images.unsplash.com/photo-1544145945-f904253d0c71?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    uri: "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    uri: "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=600&q=80",
-  },
-];
-
 type MenuContentProps = {
-  items?: ProviderPayload[];
+  /** Menu items (dishes, drinks or spa treatments) added by the provider. */
+  dishes?: ProviderPayload[];
+  emptyTitle?: string;
+  emptyText?: string;
 };
 
-function getImageUri(item: ProviderPayload): string | null {
-  return item.asset_url ?? item.image_url ?? item.cover_image_url ?? item.image ?? item.url ?? null;
+function dishImage(dish: ProviderPayload): string | null {
+  const images = (dish as { images?: unknown }).images;
+  return Array.isArray(images) && typeof images[0] === "string" && images[0] ? images[0] : null;
 }
 
-export default function MenuContent({ items = [] }: MenuContentProps) {
+function formatPrice(value: ProviderPayload["price"]) {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? `$${amount.toFixed(2)}` : "";
+}
+
+export default function MenuContent({
+  dishes = [],
+  emptyTitle = "Menu coming soon",
+  emptyText = "This restaurant hasn't added its menu yet.",
+}: MenuContentProps) {
   const [viewerVisible, setViewerVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const handleImagePress = (uri: string) => {
+  const openImage = (uri: string) => {
     setSelectedImage(uri);
     setViewerVisible(true);
   };
 
-  const images = items
-    .map(getImageUri)
-    .filter((item): item is string => Boolean(item));
+  const sections = Array.from(new Set(dishes.map((dish) => dish.category || "Other")));
+
+  if (!dishes.length) {
+    return (
+      <View style={[styles.container, styles.emptyState]}>
+        <Ionicons name="restaurant-outline" size={32} color={theme.COLORS.textSecondary} />
+        <Text style={styles.emptyTitle}>{emptyTitle}</Text>
+        <Text style={styles.emptyText}>{emptyText}</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <View style={styles.grid}>
-        {(images.length ? images.map((uri) => ({ uri })) : MENU_IMAGES).map((img, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.imageWrapper}
-            onPress={() => handleImagePress(img.uri)}
-          >
-            <Image source={{ uri: img.uri }} style={styles.image} />
-          </TouchableOpacity>
-        ))}
-      </View>
+      {sections.map((section) => (
+        <View key={section} style={styles.section}>
+          <Text style={styles.sectionTitle}>{section}</Text>
+          {dishes
+            .filter((dish) => (dish.category || "Other") === section)
+            .map((dish, index) => {
+              const image = dishImage(dish);
+              return (
+                <View key={String(dish.id ?? dish._id ?? `${section}-${index}`)} style={styles.dishRow}>
+                  {image ? (
+                    <TouchableOpacity onPress={() => openImage(image)} accessibilityLabel={`View photo of ${dish.name}`}>
+                      <Image source={{ uri: image }} style={styles.dishImage} />
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={[styles.dishImage, styles.dishImagePlaceholder]}>
+                      <Ionicons name="restaurant-outline" size={22} color={theme.COLORS.textSecondary} />
+                    </View>
+                  )}
+                  <View style={styles.dishInfo}>
+                    <View style={styles.dishHeader}>
+                      <Text style={styles.dishName} numberOfLines={2}>{dish.name}</Text>
+                      <Text style={styles.dishPrice}>{formatPrice(dish.price)}</Text>
+                    </View>
+                    {dish.description ? (
+                      <Text style={styles.dishDescription} numberOfLines={3}>{dish.description}</Text>
+                    ) : null}
+                  </View>
+                </View>
+              );
+            })}
+        </View>
+      ))}
 
       <ImageViewer
         isVisible={viewerVisible}
@@ -77,26 +96,70 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: theme.COLORS.white,
   },
-  grid: {
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 48,
+    gap: 8,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: theme.COLORS.textPrimary,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: theme.COLORS.textSecondary,
+    textAlign: "center",
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: theme.COLORS.textPrimary,
+    marginBottom: 12,
+  },
+  dishRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 20,
+    gap: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.COLORS.border,
   },
-  imageWrapper: {
-    width: COLUMN_WIDTH,
-    height: COLUMN_WIDTH * 1.4, // Aspect ratio for menu pages
-    borderRadius: 16,
+  dishImage: {
+    width: 76,
+    height: 76,
+    borderRadius: 14,
     backgroundColor: theme.COLORS.surface,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: theme.COLORS.border,
   },
-  image: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
+  dishImagePlaceholder: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dishInfo: {
+    flex: 1,
+  },
+  dishHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  dishName: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "700",
+    color: theme.COLORS.textPrimary,
+  },
+  dishPrice: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: theme.COLORS.primary,
+  },
+  dishDescription: {
+    marginTop: 4,
+    fontSize: 13,
+    lineHeight: 18,
+    color: theme.COLORS.textSecondary,
   },
 });
-
-

@@ -17,6 +17,7 @@ import {
   type VendorEventPayload,
   type VendorEventStatus,
 } from "@/lib/vendor-api";
+import { RestaurantBookingRulesEditor } from "@/components/settings/restaurant-booking-rules";
 import { extractVendorCategories, type VendorCategory } from "@/lib/vendor-access";
 import {
   EVENT_CATEGORY_OPTIONS,
@@ -39,12 +40,6 @@ const GOOGLE_MAPS_MAP_ID =
 
 type SettingsTab = "profile" | "notifications" | "security";
 type ServiceType = "restaurant" | "hotel" | "spa" | "event" | "happy_hour";
-
-type ServiceOffer = {
-  title: string;
-  description: string;
-  active: boolean;
-};
 
 type EventFormState = {
   title: string;
@@ -157,20 +152,6 @@ function setServiceTimePart(value: string, part: "hour" | "minute" | "period", n
   return `${updated.hour}:${updated.minute}${updated.period ? ` ${updated.period}` : ""}`;
 }
 
-function normalizeServiceOffers(value: unknown): ServiceOffer[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .filter(
-      (offer): offer is Record<string, unknown> =>
-        Boolean(offer) && typeof offer === "object",
-    )
-    .map((offer) => ({
-      title: String(offer.title ?? ""),
-      description: String(offer.description ?? ""),
-      active: offer.active !== false,
-    }));
-}
-
 function validateEventForm(form: EventFormState): string | null {
   if (!form.title.trim()) return "Event title is required.";
   if (!EVENT_CATEGORY_OPTIONS.includes(form.eventType)) {
@@ -239,11 +220,11 @@ export function SettingsPageClient({
   const [serviceTab, setServiceTab] = useState<ServiceType>("restaurant");
   const [serviceImageUploading, setServiceImageUploading] = useState<ServiceType | null>(null);
   const [serviceSettings, setServiceSettings] = useState({
-    restaurant: { name: initialProfile.restaurant_settings?.name ?? "", profile_image_url: initialProfile.restaurant_settings?.profile_image_url ?? "", address: initialProfile.restaurant_settings?.address ?? "", city: initialProfile.restaurant_settings?.city ?? "", phone: initialProfile.restaurant_settings?.phone ?? "", email: initialProfile.restaurant_settings?.email ?? "", latitude: initialProfile.restaurant_settings?.latitude ?? "", longitude: initialProfile.restaurant_settings?.longitude ?? "", about: initialProfile.restaurant_settings?.about ?? "", opening_time: initialProfile.restaurant_settings?.opening_time ?? "", closing_time: initialProfile.restaurant_settings?.closing_time ?? "", available_booking_times: initialProfile.restaurant_settings?.available_booking_times ?? [], seating_preferences: initialProfile.restaurant_settings?.seating_preferences ?? ["Indoor", "Outdoor", "No preference"], policy: initialProfile.restaurant_settings?.policy ?? "", amenities: initialProfile.restaurant_settings?.amenities ?? [], special_offers: initialProfile.restaurant_settings?.special_offers ?? [], published: initialProfile.restaurant_settings?.published !== false },
-    hotel: { name: initialProfile.hotel_settings?.name ?? "", profile_image_url: initialProfile.hotel_settings?.profile_image_url ?? "", address: initialProfile.hotel_settings?.address ?? "", city: initialProfile.hotel_settings?.city ?? "", phone: initialProfile.hotel_settings?.phone ?? "", email: initialProfile.hotel_settings?.email ?? "", latitude: initialProfile.hotel_settings?.latitude ?? "", longitude: initialProfile.hotel_settings?.longitude ?? "", about: initialProfile.hotel_settings?.about ?? "", opening_time: initialProfile.hotel_settings?.opening_time ?? "", closing_time: initialProfile.hotel_settings?.closing_time ?? "", policy: initialProfile.hotel_settings?.policy ?? "", amenities: initialProfile.hotel_settings?.amenities ?? [], special_offers: initialProfile.hotel_settings?.special_offers ?? [], published: initialProfile.hotel_settings?.published !== false },
-    spa: { name: initialProfile.spa_settings?.name ?? "", profile_image_url: initialProfile.spa_settings?.profile_image_url ?? "", address: initialProfile.spa_settings?.address ?? "", city: initialProfile.spa_settings?.city ?? "", phone: initialProfile.spa_settings?.phone ?? "", email: initialProfile.spa_settings?.email ?? "", latitude: initialProfile.spa_settings?.latitude ?? "", longitude: initialProfile.spa_settings?.longitude ?? "", about: initialProfile.spa_settings?.about ?? "", opening_time: initialProfile.spa_settings?.opening_time ?? "", closing_time: initialProfile.spa_settings?.closing_time ?? "", policy: initialProfile.spa_settings?.policy ?? "", amenities: initialProfile.spa_settings?.amenities ?? [], special_offers: initialProfile.spa_settings?.special_offers ?? [], published: initialProfile.spa_settings?.published !== false },
-    event: { name: initialProfile.event_settings?.name ?? "", profile_image_url: initialProfile.event_settings?.profile_image_url ?? "", address: initialProfile.event_settings?.address ?? "", city: initialProfile.event_settings?.city ?? "", phone: initialProfile.event_settings?.phone ?? "", email: initialProfile.event_settings?.email ?? "", latitude: initialProfile.event_settings?.latitude ?? "", longitude: initialProfile.event_settings?.longitude ?? "", about: initialProfile.event_settings?.about ?? "", opening_time: initialProfile.event_settings?.opening_time ?? "", closing_time: initialProfile.event_settings?.closing_time ?? "", policy: initialProfile.event_settings?.policy ?? "", amenities: initialProfile.event_settings?.amenities ?? [], special_offers: initialProfile.event_settings?.special_offers ?? [], published: initialProfile.event_settings?.published !== false },
-    happy_hour: { name: initialProfile.happy_hour_settings?.name ?? "", profile_image_url: initialProfile.happy_hour_settings?.profile_image_url ?? "", address: initialProfile.happy_hour_settings?.address ?? "", city: initialProfile.happy_hour_settings?.city ?? "", phone: initialProfile.happy_hour_settings?.phone ?? "", email: initialProfile.happy_hour_settings?.email ?? "", latitude: initialProfile.happy_hour_settings?.latitude ?? "", longitude: initialProfile.happy_hour_settings?.longitude ?? "", about: initialProfile.happy_hour_settings?.about ?? "", opening_time: initialProfile.happy_hour_settings?.opening_time ?? "", closing_time: initialProfile.happy_hour_settings?.closing_time ?? "", policy: initialProfile.happy_hour_settings?.policy ?? "", amenities: initialProfile.happy_hour_settings?.amenities ?? [], special_offers: initialProfile.happy_hour_settings?.special_offers ?? [], published: initialProfile.happy_hour_settings?.published !== false },
+    restaurant: { name: initialProfile.restaurant_settings?.name ?? "", profile_image_url: initialProfile.restaurant_settings?.profile_image_url ?? "", address: initialProfile.restaurant_settings?.address ?? "", city: initialProfile.restaurant_settings?.city ?? "", phone: initialProfile.restaurant_settings?.phone ?? "", email: initialProfile.restaurant_settings?.email ?? "", latitude: initialProfile.restaurant_settings?.latitude ?? "", longitude: initialProfile.restaurant_settings?.longitude ?? "", about: initialProfile.restaurant_settings?.about ?? "", opening_time: initialProfile.restaurant_settings?.opening_time ?? "", closing_time: initialProfile.restaurant_settings?.closing_time ?? "", available_booking_times: initialProfile.restaurant_settings?.available_booking_times ?? [], seating_preferences: initialProfile.restaurant_settings?.seating_preferences ?? ["Indoor", "Outdoor", "No preference"], policy: initialProfile.restaurant_settings?.policy ?? "", amenities: initialProfile.restaurant_settings?.amenities ?? [], published: initialProfile.restaurant_settings?.published !== false, booking_capacity: String(initialProfile.restaurant_settings?.booking_capacity ?? ""), max_guests: String(initialProfile.restaurant_settings?.max_guests ?? ""), closed_days: (initialProfile.restaurant_settings?.closed_days ?? []) as string[], blocked_dates: (initialProfile.restaurant_settings?.blocked_dates ?? []) as string[] },
+    hotel: { name: initialProfile.hotel_settings?.name ?? "", profile_image_url: initialProfile.hotel_settings?.profile_image_url ?? "", address: initialProfile.hotel_settings?.address ?? "", city: initialProfile.hotel_settings?.city ?? "", phone: initialProfile.hotel_settings?.phone ?? "", email: initialProfile.hotel_settings?.email ?? "", latitude: initialProfile.hotel_settings?.latitude ?? "", longitude: initialProfile.hotel_settings?.longitude ?? "", about: initialProfile.hotel_settings?.about ?? "", opening_time: initialProfile.hotel_settings?.opening_time ?? "", closing_time: initialProfile.hotel_settings?.closing_time ?? "", policy: initialProfile.hotel_settings?.policy ?? "", amenities: initialProfile.hotel_settings?.amenities ?? [], published: initialProfile.hotel_settings?.published !== false },
+    spa: { name: initialProfile.spa_settings?.name ?? "", profile_image_url: initialProfile.spa_settings?.profile_image_url ?? "", address: initialProfile.spa_settings?.address ?? "", city: initialProfile.spa_settings?.city ?? "", phone: initialProfile.spa_settings?.phone ?? "", email: initialProfile.spa_settings?.email ?? "", latitude: initialProfile.spa_settings?.latitude ?? "", longitude: initialProfile.spa_settings?.longitude ?? "", about: initialProfile.spa_settings?.about ?? "", opening_time: initialProfile.spa_settings?.opening_time ?? "", closing_time: initialProfile.spa_settings?.closing_time ?? "", policy: initialProfile.spa_settings?.policy ?? "", amenities: initialProfile.spa_settings?.amenities ?? [], published: initialProfile.spa_settings?.published !== false },
+    event: { name: initialProfile.event_settings?.name ?? "", profile_image_url: initialProfile.event_settings?.profile_image_url ?? "", address: initialProfile.event_settings?.address ?? "", city: initialProfile.event_settings?.city ?? "", phone: initialProfile.event_settings?.phone ?? "", email: initialProfile.event_settings?.email ?? "", latitude: initialProfile.event_settings?.latitude ?? "", longitude: initialProfile.event_settings?.longitude ?? "", about: initialProfile.event_settings?.about ?? "", opening_time: initialProfile.event_settings?.opening_time ?? "", closing_time: initialProfile.event_settings?.closing_time ?? "", policy: initialProfile.event_settings?.policy ?? "", amenities: initialProfile.event_settings?.amenities ?? [], published: initialProfile.event_settings?.published !== false },
+    happy_hour: { name: initialProfile.happy_hour_settings?.name ?? "", profile_image_url: initialProfile.happy_hour_settings?.profile_image_url ?? "", address: initialProfile.happy_hour_settings?.address ?? "", city: initialProfile.happy_hour_settings?.city ?? "", phone: initialProfile.happy_hour_settings?.phone ?? "", email: initialProfile.happy_hour_settings?.email ?? "", latitude: initialProfile.happy_hour_settings?.latitude ?? "", longitude: initialProfile.happy_hour_settings?.longitude ?? "", about: initialProfile.happy_hour_settings?.about ?? "", opening_time: initialProfile.happy_hour_settings?.opening_time ?? "", closing_time: initialProfile.happy_hour_settings?.closing_time ?? "", policy: initialProfile.happy_hour_settings?.policy ?? "", amenities: initialProfile.happy_hour_settings?.amenities ?? [], published: initialProfile.happy_hour_settings?.published !== false },
   });
   const [passwordForm, setPasswordForm] = useState({
     old_password: "",
@@ -274,18 +255,6 @@ export function SettingsPageClient({
   const activeServiceTab = (visibleServiceTabs.includes(serviceTab as (typeof visibleServiceTabs)[number])
     ? serviceTab
     : visibleServiceTabs[0]) as "restaurant" | "hotel" | "spa";
-  const activeServiceOffers = normalizeServiceOffers(
-    serviceSettings[activeServiceTab].special_offers,
-  );
-  const setActiveServiceOffers = (special_offers: ServiceOffer[]) => {
-    setServiceSettings((current) => ({
-      ...current,
-      [activeServiceTab]: {
-        ...current[activeServiceTab],
-        special_offers,
-      },
-    }));
-  };
 
   useEffect(() => {
     serviceSettingsRef.current = serviceSettings;
@@ -733,116 +702,6 @@ export function SettingsPageClient({
                         }))}
                       />
                     </div>
-                    <div className="rounded-2xl border border-slate-200 bg-white p-4 md:col-span-2 sm:p-5">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <h4 className="text-sm font-black text-slate-800">
-                            Special offers
-                          </h4>
-                          <p className="mt-1 text-xs text-slate-500">
-                            Manage offers shown on this {activeServiceTab} listing.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setActiveServiceOffers([
-                              ...activeServiceOffers,
-                              { title: "", description: "", active: true },
-                            ])
-                          }
-                          className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2.5 text-xs font-black text-[#1e2a5e] transition hover:bg-slate-200"
-                        >
-                          <Plus className="h-4 w-4" />
-                          Add offer
-                        </button>
-                      </div>
-
-                      <div className="mt-4 space-y-3">
-                        {activeServiceOffers.length ? (
-                          activeServiceOffers.map((offer, index) => (
-                            <div
-                              key={`${activeServiceTab}-offer-${index}`}
-                              className="rounded-xl border border-slate-200 bg-slate-50 p-4"
-                            >
-                              <div className="flex items-start gap-3">
-                                <div className="min-w-0 flex-1 space-y-3">
-                                  <input
-                                    value={offer.title}
-                                    onChange={(event) =>
-                                      setActiveServiceOffers(
-                                        activeServiceOffers.map((item, offerIndex) =>
-                                          offerIndex === index
-                                            ? { ...item, title: event.target.value }
-                                            : item,
-                                        ),
-                                      )
-                                    }
-                                    maxLength={120}
-                                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-sky-400"
-                                    placeholder="Offer title"
-                                  />
-                                  <textarea
-                                    value={offer.description}
-                                    onChange={(event) =>
-                                      setActiveServiceOffers(
-                                        activeServiceOffers.map((item, offerIndex) =>
-                                          offerIndex === index
-                                            ? {
-                                                ...item,
-                                                description: event.target.value,
-                                              }
-                                            : item,
-                                        ),
-                                      )
-                                    }
-                                    rows={2}
-                                    maxLength={500}
-                                    className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 outline-none focus:border-sky-400"
-                                    placeholder="Describe the offer"
-                                  />
-                                  <label className="inline-flex items-center gap-2 text-xs font-bold text-slate-500">
-                                    <input
-                                      type="checkbox"
-                                      checked={offer.active}
-                                      onChange={(event) =>
-                                        setActiveServiceOffers(
-                                          activeServiceOffers.map((item, offerIndex) =>
-                                            offerIndex === index
-                                              ? { ...item, active: event.target.checked }
-                                              : item,
-                                          ),
-                                        )
-                                      }
-                                      className="h-4 w-4 accent-sky-500"
-                                    />
-                                    Show this offer in the customer app
-                                  </label>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setActiveServiceOffers(
-                                      activeServiceOffers.filter(
-                                        (_, offerIndex) => offerIndex !== index,
-                                      ),
-                                    )
-                                  }
-                                  aria-label={`Remove offer ${index + 1}`}
-                                  className="rounded-lg p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500"
-                                >
-                                  <X className="h-4 w-4" />
-                                </button>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-xs font-semibold text-slate-400">
-                            No special offers added.
-                          </p>
-                        )}
-                      </div>
-                    </div>
                     <TimeSelects label="Open time" value={serviceSettings[activeServiceTab].opening_time} onChange={(value) => setServiceSettings((current) => ({ ...current, [activeServiceTab]: { ...current[activeServiceTab], opening_time: value } }))} />
                     <TimeSelects label="Close time" value={serviceSettings[activeServiceTab].closing_time} onChange={(value) => setServiceSettings((current) => ({ ...current, [activeServiceTab]: { ...current[activeServiceTab], closing_time: value } }))} />
                     {activeServiceTab === "restaurant" ? (
@@ -869,6 +728,17 @@ export function SettingsPageClient({
                           onChange={(seating_preferences) => setServiceSettings((current) => ({
                             ...current,
                             restaurant: { ...current.restaurant, seating_preferences },
+                          }))}
+                        />
+                      </div>
+                    ) : null}
+                    {activeServiceTab === "restaurant" ? (
+                      <div className="md:col-span-2">
+                        <RestaurantBookingRulesEditor
+                          value={serviceSettings.restaurant}
+                          onChange={(rules) => setServiceSettings((current) => ({
+                            ...current,
+                            restaurant: { ...current.restaurant, ...rules },
                           }))}
                         />
                       </div>

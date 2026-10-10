@@ -45,6 +45,7 @@ VENDOR_COLLECTIONS = (
     "vendor_events",
     "vendor_happy_hours",
     "vendor_assets",
+    "vendor_promotions",
 )
 
 SERVICE_COLLECTIONS = {"restaurant": "restaurants", "hotel": "hotels", "spa": "spas"}
@@ -74,9 +75,9 @@ PROVIDERS = [
             "seating_preferences": ["Indoor", "Outdoor", "Rooftops"],
             "available_booking_times": ["12:00 PM", "01:00 PM", "07:00 PM", "08:00 PM", "09:00 PM"],
             "profile_image_url": img("photo-1517248135467-4c7edcad34c4"),
-            "special_offers": [{"title": "Buy 1 Get 1 Kacchi", "description": "Every weekday lunch", "active": True}],
         },
-        "gallery": [img("photo-1414235077428-338989a2e8c0"), img("photo-1555396273-367ea4eb4db5")],
+        "promotion": ("25% off weekday tables", "Table bookings Monday to Friday.", 25, "Dining Only", ["0", "1", "2", "3", "4"]),
+        "gallery": [img(pid) for pid in ("photo-1414235077428-338989a2e8c0", "photo-1555396273-367ea4eb4db5", "photo-1590846406792-0adc7f938f1d", "photo-1600891964599-f61ba0e24092", "photo-1565299624946-b28f40a0ae38")],
         "menu": [
             ("Kacchi Biryani", "Mutton kacchi with aloo and borhani", 450, "Main Course"),
             ("Chicken Tikka", "Charcoal grilled, served with naan", 380, "Starters"),
@@ -111,9 +112,8 @@ PROVIDERS = [
             "seating_preferences": ["Indoor", "Outdoor"],
             "available_booking_times": ["09:00 AM", "11:00 AM", "04:00 PM", "06:00 PM", "08:00 PM"],
             "profile_image_url": img("photo-1554118811-1e0d58224f24"),
-            "special_offers": [],
         },
-        "gallery": [img("photo-1501339847302-ac426a4a7cbb")],
+        "gallery": [img(pid) for pid in ("photo-1501339847302-ac426a4a7cbb", "photo-1559339352-11d035aa65de", "photo-1514362545857-3bc16c4c7d1b", "photo-1424847651672-bf20a4b0982b", "photo-1546069901-ba9599a7e63c")],
         "menu": [
             ("Cappuccino", "Double shot with steamed milk", 220, "Coffee"),
             ("Creamy Alfredo Pasta", "Chicken and mushroom", 520, "Main Course"),
@@ -146,9 +146,9 @@ PROVIDERS = [
             "closing_time": "11:59 PM",
             "amenities": ["Free WiFi", "Swimming Pool", "Gym", "Parking", "Airport Shuttle"],
             "profile_image_url": img("photo-1566073771259-6a8506099945"),
-            "special_offers": [{"title": "15% off weekend stays", "description": "Fri-Sat nights", "active": True}],
         },
-        "gallery": [img("photo-1542314831-068cd1dbfeeb")],
+        "promotion": ("15% off weekend stays", "Friday and Saturday check-ins.", 15, "Hotel Only", ["4", "5"]),
+        "gallery": [img(pid) for pid in ("photo-1542314831-068cd1dbfeeb", "photo-1566073771259-6a8506099945", "photo-1611892440504-42a792e24d32", "photo-1590490360182-c33d57733427", "photo-1571896349842-33c89424de2d")],
         "rooms": [
             ("Deluxe King Room", "King Size", 1, 2, 32, 8500, 9500, img("photo-1618773928121-c32242e63f39")),
             ("Twin Executive Room", "Twin", 2, 2, 30, 7800, 8800, img("photo-1590490360182-c33d57733427")),
@@ -172,9 +172,8 @@ PROVIDERS = [
             "closing_time": "11:59 PM",
             "amenities": ["Free WiFi", "Garden", "Restaurant", "Parking"],
             "profile_image_url": img("photo-1551882547-ff40c63fe5fa"),
-            "special_offers": [],
         },
-        "gallery": [img("photo-1520250497591-112f2f40a3f4")],
+        "gallery": [img(pid) for pid in ("photo-1520250497591-112f2f40a3f4", "photo-1582719478250-c89cae4dc85b", "photo-1578683010236-d716f9a3f461", "photo-1631049307264-da0ec9d70304", "photo-1566073771259-6a8506099945")],
         "rooms": [
             ("Standard Double", "Queen Size", 1, 2, 24, 4200, 4800, img("photo-1611892440504-42a792e24d32")),
             ("Garden Suite", "King Size", 1, 3, 40, 6500, 7200, img("photo-1582719478250-c89cae4dc85b")),
@@ -197,9 +196,9 @@ PROVIDERS = [
             "closing_time": "10:00 PM",
             "amenities": ["Sauna", "Steam Room", "Changing Room", "Relaxation Lounge"],
             "profile_image_url": img("photo-1540555700478-4be289fbecef"),
-            "special_offers": [{"title": "20% off couple massage", "description": "Weekdays before 5 PM", "active": True}],
         },
-        "gallery": [img("photo-1544161515-4ab6ce6db874")],
+        "promotion": ("20% off weekday treatments", "Spa bookings Monday to Friday.", 20, "Spa Only", ["0", "1", "2", "3", "4"]),
+        "gallery": [img(pid) for pid in ("photo-1544161515-4ab6ce6db874", "photo-1600334089648-b0d9d3028eb2", "photo-1540555700478-4be289fbecef", "photo-1519823551278-64ac92734fb1", "photo-1515377905703-c4788e51af15")],
         "menu": [
             ("Thai Massage (60 min)", "Traditional full-body stretch massage", 3500, "Massage"),
             ("Aromatherapy (90 min)", "Essential oil relaxation massage", 4800, "Massage"),
@@ -234,9 +233,8 @@ PROVIDERS = [
             "seating_preferences": ["Indoor"],
             "available_booking_times": ["12:00 PM", "02:00 PM", "07:00 PM", "09:00 PM"],
             "profile_image_url": img("photo-1552566626-52f8b828add9"),
-            "special_offers": [],
         },
-        "gallery": [img("photo-1504674900247-0877df9cc836")],
+        "gallery": [img(pid) for pid in ("photo-1504674900247-0877df9cc836", "photo-1552566626-52f8b828add9", "photo-1466978913421-dad2ebd01d17", "photo-1540189549336-e6e99c3679fe", "photo-1517248135467-4c7edcad34c4")],
         "menu": [
             ("Beef Tehari", "Feni-style spicy tehari", 250, "Main Course"),
             ("Chicken Burger", "Crispy chicken with fries", 280, "Fast Food"),
@@ -259,9 +257,8 @@ PROVIDERS = [
             "closing_time": "11:30 PM",
             "amenities": ["Security", "Food Available", "Family Friendly"],
             "profile_image_url": img("photo-1492684223066-81342ee5ff30"),
-            "special_offers": [],
         },
-        "gallery": [],
+        "gallery": [img(pid) for pid in ("photo-1492684223066-81342ee5ff30", "photo-1501281668745-f7f57925c3b4", "photo-1514525253161-7a46d19cd819", "photo-1470229722913-7c0e2dbbafd3")],
         "events": [
             ("Hatirjheel Live Music Night", "Music", 7, "18:00", "22:30", 800.0, 500, "Hatirjheel Amphitheatre, Dhaka", 23.7713, 90.4110, img("photo-1470229722913-7c0e2dbbafd3")),
             ("Dhaka Street Food Festival", "Food & Drink", 12, "15:00", "22:00", 300.0, 2000, "Army Stadium, Banani, Dhaka", 23.7970, 90.4020, img("photo-1555939594-58d7cb561ad1")),
@@ -311,6 +308,34 @@ def providers_with_s3_images(settings: Settings) -> list[dict]:
         providers = [swap(provider) for provider in PROVIDERS]
     print(f"{len(uploaded)} provider images available in S3.")
     return providers
+
+
+def seed_promotion(db, vendor_id, provider: dict, now: datetime) -> None:
+    if not provider.get("promotion"):
+        return
+    name, description, percent, applicable_to, recurring_days = provider["promotion"]
+    today = now.date()
+    db.vendor_promotions.insert_one({
+        "seed_tag": SEED_TAG,
+        "vendor_id": vendor_id,
+        "promotion_name": name,
+        "internal_description": description,
+        "offer_type": "percentage",
+        "discount_value": float(percent),
+        "applicable_to": applicable_to,
+        "start_date": (today - timedelta(days=1)).isoformat(),
+        "end_date": (today + timedelta(days=90)).isoformat(),
+        "recurring_days": recurring_days,
+        "require_promo_code": False,
+        "promo_code": None,
+        "first_time_customers_only": False,
+        "minimum_spend": None,
+        "active": True,
+        "usage_count": 0,
+        "total_promo_revenue": 0.0,
+        "created_at": now,
+        "updated_at": now,
+    })
 
 
 def seed_vendor(db, provider: dict, now: datetime) -> None:
@@ -380,6 +405,8 @@ def seed_vendor(db, provider: dict, now: datetime) -> None:
     for title, event_type, days_ahead, start, end, price, capacity, venue, lat, lng, banner in provider.get("events", []):
         event_date = (today + timedelta(days=days_ahead)).isoformat()
         db.vendor_events.insert_one({**base, "title": title, "event_type": event_type, "description": f"{title} — hosted by {provider['business_name']}.", "event_date": event_date, "end_date": event_date, "start_time": start, "end_time": end, "timezone": TIMEZONE, "venue": venue, "latitude": lat, "longitude": lng, "capacity": capacity, "ticket_price": price, "registration_deadline": (today + timedelta(days=days_ahead - 1)).isoformat(), "banner_image_url": banner, "status": "published", "active": True, "active_status": True})
+
+    seed_promotion(db, vendor_id, provider, now)
 
     happy_hour = provider.get("happy_hour")
     if happy_hour:
