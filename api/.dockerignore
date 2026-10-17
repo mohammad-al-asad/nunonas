@@ -35,3 +35,7 @@ Dockerfile
 docker-compose*.yml
 .dockerignore
 *.log
+
+# Secrets: passed at runtime via env_file, never baked into the image
+.env
+.env.*

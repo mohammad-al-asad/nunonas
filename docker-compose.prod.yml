@@ -1,0 +1,68 @@
+# Production stack for the EC2 host. Images are built on the server.
+#   docker compose -f docker-compose.prod.yml up -d --build
+# Build-time values come from ./.env (see deploy/.env.example).
+# API secrets come from ./api/.env.production (same keys as api/.env.example).
+# Ports are bound to 127.0.0.1 so only Nginx on the host can reach them.
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-next-build-args: &next-build-args
+  NEXT_PUBLIC_API_BASE_URL: ${API_URL:-https://api.meetz4u.xyz}
+  NEXT_PUBLIC_AUTH_API_BASE: ${API_URL:-https://api.meetz4u.xyz}
+  NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+  NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID: ${GOOGLE_MAPS_MAP_ID:-}
+
+services:
+  api:
+    build: ./api
+    image: meetz-api
+    env_file: ./api/.env.production
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*
+    ports:
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+    logging: *logging
+
+  admin:
+    build:
+      context: ./dashboard
+      args:
+        <<: *next-build-args
+        NEXT_PUBLIC_APP_URL: https://admin.meetz4u.xyz
+    image: meetz-admin
+    environment:
+      APP_URL: https://admin.meetz4u.xyz
+    ports:
+      - "127.0.0.1:3001:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+    logging: *logging
+
+  provider:
+    build:
+      context: ./service-provider
+      args:
+        <<: *next-build-args
+        NEXT_PUBLIC_APP_URL: https://provider.meetz4u.xyz
+    image: meetz-provider
+    environment:
+      APP_URL: https://provider.meetz4u.xyz
+    ports:
+      - "127.0.0.1:3002:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+    logging: *logging
+
+  landing:
+    build: ./landing
+    image: meetz-landing
+    ports:
+      - "127.0.0.1:3000:3000"
+    restart: unless-stopped
+    logging: *logging

@@ -1,0 +1,88 @@
+name: Test and deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Never run two deploys at once; a newer push waits for the current one.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  api-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: api/requirements.txt
+      - run: pip install -r requirements.txt
+      - run: python -m compileall -q app scripts
+      - run: python -m pytest -q
+
+  landing-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: landing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: landing/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  deploy:
+    # Only deploy from main; pull requests just run the checks above.
+    if: github.event_name != 'pull_request'
+    needs: [api-tests, landing-check]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Configure SSH
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+
+      - name: Build and restart on EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o ServerAliveInterval=30 "$EC2_USER@$EC2_HOST" bash -s <<'EOF'
+          set -euo pipefail
+          cd ~/meetz
+          git fetch --depth 1 origin main
+          git reset --hard origin/main
+          # Build one image at a time so a small instance doesn't run out of memory.
+          export COMPOSE_PARALLEL_LIMIT=1
+          docker compose -f docker-compose.prod.yml build
+          docker compose -f docker-compose.prod.yml up -d --remove-orphans
+          docker image prune -f
+          docker builder prune -f --filter until=168h
+          docker compose -f docker-compose.prod.yml ps
+          EOF
+
+      - name: Smoke test
+        run: |
+          sleep 15
+          curl -fsS https://api.meetz4u.xyz/health
+          curl -fsS -o /dev/null https://meetz4u.xyz
+          curl -fsS -o /dev/null https://admin.meetz4u.xyz
+          curl -fsS -o /dev/null https://provider.meetz4u.xyz
