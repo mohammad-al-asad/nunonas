@@ -4,4 +4,4 @@ export const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com
 
 export const SUPPORT_EMAIL = "support@meetz4u.xyz";
 export const PROVIDER_PORTAL_URL = "https://provider.meetz4u.xyz";
-export const TERMS_LAST_UPDATED = "17 October 2026";
+export const API_BASE_URL = (process.env.API_BASE_URL || "https://api.meetz4u.xyz").replace(/\/+$/, "");
