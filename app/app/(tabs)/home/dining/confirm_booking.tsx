@@ -19,7 +19,6 @@ import { showToast } from "../../../../lib/toast";
 import ConfirmSummaryCard from "../../../../components/tabs/home/dining/details/booking/confirm_booking/ConfirmSummaryCard";
 import ConfirmationDetails from "../../../../components/tabs/home/dining/details/booking/confirm_booking/ConfirmationDetails";
 import ConfirmNotes from "../../../../components/tabs/home/dining/details/booking/confirm_booking/ConfirmNotes";
-import BookingPriceSummary from "../../../../components/ui/BookingPriceSummary";
 import PromoCodeInput from "../../../../components/ui/PromoCodeInput";
 
 export default function ConfirmBookingScreen() {
@@ -140,13 +139,11 @@ export default function ConfirmBookingScreen() {
         params: {
           id: restaurantId,
           restaurantName: restaurant?.title ?? "Restaurant",
-          dateTime: `${displayDate.replace("Wednesday, ", "")} at ${displayTime}`,
+          dateTime: `${displayDate} at ${displayTime}`,
           guests: displayGuests,
           seating: displaySeating,
           bookingRecordId: String(bookingRecordId),
           bookingCode: String(bookingCode),
-          estimatedPoints: String(response?.estimated_points ?? quote?.estimated_points ?? 0),
-          totalAmount: String(response?.total_amount ?? quote?.total ?? 0),
           promotionName: String(response?.promotion_name ?? quote?.promotion_name ?? ""),
         }
       });
@@ -158,7 +155,14 @@ export default function ConfirmBookingScreen() {
   };
 
   // Format date for display
-  const displayDate = date ? new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric", year: "numeric" }) : "";
+  // Built by hand: Android's Intl ignores the options and prints the phone locale's format ("sábado, 7/11/2026").
+  const displayDate = (() => {
+    const parsed = date ? new Date(`${date}T12:00:00`) : null;
+    if (!parsed || Number.isNaN(parsed.getTime())) return "";
+    const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return `${weekdays[parsed.getDay()]}, ${parsed.getDate()} ${months[parsed.getMonth()]} ${parsed.getFullYear()}`;
+  })();
   const displayTime = time || "";
   const displayGuests = guests || "2";
   const displaySeating = seating || "Outdoor";
@@ -210,7 +214,13 @@ export default function ConfirmBookingScreen() {
           error={promoError}
         />
 
-        <BookingPriceSummary quote={quote} loading={quoteLoading} />
+        {/* No price summary: a table booking is paid at the restaurant, for whatever the guests order. */}
+        <View style={styles.payAtVenue}>
+          <Text style={styles.payAtVenueText}>
+            No payment now. You pay at the restaurant for what you order
+            {quote?.promotion_name ? `, and ${quote.promotion_name} is applied to your bill.` : "."}
+          </Text>
+        </View>
 
         <Button
           title="Send Booking Request"
@@ -244,6 +254,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: theme.COLORS.textSecondary,
     textAlign: "center",
+  },
+  payAtVenue: {
+    marginVertical: 10,
+    borderRadius: 14,
+    backgroundColor: theme.COLORS.surface,
+    padding: 14,
+  },
+  payAtVenueText: {
+    color: theme.COLORS.textSecondary,
+    fontSize: 13,
+    lineHeight: 19,
   },
   confirmButton: {
     height: 56,

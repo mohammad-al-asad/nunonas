@@ -47,7 +47,7 @@ export default function OverviewContent({ restaurant, offers = [] }: OverviewCon
   const seating = restaurant.seatingPreferences.filter((option) => option.trim().toLowerCase() !== "no preference");
   return (
     <View style={styles.container}>
-      <ProviderOffers offers={offers} />
+      <ProviderOffers offers={offers} priced={false} />
 
       {/* About Section */}
       <View style={styles.section}>

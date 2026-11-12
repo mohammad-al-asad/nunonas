@@ -142,6 +142,14 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="profile"
+        // Tapping Profile always lands on the profile page, even if booking details were opened from
+        // another tab (popToTopOnBlur alone leaves the nested bookings stack showing details).
+        listeners={({ navigation }) => ({
+          tabPress: (event) => {
+            event.preventDefault();
+            navigation.navigate("profile", { screen: "index" });
+          },
+        })}
         options={{
           title: "Profile",
           // Leaving the tab resets it, so tapping Profile always opens the profile page

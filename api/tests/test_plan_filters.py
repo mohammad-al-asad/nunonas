@@ -39,3 +39,37 @@ def test_offer_text_only_counts_real_offers():
     assert offer("restaurants", GROUPS["restaurants"][1]) is None
     assert offer("events", GROUPS["events"][0]) is None  # "Concert" is the event type, not an offer
     assert offer("hotels", GROUPS["hotels"][0]) == "15% off weekend stays"
+
+
+def _context_for(groups_by_area):
+    """A get_personalized_plan_context stand-in that returns candidates by requested area."""
+
+    def fake(customer_id, preferences=None):
+        area = str((preferences or {}).get("area") or "Anywhere")
+        candidates = groups_by_area.get(area, {"restaurants": []})
+        return {"plan_filters": {"area": area, "vouchers_only": False}}, candidates
+
+    return fake
+
+
+def test_area_with_no_places_widens_to_all_areas_with_a_notice():
+    repo = CustomerRepository.__new__(CustomerRepository)
+    repo.get_personalized_plan_context = _context_for({"Anywhere": {"restaurants": [{"id": "r1"}]}})
+
+    context, candidates = repo.get_plan_context_with_area_fallback("c1", {"area": "Doha"})
+
+    assert candidates == {"restaurants": [{"id": "r1"}]}
+    assert context["plan_filters"]["requested_area"] == "Doha"
+    assert "Doha" in context["plan_notice"]
+
+
+def test_area_with_places_is_kept_without_a_notice():
+    repo = CustomerRepository.__new__(CustomerRepository)
+    repo.get_personalized_plan_context = _context_for(
+        {"Gulshan": {"restaurants": [{"id": "r1"}]}, "Anywhere": {"restaurants": [{"id": "r1"}, {"id": "r2"}]}}
+    )
+
+    context, candidates = repo.get_plan_context_with_area_fallback("c1", {"area": "Gulshan"})
+
+    assert candidates == {"restaurants": [{"id": "r1"}]}
+    assert "plan_notice" not in context

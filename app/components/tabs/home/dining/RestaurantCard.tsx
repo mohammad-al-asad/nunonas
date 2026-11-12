@@ -40,8 +40,10 @@ const RestaurantCard = ({ restaurant }) => {
   const imageSource = getImageSource(restaurant);
   const distanceText = getDistanceText(restaurant);
 
+  const openDetails = () => router.push(`/home/dining/${restaurant.id}`);
+
   return (
-    <View style={styles.card}>
+    <TouchableOpacity style={styles.card} activeOpacity={0.9} onPress={openDetails}>
       <View style={styles.imageContainer}>
         {imageSource ? (
           <Image source={imageSource} style={styles.image} />
@@ -98,12 +100,12 @@ const RestaurantCard = ({ restaurant }) => {
         </View>
         <Button
           title="Book Now"
-          onPress={() => router.push(`/home/dining/${restaurant.id}`)}
+          onPress={openDetails}
           style={styles.bookBtn}
           textStyle={styles.bookBtnText}
         />
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 

@@ -20,6 +20,7 @@ import { cancelBooking, createBookingReview, getBooking } from "../../../../lib/
 import { showToast } from "../../../../lib/toast";
 import { BookingDetailsSkeleton } from "../../../../components/skeleton";
 import { LOYALTY_POINTS_ENABLED } from "../../../../lib/features";
+import { parseServerDate } from "../../../../lib/server-date";
 
 const InfoRow = ({ label, value, valueStyle }) => (
   <View style={styles.infoRow}>
@@ -123,6 +124,8 @@ export default function BookingDetailsScreen() {
     imageUrl: liveBooking?.provider_image || routeParams.imageUrl,
   };
   const isHotel = params.category === "Hotel";
+  // Table bookings have no price: the bill depends on what the guests order at the venue.
+  const isRestaurant = params.category === "Restaurant";
   const [showReviewModal, setShowReviewModal] = React.useState(false);
   const normalizedStatus = String(params.status || "").toLowerCase();
   const canCancel = ["pending", "confirmed", "check_in", "check in"].includes(normalizedStatus);
@@ -181,7 +184,7 @@ export default function BookingDetailsScreen() {
           <View style={styles.timelineDot} />
           <View style={styles.timelineContent}>
             <Text style={styles.timelineTitle}>{entry.label || String(entry.status || "Updated").replace(/_/g, " ")}</Text>
-            <Text style={styles.timelineDate}>{entry.at ? new Date(entry.at).toLocaleString() : "Time unavailable"}</Text>
+            <Text style={styles.timelineDate}>{parseServerDate(entry.at)?.toLocaleString() ?? "Time unavailable"}</Text>
             {entry.note ? <Text style={styles.timelineNote}>{entry.note}</Text> : null}
           </View>
         </View>
@@ -341,18 +344,29 @@ export default function BookingDetailsScreen() {
           <View style={styles.cardDivider} />
           <InfoRow label="Status" value={params.status || "Pending"} />
           <View style={styles.cardDivider} />
-          <InfoRow label="Payment" value={params.payment_status || "Unpaid"} />
+          <InfoRow label="Payment" value={isRestaurant ? "Pay at the restaurant" : params.payment_status || "Unpaid"} />
           <View style={styles.cardDivider} />
           <InfoRow label="Seating" value={params.seating_preference || "No preference"} />
           <View style={styles.cardDivider} />
-          {Number(params.discountAmount || 0) > 0 ? (
+          {isRestaurant ? (
+            params.promotionName ? (
+              <>
+                <InfoRow label="Offer" value={params.promotionName} />
+                <View style={styles.cardDivider} />
+              </>
+            ) : null
+          ) : (
             <>
-              <InfoRow label={params.promotionName || "Promotion"} value={`-$${Number(params.discountAmount).toFixed(2)}`} />
+              {Number(params.discountAmount || 0) > 0 ? (
+                <>
+                  <InfoRow label={params.promotionName || "Promotion"} value={`-$${Number(params.discountAmount).toFixed(2)}`} />
+                  <View style={styles.cardDivider} />
+                </>
+              ) : null}
+              <InfoRow label="Total" value={params.total_amount != null ? `$${Number(params.total_amount).toFixed(2)}` : "—"} />
               <View style={styles.cardDivider} />
             </>
-          ) : null}
-          <InfoRow label="Total" value={params.total_amount != null ? `$${Number(params.total_amount).toFixed(2)}` : "—"} />
-          <View style={styles.cardDivider} />
+          )}
           <View style={styles.notesRow}>
             <Text style={styles.infoLabel}>Special Notes</Text>
             <Text style={styles.notesValue}>

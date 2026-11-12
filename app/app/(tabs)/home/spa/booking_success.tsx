@@ -75,14 +75,16 @@ export default function SpaBookingSuccessScreen() {
         <Button
           title="View My Bookings"
           onPress={() => {
+            // Put Home back on its main page first; otherwise the Home tab keeps showing this confirmation.
+            router.replace("/(tabs)/home");
             if (!bookingRecordId) {
-              router.push("/profile/bookings");
+              router.push("/profile/bookings", { withAnchor: true });
               return;
             }
             router.push({
               pathname: "/profile/bookings/details",
               params: { id: String(bookingRecordId), category: "Spa" },
-            });
+            }, { withAnchor: true });
           }}
           variant="outline"
           style={styles.bookingsButton}

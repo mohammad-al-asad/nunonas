@@ -27,6 +27,8 @@ export default function PlanScreen() {
     vouchersOnly: false,
   });
   const [plans, setPlans] = useState([]);
+  const [planSessionId, setPlanSessionId] = useState("");
+  const [planNotice, setPlanNotice] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const totalSteps = 4;
@@ -61,6 +63,8 @@ export default function PlanScreen() {
       const result = await revealPlan(sessionId);
       const nextPlans = Array.isArray(result?.plans) ? result.plans : result?.plan ? [result.plan] : [];
       if (!nextPlans.length) throw new Error("We couldn't build a plan right now. Please try again.");
+      setPlanSessionId(sessionId);
+      setPlanNotice(typeof result?.notice === "string" ? result.notice : "");
       setPlans(nextPlans);
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Could not create your personalized plan.", { type: "error" });
@@ -73,6 +77,9 @@ export default function PlanScreen() {
     return (
       <PlanResults
         plans={plans}
+        sessionId={planSessionId}
+        notice={planNotice}
+        onPlansChange={setPlans}
         preferences={{
           companion: planData.companion,
           mood: planData.vibe === "custom" ? planData.customVibe.trim() : planData.vibe,

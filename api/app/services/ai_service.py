@@ -4,7 +4,12 @@ from fastapi import HTTPException, status
 from pydantic import ValidationError
 
 from app.ai.client import LLMClient
-from app.ai.prompt_templates import SYSTEM_PROMPT, build_plan_options_prompt, build_planner_prompt
+from app.ai.prompt_templates import (
+    SYSTEM_PROMPT,
+    build_plan_options_prompt,
+    build_plan_refine_prompt,
+    build_planner_prompt,
+)
 from app.ai.schemas import AIPlan, AIPlanOptions, ItineraryStep
 from app.domain.enums import ListingType
 from app.models.ai import AIPlanRequest
@@ -93,6 +98,24 @@ class AIPlannerService:
         if len(plans) < count:
             plans += self._fallback_plans(user_context, candidates, count)[len(plans):]
         return plans
+
+    async def refine_plan(
+        self, user_context: dict, candidates: dict[str, list[dict]], current_plan: dict, change_request: str
+    ) -> AIPlan:
+        """Change one plan the way the customer asked, still using only real candidates."""
+        prompt = build_plan_refine_prompt(user_context, candidates, current_plan, change_request)
+        try:
+            llm_json = await self.llm_client.generate_json(prompt=prompt, system_prompt=SYSTEM_PROMPT)
+            plan = self._attach_listings(AIPlan.model_validate(llm_json), candidates)
+            if not plan.steps:
+                raise ValueError("AI returned a plan with no usable steps")
+        except Exception as exc:
+            logger.warning("AI planner could not refine the plan: %s", exc)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="We couldn't change your plan right now. Please try again or reword your request.",
+            ) from exc
+        return plan
 
     @staticmethod
     def _attach_listings(plan: AIPlan, candidates: dict[str, list[dict]]) -> AIPlan:

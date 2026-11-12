@@ -49,6 +49,9 @@ export default {
           iosGoogleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
         },
       ],
+      // Required to build with Xcode 27 / run on iOS 27 (see each plugin for why).
+      "./plugins/withIosSceneLifecycle",
+      "./plugins/withPodsMinimumDeploymentTarget",
     ],
     extra: {
       router: {},

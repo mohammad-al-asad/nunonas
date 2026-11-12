@@ -39,14 +39,16 @@ export default function HotelBookingSuccessScreen() {
     });
   };
   const viewBooking = () => {
+    // Put Home back on its main page first; otherwise the Home tab keeps showing this confirmation.
+    router.replace("/(tabs)/home");
     if (!bookingRecordId) {
-      router.push("/profile/bookings");
+      router.push("/profile/bookings", { withAnchor: true });
       return;
     }
     router.push({
       pathname: "/profile/bookings/details",
       params: { id: String(bookingRecordId), category: "Hotel" },
-    });
+    }, { withAnchor: true });
   };
 
   return (

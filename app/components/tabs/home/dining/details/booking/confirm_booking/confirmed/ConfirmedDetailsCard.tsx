@@ -43,16 +43,20 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
+    gap: 12,
     marginBottom: 16,
   },
   label: {
     fontSize: 15,
     color: theme.COLORS.textSecondary,
   },
+  // Long values (date & time) wrap inside the card instead of running into the label and off-screen.
   value: {
+    flex: 1,
     fontSize: 15,
     color: theme.COLORS.textPrimary,
+    textAlign: "right",
   },
   boldValue: {
     fontWeight: "700",

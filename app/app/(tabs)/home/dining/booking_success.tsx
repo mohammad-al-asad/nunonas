@@ -10,8 +10,6 @@ import { Ionicons } from "@expo/vector-icons";
 // Import Modular Components
 import SuccessHeader from "../../../../components/tabs/home/dining/details/booking/confirm_booking/confirmed/SuccessHeader";
 import ConfirmedDetailsCard from "../../../../components/tabs/home/dining/details/booking/confirm_booking/confirmed/ConfirmedDetailsCard";
-import PointsBanner from "../../../../components/tabs/home/dining/details/booking/confirm_booking/confirmed/PointsBanner";
-import { LOYALTY_POINTS_ENABLED } from "../../../../lib/features";
 
 export default function BookingSuccessScreen() {
   const router = useRouter();
@@ -24,8 +22,6 @@ export default function BookingSuccessScreen() {
     seating,
     bookingRecordId,
     bookingCode,
-    estimatedPoints,
-    totalAmount,
     promotionName,
   } = params;
 
@@ -34,14 +30,16 @@ export default function BookingSuccessScreen() {
   };
 
   const handleViewBooking = () => {
+    // Put Home back on its main page first; otherwise the Home tab keeps showing this confirmation.
+    router.replace("/(tabs)/home");
     if (!bookingRecordId) {
-      router.push("/profile/bookings");
+      router.push("/profile/bookings", { withAnchor: true });
       return;
     }
     router.push({
       pathname: "/profile/bookings/details",
       params: { id: String(bookingRecordId), category: "Restaurant" },
-    });
+    }, { withAnchor: true });
   };
 
   const details = {
@@ -59,12 +57,8 @@ export default function BookingSuccessScreen() {
         
         <ConfirmedDetailsCard details={details} />
         
-        {LOYALTY_POINTS_ENABLED && Number(estimatedPoints || 0) > 0 ? (
-          <PointsBanner points={Number(estimatedPoints)} />
-        ) : null}
-
-        {promotionName ? <Text style={styles.promotionText}>{promotionName} was applied.</Text> : null}
-        {Number(totalAmount || 0) > 0 ? <Text style={styles.totalText}>Estimated total: ${Number(totalAmount).toFixed(2)}</Text> : null}
+        {/* No price or points estimate: the bill depends on what the guests order at the restaurant. */}
+        {promotionName ? <Text style={styles.promotionText}>Offer applied: {promotionName}</Text> : null}
 
         <Button
           title="View My Booking"

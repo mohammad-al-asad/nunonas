@@ -15,8 +15,8 @@ export default function UpcomingBookings() {
   if (!isLoading && !items.length) return null;
   const booking = items[0];
   return <View style={styles.container}>
-    <View style={styles.header}><Text style={styles.title}>Upcoming booking</Text><TouchableOpacity onPress={() => router.push("/profile/bookings" as any)}><Text style={styles.seeAll}>See all</Text></TouchableOpacity></View>
-    {isLoading ? <UpcomingBookingsSkeleton /> : <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={() => router.push({ pathname: "/profile/bookings/details", params: { id: String(booking.id ?? booking._id ?? "") } } as any)}>
+    <View style={styles.header}><Text style={styles.title}>Upcoming booking</Text><TouchableOpacity onPress={() => router.push("/profile/bookings" as any, { withAnchor: true })}><Text style={styles.seeAll}>See all</Text></TouchableOpacity></View>
+    {isLoading ? <UpcomingBookingsSkeleton /> : <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={() => router.push({ pathname: "/profile/bookings/details", params: { id: String(booking.id ?? booking._id ?? "") } } as any, { withAnchor: true })}>
       <View style={styles.icon}><Ionicons name="calendar" size={22} color={theme.COLORS.primary} /></View>
       <View style={styles.body}><Text style={styles.name} numberOfLines={1}>{booking.provider_name ?? booking.vendor_name ?? booking.title ?? "Your reservation"}</Text><Text style={styles.meta}>{booking.date ?? booking.booking_date ?? booking.scheduled_date ?? "Upcoming"}{(booking.time ?? booking.scheduled_time) ? ` · ${booking.time ?? booking.scheduled_time}` : ""}</Text><Text style={styles.location} numberOfLines={1}>{booking.address ?? booking.location ?? booking.provider_address ?? "View booking details"}</Text></View><Ionicons name="chevron-forward" size={20} color={theme.COLORS.textSecondary} />
     </TouchableOpacity>}

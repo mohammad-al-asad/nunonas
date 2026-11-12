@@ -9,8 +9,10 @@ import SaveButton from "../../../ui/SaveButton";
 const SpaCard = ({ spa }) => {
   const router = useRouter();
 
+  const openDetails = () => router.push(`/home/spa/${spa.id}`);
+
   return (
-    <View style={styles.card}>
+    <TouchableOpacity style={styles.card} activeOpacity={0.9} onPress={openDetails}>
       <View style={styles.imageContainer}>
         {spa.image ? <Image source={typeof spa.image === "string" ? { uri: spa.image } : spa.image} style={styles.image} /> : <View style={[styles.image, styles.imagePlaceholder]}><Ionicons name="image-outline" size={42} color={theme.COLORS.textSecondary} /></View>}
         {spa.badge && (
@@ -63,12 +65,12 @@ const SpaCard = ({ spa }) => {
         <TouchableOpacity
           style={styles.detailsBtn}
           activeOpacity={0.8}
-          onPress={() => router.push(`/home/spa/${spa.id}`)}
+          onPress={openDetails}
         >
           <Text style={styles.detailsBtnText}>View Details</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 

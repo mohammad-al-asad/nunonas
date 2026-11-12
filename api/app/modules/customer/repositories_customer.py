@@ -385,8 +385,13 @@ class CustomerRepository:
         customer_id: ObjectId | None,
         scheduled_date: str,
         promo_code: str | None,
+        priced: bool = True,
     ) -> dict[str, Any]:
+        """Best promotion for a booking. priced=False (restaurant tables) picks the promotion
+        without pricing it: the bill depends on what guests order, so minimum spend is checked at the venue."""
         normalized_code = str(promo_code or "").strip().upper()
+        # Unpriced bookings still need the best offer, so rank offers against a nominal bill.
+        rank_base = subtotal if priced else 100.0
         candidates: list[tuple[float, dict[str, Any]]] = []
         try:
             booking_day = datetime.fromisoformat(scheduled_date[:10])
@@ -419,7 +424,7 @@ class CustomerRepository:
             elif required_code:
                 continue
             minimum_spend = max(float(promotion.get("minimum_spend") or 0), 0)
-            if subtotal < minimum_spend:
+            if priced and subtotal < minimum_spend:
                 continue
             if promotion.get("first_time_customers_only") and customer_id:
                 previous = self.vendor_bookings.find_one(
@@ -434,19 +439,24 @@ class CustomerRepository:
                     continue
 
             code_matched = code_matched or bool(normalized_code)
-            candidates.append((self._discount_amount(promotion.get("offer_type"), promotion.get("discount_value"), subtotal), promotion))
+            candidates.append((self._discount_amount(promotion.get("offer_type"), promotion.get("discount_value"), rank_base), promotion))
 
         if normalized_code and not code_matched:
             raise ValueError("Promo code is invalid or not available for this booking.")
         # Platform offers the provider accepted compete with its own promotions; the best one wins.
         for offer in platform_offers.accepted_offers(self.vendors.database, vendor_id, booking_day.date().isoformat()):
             candidates.append(
-                (self._discount_amount(offer.get("discount_type"), offer.get("discount_value"), subtotal), {**offer, "platform": True})
+                (self._discount_amount(offer.get("discount_type"), offer.get("discount_value"), rank_base), {**offer, "platform": True})
             )
         if not candidates:
             return {"discount_amount": 0.0, "promotion_id": None, "platform_offer_id": None, "promotion_name": None, "promo_code": None}
 
-        discount, promotion = max(candidates, key=lambda item: item[0])
+        _, promotion = max(candidates, key=lambda item: item[0])
+        discount = (
+            self._discount_amount(promotion.get("discount_type"), promotion.get("discount_value"), subtotal)
+            if promotion.get("platform")
+            else self._discount_amount(promotion.get("offer_type"), promotion.get("discount_value"), subtotal)
+        )
         if promotion.get("platform"):
             return {
                 "discount_amount": discount,
@@ -1352,6 +1362,14 @@ class CustomerRepository:
         docs = self.notifications.find(query).sort("created_at", DESCENDING).skip(skip).limit(limit)
         return {"items": [self._serialize(doc) for doc in docs], "total": total, "unread_count": int(self.notifications.count_documents({**query, "read": {"$ne": True}}))}
 
+    def mark_customer_notifications_read(self, customer_id: str) -> int:
+        now = datetime.now(UTC)
+        result = self.notifications.update_many(
+            {"user_id": self._oid(customer_id), "read": {"$ne": True}},
+            {"$set": {"read": True, "read_at": now, "updated_at": now}},
+        )
+        return int(result.modified_count)
+
     def _enrich_customer_booking(self, booking: dict[str, Any]) -> dict[str, Any]:
         """Attach current provider/event details to a customer booking."""
         result = self._serialize(booking) or {}
@@ -1614,6 +1632,28 @@ class CustomerRepository:
     def update_plan_session(self, customer_id: str, session_id: str, key: str, value: Any) -> dict[str, Any] | None:
         self.customer_plan_sessions.update_one({"_id": self._oid(session_id), "customer_id": self._oid(customer_id)}, {"$set": {f"values.{key}": value, "updated_at": datetime.now(UTC)}})
         return self._serialize(self.customer_plan_sessions.find_one({"_id": self._oid(session_id), "customer_id": self._oid(customer_id)}))
+
+    def get_plan_session(self, customer_id: str, session_id: str) -> dict[str, Any] | None:
+        return self._serialize(
+            self.customer_plan_sessions.find_one({"_id": self._oid(session_id), "customer_id": self._oid(customer_id)})
+        )
+
+    def get_plan_context_with_area_fallback(
+        self, customer_id: str, preferences: dict[str, Any] | None = None
+    ) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]]]:
+        """Plan context for the chosen area. When nothing matches the typed area, widen to all areas
+        (keeping Vouchers only) and say so in user_context["plan_notice"], instead of a dead end."""
+        preferences = preferences if isinstance(preferences, dict) else {}
+        user_context, candidates = self.get_personalized_plan_context(customer_id, preferences)
+        area = str(preferences.get("area") or "").strip()
+        if any(candidates.values()) or not area or area.casefold() == "anywhere":
+            return user_context, candidates
+        wide_context, wide_candidates = self.get_personalized_plan_context(customer_id, {**preferences, "area": "Anywhere"})
+        if not any(wide_candidates.values()):
+            return user_context, candidates
+        wide_context["plan_filters"]["requested_area"] = area
+        wide_context["plan_notice"] = f"We couldn't find places in {area} yet, so these plans use places from all areas."
+        return wide_context, wide_candidates
 
     def get_personalized_plan_context(
         self, customer_id: str, preferences: dict[str, Any] | None = None
@@ -2536,11 +2576,8 @@ class CustomerRepository:
             )
             unit_price = float((service or {}).get("price", 0))
         else:
-            room = self.vendor_rooms.find_one(
-                {"vendor_id": vendor["_id"], "available": True},
-                sort=[("base_price", ASCENDING)],
-            )
-            unit_price = float((room or {}).get("base_price", 60))
+            # A table booking has no price: the bill depends on what the guests order at the venue.
+            unit_price = 0.0
         original_subtotal = round(unit_price * guests, 2)
         promotion = self._promotion_discount(
             vendor["_id"],
@@ -2549,6 +2586,7 @@ class CustomerRepository:
             self._oid(customer_id) if customer_id else None,
             date,
             promo_code,
+            priced=provider_type == "spa",
         )
         subtotal = round(original_subtotal - promotion["discount_amount"], 2)
         total = subtotal

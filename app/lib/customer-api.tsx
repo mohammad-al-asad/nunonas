@@ -182,6 +182,10 @@ export async function listNotifications<TResponse = unknown>(): Promise<TRespons
   return apiGetAuth<TResponse>(`${C}/notifications`);
 }
 
+export async function markAllNotificationsRead<TResponse = unknown>(): Promise<TResponse> {
+  return apiPostAuth<TResponse, Record<string, never>>(`${C}/notifications/read-all`, {});
+}
+
 export async function getCurrentLocation<TResponse = unknown>(): Promise<TResponse> {
   return apiGetAuth<TResponse>(`${C}/location/current`);
 }
@@ -523,6 +527,20 @@ export async function setPlanPreferences<TResponse = unknown>(
 
 export async function revealPlan<TResponse = unknown>(sessionId: string): Promise<TResponse> {
   return apiPostAuth<TResponse, JsonObject>(`${C}/plan-for-me/sessions/${sessionId}/reveal`, {});
+}
+
+/** Ask the planner to change one plan, e.g. "add a spa" or "something cheaper". */
+export async function refinePlan<TResponse = unknown>(
+  sessionId: string,
+  planIndex: number,
+  request: string,
+  plan?: JsonObject,
+): Promise<TResponse> {
+  return apiPostAuth<TResponse, JsonObject>(`${C}/plan-for-me/sessions/${sessionId}/refine`, {
+    plan_index: planIndex,
+    request,
+    ...(plan ? { plan } : {}),
+  });
 }
 
 export async function getMe(): Promise<NormalizedUserProfile> {

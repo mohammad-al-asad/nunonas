@@ -90,21 +90,23 @@ def test_provider_answers_once_and_offer_waits_until_then():
     assert (summary["accepted"], summary["rejected"], summary["pending"]) == (1, 0, 1)
 
 
-def test_accepted_offer_discounts_bookings_and_commission_uses_the_discounted_price():
+def test_accepted_offer_wins_over_own_promotion_on_restaurant_bookings():
     db, vendor_id, _, customer_id = _setup()
     offer, _ = _offer(db)
     db.vendor_promotions.insert_one(
         {"vendor_id": vendor_id, "promotion_name": "20% off", "offer_type": "percentage", "discount_value": 20, "active": True}
     )
 
-    assert _quote(db, vendor_id, customer_id)["discount_amount"] == 40  # own promotion only, not joined yet
+    # Restaurant tables are not priced (the bill depends on what guests order), but the offer is still named.
+    quote = _quote(db, vendor_id, customer_id)
+    assert quote["promotion_name"] == "20% off"  # own promotion only, not joined yet
+    assert quote["original_subtotal"] == 0
+    assert quote["discount_amount"] == 0
+    assert quote["total"] == 0
 
     platform_offers.respond(db, str(vendor_id), offer["id"], accept=True)
     quote = _quote(db, vendor_id, customer_id)
-    assert quote["original_subtotal"] == 200
-    assert quote["discount_amount"] == 100  # the best single discount wins
-    assert quote["total"] == 100
-    assert quote["promotion_name"] == "Summer 50% Off"
+    assert quote["promotion_name"] == "Summer 50% Off"  # the best single offer wins
     assert quote["platform_offer_id"] == offer["id"]
 
     booking = CustomerRepository(db).create_booking(
@@ -112,10 +114,10 @@ def test_accepted_offer_discounts_bookings_and_commission_uses_the_discounted_pr
     )
     stored = db.vendor_bookings.find_one({"_id": ObjectId(booking["id"])})
     assert stored["platform_offer_id"] == ObjectId(offer["id"])
-    assert billing._booking_value(stored) == 100  # commission is on what the customer pays
+    assert billing._booking_value(stored) == 0  # no made-up price for commission to be taken on
 
     # Outside the offer period the platform offer no longer applies.
-    assert _quote(db, vendor_id, customer_id, day=_day(40))["discount_amount"] == 40
+    assert _quote(db, vendor_id, customer_id, day=_day(40))["promotion_name"] == "20% off"
 
 
 def test_rejected_offer_never_applies():

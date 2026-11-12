@@ -52,7 +52,7 @@ const SpaDetailsActions = ({
     <View style={styles.container}>
       <Button
         title="Book Now"
-        onPress={() => router.push("/home/spa/booking")}
+        onPress={() => router.push({ pathname: "/home/spa/booking", params: { id: String(spaId ?? "") } })}
         style={styles.bookBtn}
         textStyle={styles.bookBtnText}
       />

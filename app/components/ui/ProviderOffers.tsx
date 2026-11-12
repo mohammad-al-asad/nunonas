@@ -24,7 +24,8 @@ function formatEnd(value?: string) {
 }
 
 /** Offers on a provider's page: platform offers it joined first, then its own. */
-export default function ProviderOffers({ offers, title = "Offers" }: { offers: ProviderOffer[]; title?: string }) {
+// priced=false (restaurants): table bookings have no price, so booking offers come off the bill at the venue.
+export default function ProviderOffers({ offers, title = "Offers", priced = true }: { offers: ProviderOffer[]; title?: string; priced?: boolean }) {
   if (!offers.length) return null;
   return (
     <View style={styles.section}>
@@ -49,7 +50,7 @@ export default function ProviderOffers({ offers, title = "Offers" }: { offers: P
                 <Text key={detailIndex} style={styles.description}>{text}</Text>
               ))}
               <Text style={styles.footnote}>
-                {[inVenue ? "Show this offer at the venue" : "Applied to your booking price", formatEnd(offer.end_date)].filter(Boolean).join(" · ")}
+                {[inVenue ? "Show this offer at the venue" : priced ? "Applied to your booking price" : "Applied to your bill at the restaurant", formatEnd(offer.end_date)].filter(Boolean).join(" · ")}
               </Text>
             </View>
           </View>

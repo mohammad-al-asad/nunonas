@@ -41,7 +41,7 @@ export default function PromoCodeInput({
           {loading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.buttonText}>Apply</Text>}
         </TouchableOpacity>
       </View>
-      {appliedPromotion ? <Text style={styles.success}>{appliedPromotion} applied</Text> : null}
+      {appliedPromotion ? <Text style={styles.success}>Offer applied: {appliedPromotion}</Text> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );

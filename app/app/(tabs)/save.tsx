@@ -9,6 +9,9 @@ import {
   FlatList,
   ActivityIndicator,
   RefreshControl,
+  Alert,
+  Modal,
+  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -101,6 +104,8 @@ export default function SaveScreen() {
   const [savedItems, setSavedItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [sortBy, setSortBy] = useState("newest");
   const dispatch = useAppDispatch();
 
   const fetchSaved = useCallback(async () => {
@@ -148,13 +153,49 @@ export default function SaveScreen() {
     actionLabel: item.entity_type === "event" ? "Get Tickets" : "Book Now",
   }));
 
-  const filteredItems =
+  const filteredItems = (
     activeFilter === "All"
       ? normalizedSavedItems
       : normalizedSavedItems.filter((item) => {
           const type = (item.entity_type ?? item.type ?? "").toLowerCase();
           return type.includes(activeFilter.toLowerCase());
-        });
+        })
+  ).sort((a, b) =>
+    sortBy === "name"
+      ? String(a.title).localeCompare(String(b.title))
+      : new Date(b.savedAt ?? 0).getTime() - new Date(a.savedAt ?? 0).getTime(),
+  );
+
+  const clearAllSaved = () => {
+    setMenuOpen(false);
+    if (!normalizedSavedItems.length) return;
+    Alert.alert("Clear saved items?", "This removes every place and event from your saved list.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Clear all",
+        style: "destructive",
+        onPress: async () => {
+          const results = await Promise.allSettled(
+            normalizedSavedItems.map((item) => removeSaved(item.entity_type, String(item.id ?? item._id))),
+          );
+          normalizedSavedItems.forEach((item, index) => {
+            if (results[index].status === "fulfilled") {
+              dispatch(markUnsaved({ entityType: item.entity_type, entityId: String(item.id ?? item._id) }));
+            }
+          });
+          const failed = results.filter((result) => result.status === "rejected").length;
+          showToast(failed ? "Some saved items could not be removed." : "Saved items cleared.", { type: failed ? "error" : "success" });
+          void fetchSaved();
+        },
+      },
+    ]);
+  };
+
+  const menuOptions = [
+    { key: "newest", label: "Sort by newest saved", icon: "time-outline", onPress: () => { setSortBy("newest"); setMenuOpen(false); } },
+    { key: "name", label: "Sort by name (A–Z)", icon: "text-outline", onPress: () => { setSortBy("name"); setMenuOpen(false); } },
+    { key: "clear", label: "Clear all saved items", icon: "trash-outline", destructive: true, onPress: clearAllSaved },
+  ];
 
 
   const renderFilterItem = ({ item }) => {
@@ -195,7 +236,7 @@ export default function SaveScreen() {
       {/* Header with Title */}
       <View style={styles.header}>
         <Text style={styles.title}>Saved Items</Text>
-        <TouchableOpacity style={styles.moreBtn}>
+        <TouchableOpacity style={styles.moreBtn} onPress={() => setMenuOpen(true)} accessibilityLabel="Saved items options">
           <Ionicons
             name="ellipsis-horizontal"
             size={24}
@@ -255,11 +296,46 @@ export default function SaveScreen() {
           </View>
         )}
       </ScrollView>
+
+      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
+        <Pressable style={styles.menuBackdrop} onPress={() => setMenuOpen(false)}>
+          <Pressable style={styles.menuSheet}>
+            <Text style={styles.menuTitle}>Saved items</Text>
+            {menuOptions.map((option) => {
+              const selected = option.key === sortBy;
+              return (
+                <TouchableOpacity key={option.key} style={styles.menuRow} onPress={option.onPress} activeOpacity={0.7}>
+                  <Ionicons
+                    name={option.icon}
+                    size={20}
+                    color={option.destructive ? theme.COLORS.error : theme.COLORS.textPrimary}
+                  />
+                  <Text style={[styles.menuLabel, option.destructive && styles.menuLabelDestructive]}>{option.label}</Text>
+                  {selected ? <Ionicons name="checkmark" size={20} color={theme.COLORS.primary} /> : null}
+                </TouchableOpacity>
+              );
+            })}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  menuBackdrop: { flex: 1, backgroundColor: "rgba(15, 23, 42, 0.35)", justifyContent: "flex-end" },
+  menuSheet: {
+    backgroundColor: theme.COLORS.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 34,
+  },
+  menuTitle: { fontSize: 17, fontWeight: "700", color: theme.COLORS.textPrimary, marginBottom: 8 },
+  menuRow: { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14 },
+  menuLabel: { flex: 1, fontSize: 15, color: theme.COLORS.textPrimary },
+  menuLabelDestructive: { color: theme.COLORS.error, fontWeight: "600" },
   container: {
     flex: 1,
     backgroundColor: theme.COLORS.white,

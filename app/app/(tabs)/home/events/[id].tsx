@@ -194,8 +194,8 @@ export default function EventDetailsScreen() {
               ? router.push({
                   pathname: "/profile/bookings/details",
                   params: { id: String(response.id), category: "Event" },
-                })
-              : router.push("/profile/bookings"),
+                }, { withAnchor: true })
+              : router.push("/profile/bookings", { withAnchor: true }),
           },
         ],
       );

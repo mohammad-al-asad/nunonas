@@ -40,11 +40,11 @@ const NEARBY_REGION_DELTA = 0.025;
 type ServiceFilter = "all" | "restaurant" | "hotel" | "spa" | "event" | "happy_hour";
 const SERVICE_FILTERS: Array<{ key: ServiceFilter; label: string }> = [
   { key: "all", label: "All" },
+  { key: "happy_hour", label: "Happy Hours" },
   { key: "restaurant", label: "Restaurants" },
   { key: "hotel", label: "Hotels" },
   { key: "spa", label: "Spas" },
   { key: "event", label: "Events" },
-  { key: "happy_hour", label: "Happy Hours" },
 ];
 const VENUE_LABELS: Record<string, string> = { restaurant: "Restaurant", hotel: "Hotel", spa: "Spa" };
 type BookingState = { loading: boolean; code: string; status: string };

@@ -13,11 +13,11 @@ def test_active_promotion_changes_booking_quote_and_estimated_points():
     customer_id = ObjectId()
     today = datetime.now(UTC).date()
     database.vendors.insert_one(
-        {"_id": vendor_id, "status": "approved", "business_name": "Offer Restaurant"}
+        {"_id": vendor_id, "status": "approved", "business_name": "Offer Spa"}
     )
     database.users.insert_one({"_id": customer_id, "full_name": "Offer Customer"})
-    database.vendor_rooms.insert_one(
-        {"vendor_id": vendor_id, "available": True, "base_price": 100}
+    database.vendor_services.insert_one(
+        {"vendor_id": vendor_id, "service_type": "spa", "available": True, "price": 100}
     )
     database.vendor_promotions.insert_one(
         {
@@ -25,7 +25,7 @@ def test_active_promotion_changes_booking_quote_and_estimated_points():
             "promotion_name": "Twenty off",
             "offer_type": "percentage",
             "discount_value": 20,
-            "applicable_to": "Restaurant",
+            "applicable_to": "All Services",
             "start_date": (today - timedelta(days=1)).isoformat(),
             "end_date": (today + timedelta(days=1)).isoformat(),
             "active": True,
@@ -40,7 +40,7 @@ def test_active_promotion_changes_booking_quote_and_estimated_points():
 
     quote = CustomerRepository(database).get_booking_quote(
         str(vendor_id),
-        "restaurant",
+        "spa",
         guests=2,
         date=today.isoformat(),
         time="18:00",
@@ -54,6 +54,22 @@ def test_active_promotion_changes_booking_quote_and_estimated_points():
     assert quote["total"] == 160
     assert quote["promotion_name"] == "Twenty off"
     assert quote["estimated_points"] == 160
+
+    # A restaurant table has no price, so the promotion is named but not priced.
+    table_quote = CustomerRepository(database).get_booking_quote(
+        str(vendor_id),
+        "restaurant",
+        guests=2,
+        date=today.isoformat(),
+        time="18:00",
+        seating_preference=None,
+        customer_id=str(customer_id),
+    )
+    assert table_quote["promotion_name"] == "Twenty off"
+    assert table_quote["original_subtotal"] == 0
+    assert table_quote["discount_amount"] == 0
+    assert table_quote["total"] == 0
+    assert table_quote["estimated_points"] == 0
 
 
 def test_loyalty_awards_and_promotion_usage_are_idempotent():

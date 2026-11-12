@@ -22,6 +22,7 @@ from app.modules.schemas import (
     GenericPatchRequest,
     PlanForMeStepRequest,
     PlannedEndpointResponse,
+    PlanRefineRequest,
 )
 
 router = APIRouter(prefix="/customer")
@@ -80,6 +81,11 @@ def list_notifications(limit: int = Query(default=50, ge=1, le=200), skip: int =
     return customer_service.repo.get_customer_notifications(current_user["id"], limit=limit, skip=skip)
 
 
+@router.post("/notifications/read-all", tags=["Customer - Home"])
+def mark_all_notifications_read(current_user: dict = Depends(get_current_user), customer_service: CustomerService = Depends(get_customer_service)) -> dict:
+    return {"updated": customer_service.repo.mark_customer_notifications_read(current_user["id"])}
+
+
 @router.post("/plan-for-me/sessions", tags=["Customer - Plan"])
 def create_plan_session(current_user: dict = Depends(get_current_user), customer_service: CustomerService = Depends(get_customer_service)) -> dict:
     return customer_service.repo.create_plan_session(current_user["id"])
@@ -121,7 +127,42 @@ def set_plan_preferences(session_id: str, payload: PlanForMeStepRequest, current
 async def reveal_plan(session_id: str, current_user: dict = Depends(get_current_user), customer_service: CustomerService = Depends(get_customer_service), ai_service: AIPlannerService = Depends(get_ai_service)) -> dict:
     session = customer_service.repo.update_plan_session(current_user["id"], session_id, "revealed", True)
     values = (session or {}).get("values", {})
-    user_context, candidates = customer_service.repo.get_personalized_plan_context(current_user["id"], values.get("preferences"))
+    user_context, candidates = _plan_context(customer_service, current_user["id"], values)
+    plans = [plan.model_dump(mode="json") for plan in await ai_service.create_plan_options_from_context(user_context, candidates)]
+    updated_session = customer_service.repo.update_plan_session(current_user["id"], session_id, "generated_plans", plans)
+    notice = user_context.get("plan_notice")
+    if notice:
+        customer_service.repo.update_plan_session(current_user["id"], session_id, "plan_notice", notice)
+    # "plan" is kept for older app builds that only read a single plan.
+    return {"session": updated_session, "plans": plans, "plan": plans[0], "notice": notice}
+
+
+@router.post(
+    "/plan-for-me/sessions/{session_id}/refine",
+    tags=["Customer - Plan"],
+)
+async def refine_plan(session_id: str, payload: PlanRefineRequest, current_user: dict = Depends(get_current_user), customer_service: CustomerService = Depends(get_customer_service), ai_service: AIPlannerService = Depends(get_ai_service)) -> dict:
+    """Change one generated plan the way the customer asks ("add a spa", "something cheaper")."""
+    try:
+        session = customer_service.repo.get_plan_session(current_user["id"], session_id)
+    except InvalidId as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plan not found.") from exc
+    values = (session or {}).get("values") or {}
+    plans = list(values.get("generated_plans") or [])
+    if payload.plan_index >= len(plans):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plan not found.")
+    user_context, candidates = _plan_context(customer_service, current_user["id"], values)
+    current_plan = payload.plan if isinstance(payload.plan, dict) and payload.plan.get("steps") is not None else plans[payload.plan_index]
+    refined = await ai_service.refine_plan(user_context, candidates, current_plan, payload.request.strip())
+    plans[payload.plan_index] = refined.model_dump(mode="json")
+    updated_session = customer_service.repo.update_plan_session(current_user["id"], session_id, "generated_plans", plans)
+    return {"session": updated_session, "plans": plans, "plan": plans[payload.plan_index]}
+
+
+def _plan_context(customer_service: CustomerService, customer_id: str, values: dict) -> tuple[dict, dict]:
+    """Candidates for a plan session, widened to all areas when the typed area has no places."""
+    preferences = values.get("preferences") if isinstance(values.get("preferences"), dict) else {}
+    user_context, candidates = customer_service.repo.get_plan_context_with_area_fallback(customer_id, preferences)
     if not any(candidates.values()):
         filters = user_context.get("plan_filters") or {}
         where = "" if filters.get("area") in (None, "Anywhere") else f" in {filters['area']}"
@@ -130,11 +171,11 @@ async def reveal_plan(session_id: str, current_user: dict = Depends(get_current_
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"We couldn't find any {what}{where}. Try another area or turn off Vouchers only.",
         )
+    if user_context.get("plan_notice"):
+        # The plans cover all areas, so don't describe them as being "around" the area that had no places.
+        values = {**values, "preferences": {**preferences, "area": "Anywhere"}}
     user_context["plan_preferences"] = values
-    plans = [plan.model_dump(mode="json") for plan in await ai_service.create_plan_options_from_context(user_context, candidates)]
-    updated_session = customer_service.repo.update_plan_session(current_user["id"], session_id, "generated_plans", plans)
-    # "plan" is kept for older app builds that only read a single plan.
-    return {"session": updated_session, "plans": plans, "plan": plans[0]}
+    return user_context, candidates
 
 
 @router.get("/categories", tags=["Customer - Discover"])

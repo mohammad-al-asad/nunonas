@@ -1,5 +1,6 @@
 // @ts-nocheck
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
 import {
   StyleSheet,
   View,
@@ -55,6 +56,8 @@ export default function HomeScreen() {
   const [greeting, setGreeting] = useState(getTimeGreeting);
   const [userName, setUserName] = useState("Nuno");
   const unreadNotifications = useRef(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const router = useRouter();
 
   useEffect(() => {
     let active = true;
@@ -82,7 +85,10 @@ export default function HomeScreen() {
         if (active && unreadNotifications.current !== null && count > unreadNotifications.current) {
           showToast("You have a new notification.", { type: "info" });
         }
-        if (active) unreadNotifications.current = count;
+        if (active) {
+          unreadNotifications.current = count;
+          setUnreadCount(count);
+        }
       } catch {
         // Notification polling is best effort and should not interrupt discovery.
       }
@@ -94,6 +100,19 @@ export default function HomeScreen() {
       clearInterval(timer);
     };
   }, []);
+
+  // Coming back from the notifications screen clears the dot straight away.
+  useFocusEffect(
+    useCallback(() => {
+      getUnreadNotificationCount()
+        .then((payload) => {
+          const count = Number(payload?.count ?? payload?.unread_count ?? payload?.unreadCount ?? 0);
+          unreadNotifications.current = count;
+          setUnreadCount(count);
+        })
+        .catch(() => {});
+    }, []),
+  );
 
   useEffect(() => {
     async function getUserLocation() {
@@ -182,12 +201,17 @@ export default function HomeScreen() {
             />
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.notificationBtn}>
+        <TouchableOpacity
+          style={styles.notificationBtn}
+          onPress={() => router.push("/home/notifications")}
+          accessibilityLabel="Notifications"
+        >
           <Ionicons
             name="notifications-outline"
             size={24}
             color={theme.COLORS.textPrimary}
           />
+          {unreadCount > 0 ? <View style={styles.notificationDot} /> : null}
         </TouchableOpacity>
       </View>
 

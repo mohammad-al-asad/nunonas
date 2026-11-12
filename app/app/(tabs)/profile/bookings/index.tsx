@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import theme from "../../../../constants/theme";
 import BookingCard from "../../../../components/tabs/profile/bookings/BookingCard";
 import { BookingListSkeleton } from "../../../../components/skeleton";
@@ -53,6 +53,13 @@ export default function BookingsScreen() {
     setLoading(true);
     fetchBookings(activeTab);
   }, [fetchBookings, activeTab]);
+
+  // Coming back from booking details (e.g. after cancelling) shows the current status, not the old one.
+  useFocusEffect(
+    useCallback(() => {
+      fetchBookings(activeTab);
+    }, [fetchBookings, activeTab]),
+  );
 
   const handleViewDetails = (item) => {
     router.push({
